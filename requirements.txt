@@ -1,0 +1,3 @@
+# install_requires
+aiohttp
+oauthlib

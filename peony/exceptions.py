@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 
 class PeonyException(Exception):
@@ -29,6 +30,10 @@ class PeonyException(Exception):
         self.data = data
 
         super().__init__(message)
+
+
+class MediaProcessingError(PeonyException):
+    pass
 
 
 class StreamLimit(PeonyException):

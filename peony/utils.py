@@ -1,5 +1,19 @@
+# -*- coding: utf-8 -*-
 
 import json
+import os
+import io
+
+try:
+    from magic import Magic
+    mime = Magic(mime=True)
+    magic = True
+except:
+    import mimetypes
+    mime = mimetypes.MimeTypes()
+    magic = False
+
+from PIL import Image
 
 from .exceptions import PeonyBaseException
 
@@ -87,3 +101,65 @@ async def throw(response):
             pass
 
     return PeonyBaseException(**kwargs)
+
+
+def convert(img, formats):
+    for kwargs in formats:
+        f = io.BytesIO()
+        img.save(f, **kwargs)
+        yield f
+
+
+def optimize_media(path, max_size, formats):
+    with Image.open(path) as img:
+        ratio = max(hw / max_hw for hw, max_hw in zip(img.size, max_size))
+
+        if ratio > 1:
+            size = tuple(int(hw // ratio) for hw in img.size)
+            img.resize(size, Image.ANTIALIAS)
+
+        files = list(convert(img, formats))
+
+    files.sort(key=get_size)
+    media = files.pop(0)
+
+    for f in files:
+        f.close()
+
+    return media
+
+
+def reset_io(func):
+    def decorated(media):
+        media.seek(0)
+        result = func(media)
+        media.seek(0)
+
+        return result
+
+    return decorated
+
+
+@reset_io
+def get_size(media):
+    media.seek(0, os.SEEK_END)
+    return media.tell()
+
+
+@reset_io
+def get_type(media, path=None):
+    if magic:
+        media_type = mime.from_buffer(media.read(1024))
+    elif path:
+        media_type = mime.guess_type(path)
+    else:
+        raise RuntimeError("Cannot guess mimetype of media")
+
+    if media_type.startswith('video'):
+        media_category = "tweet_video"
+    elif media_type.endswith('gif'):
+        media_category = "tweet_gif"
+    else:
+        media_category = "tweet_image"
+
+    return media_type, media_category

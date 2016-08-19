@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import asyncio
 import json
@@ -30,6 +31,7 @@ class StreamResponse:
     async def __aiter__(self):
         """ create the connection """
         kwargs = self.headers.prepare_request(**self.kwargs)
+        print(kwargs)
 
         self.response = await self.session.request(*self.args, **kwargs)
         if self.response.status == 200:

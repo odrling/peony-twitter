@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import asyncio
 import re
@@ -6,7 +7,7 @@ import re
 def doc(value):
     stripped_chars = " \t"
 
-    if hasattr(value, "__doc__"):
+    if hasattr(value, '__doc__'):
         doc = value.__doc__.lstrip(" \n\t")
         if "\n" in doc:
             i = doc.index("\n")
@@ -28,7 +29,7 @@ def permission_check(data, _permissions, command=None, permissions=None):
     if permissions:
         pass
     elif command:
-        if hasattr(command, "permissions"):
+        if hasattr(command, 'permissions'):
             permissions = command.permissions
         else:
             return True  # true if no permission is required

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import asyncio
 import time
@@ -88,7 +89,7 @@ async def async_oauth_dance(consumer_key, consumer_secret, callback_uri="oob"):
 def parse_token(response):
     """ parse the responses containing the tokens """
     items = response.split("&")
-    items = [item.split("=") for item in items]
+    items = [item.split(=) for item in items]
 
     return {key: value for key, value in items}
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 import oauthlib.oauth1
 from oauthlib.common import add_params_to_uri
@@ -24,13 +25,23 @@ class OAuth1Headers(dict):
         )
         self['User-Agent'] = "peony v%s" % __version__
 
-    def sign(self, method, url, data={}, params={}, **kwargs):
+    def sign(self, method, url,
+             data={},
+             params={},
+             skip_params=False,
+             **kwargs):
         """ sign, that is, generate the `Authorization` headers """
 
         headers = dict(**self)
 
         if data:
-            headers['Content-Type'] = "application/x-www-form-urlencoded"
+            if skip_params:
+                default = "application/octet-stream"
+            else:
+                default = "application/x-www-form-urlencoded"
+
+            headers['Content-Type'] = headers.get('Content-Type', default)
+
             body = data
         else:
             if params:
@@ -59,7 +70,8 @@ class OAuth1Headers(dict):
 
         request_params.update(dict(method=method.upper(), url=url))
 
-        request_params['headers'] = self.sign(**request_params)
+        request_params['headers'] = self.sign(**request_params,
+                                              skip_params=skip_params)
         request_params['headers'].update(headers)
 
         kwargs.update(request_params)

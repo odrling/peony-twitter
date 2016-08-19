@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 
 from .commands import Commands
 from .event_handlers import EventStream, EventStreams, event_handler

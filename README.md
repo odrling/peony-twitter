@@ -144,6 +144,7 @@ async def track():
 ```
 
 <h2 id='iterators'>Iterators</h2>
+
 Sometimes you need to make several requests to the same API endpoint in order
 to get all the data you want (e.g. getting more than 200 tweets of an user).  
 Some iterators are included in Peony and usable through the peony.iterators
@@ -154,6 +155,7 @@ module that deals with the actual iteration, getting all the responses you need.
 This is an iterator for endpoints using the `cursor` parameter
 (e.g. followers/ids.json). The first argument given to the iterator is the
 coroutine function that will make the request.
+
 
 ```python
 import peony.iterators
@@ -180,6 +182,7 @@ async def get_followers(user_id, **additional_params):
 <h3 id="max_id_iterator">Max_id iterator</h3>
 An iterator for endpoints using the `max_id` parameter
 (e.g. statuses/user_timeline.json)
+
 
 ```python
 from peony import PeonyClient
@@ -211,25 +214,38 @@ async def get_tweets(user_id, n_tweets=1600, **additional_params):
 An iterator for endpoints using the `since_id` parameter
 (e.g. statuses/home_timeline.json)
 
+
 ```python
-from peony import PeonyClient
-import peony.iterators
+import asyncio
+import html
 
-client = PeonyClient(**creds)
+try:
+    from . import peony, api, testdir
+except SystemError:
+    from __init__ import peony, testdir
+    import api
 
-async def get_home(since_id, **additional_params):
+
+client = peony.PeonyClient(**api.keys)
+
+async def get_home(since_id=None, **params):
     responses = peony.iterators.with_since_id(
         client.api.statuses.home_timeline.get,
-        since_id=since_id,
         count=200,
-        **additional_params
+        **params
     )
 
     home = []
     async for tweets in responses:
-        home.extend(tweets)
+        for tweet in reversed(tweets):
+            text = html.unescape(tweet.text)
+            print("@{user.screen_name}: {text}".format(user=tweet.user,
+                                                       text=text))
+            print("-"*10)
 
-    return home
+        await asyncio.sleep(180)
+
+    return sorted(home, key=lambda tweet: tweet.id)
 ```
 
 <h2 id='tasks'>Tasks</h2>

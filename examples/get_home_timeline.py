@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import asyncio
+import html
 
 try:
     from . import peony, api, testdir
@@ -14,16 +15,19 @@ client = peony.PeonyClient(**api.keys)
 async def get_home(since_id=None, **params):
     responses = peony.iterators.with_since_id(
         client.api.statuses.home_timeline.get,
-        since_id=since_id,
         count=200,
         **params
     )
 
     home = []
     async for tweets in responses:
-        home.extend(tweets)
-        print(len(home))
-        input("waiting for input")
+        for tweet in reversed(tweets):
+            text = html.unescape(tweet.text)
+            print("@{user.screen_name}: {text}".format(user=tweet.user,
+                                                       text=text))
+            print("-"*10)
+
+        await asyncio.sleep(180)
 
     return sorted(home, key=lambda tweet: tweet.id)
 

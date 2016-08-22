@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
 
-
 class IdIterator:
     """
         Iterate using ids
 
-    It manages both max_id and since_id iterators thanks to some
-    twisted logics
+    It is the parent class of MaxIdIterator and SinceIdIterator
     """
 
-    def __init__(self, _request, _parameter, _i, *args, **kwargs):
+    def __init__(self, _request, _parameter, _i, _force=False,
+                 **kwargs):
         """ Keep all the arguments as class attributes """
         self.request = _request
         self.kwargs = kwargs
         self.param = _parameter
-        self.args = args
+        self.force = _force
         self.i = _i
 
     def __aiter__(self):
@@ -22,15 +21,86 @@ class IdIterator:
 
     async def __anext__(self):
         """ return each response until getting an empty response """
-        response = await self.request(*self.args, **self.kwargs)
+        response = await self.request(**self.kwargs)
 
         if response:
-            i = self.i
-            self.kwargs[self.param] = response[i].id + i
-        else:
+            response = await self.call_on_response(response)
+        elif not self.force:
             raise StopAsyncIteration
 
         return response
+
+    async def call_on_response(self, response):
+        """
+            The parameter is set to the id of the tweet at index i - 1
+        """
+        self.kwargs[self.param] = response[self.i]['id'] - 1
+        return response
+
+
+class MaxIdIterator(IdIterator):
+    """
+        Iterator for endpoints using max_id
+    """
+
+    def __init__(self, _request, _force=False, **kwargs):
+        """ Keep all the arguments as class attributes """
+        super().__init__(_request,
+                         _parameter="max_id",
+                         _i=-1,
+                         _force=_force,
+                         **kwargs)
+
+
+class SinceIdIterator(IdIterator):
+    """
+        Iterator for endpoints using since_id
+    """
+
+    def __init__(self, _request, _force=True, _fill_gaps=True, **kwargs):
+        super().__init__(_request,
+                         _parameter="since_id",
+                         _i=0,
+                         _force=_force,
+                         **kwargs)
+
+        self.fill_gaps = _fill_gaps
+
+    async def set_param(self, response):
+        if self.fill_gaps:
+            self.kwargs[self.param] = response[self.i]['id'] - 1
+        else:
+            self.kwargs[self.param] = response[self.i]['id']
+
+    async def call_on_response(self, response):
+        """
+            Try to fill the gaps and strip last tweet from the response
+            if its id is that of the first tweet of the former response
+        """
+        since_id = self.kwargs.get(self.param, 0)
+        if self.fill_gaps:
+            since_id += 1
+
+        if since_id != response[-1]['id']:
+            if self.fill_gaps:
+                responses = with_max_id(
+                    _request=self.request,
+                    max_id=response[-1]['id']-1,
+                    **self.kwargs
+                )
+
+                async for tweets in responses:
+                    response.extend(tweets)
+
+                if since_id == response[-1]['id']:
+                    await self.set_param(response)
+                    return response[:-1]
+
+            await self.set_param(response)
+            return response
+
+        await self.set_param(response)
+        return response[:-1]
 
 
 class CursorIterator:
@@ -43,10 +113,6 @@ class CursorIterator:
         """
         self.request = _request
         self.args = args
-
-        if 'cursor' not in kwargs:
-            kwargs['cursor'] = -1
-
         self.kwargs = kwargs
 
     def __aiter__(self):
@@ -54,26 +120,16 @@ class CursorIterator:
 
     async def __anext__(self):
         """ return each response until getting 0 as next cursor """
-        if self.kwargs['cursor'] != 0:
+        if self.kwargs.get('cursor', -1) != 0:
             response = await self.request(*self.args, **self.kwargs)
 
-            self.kwargs['cursor'] = response.next_cursor
+            self.kwargs['cursor'] = response['next_cursor']
 
             return response
         else:
             raise StopAsyncIteration
 
 
-def with_max_id(_request, *args, **kwargs):
-    """ create an iterator using the max_id parameter """
-    return IdIterator(_request, _parameter="max_id", _i=-1, *args, **kwargs)
-
-
-def with_since_id(_request, *args, **kwargs):
-    """ create an iterator using the since_id parameter """
-    return IdIterator(_request, _parameter="since_id", _i=0, *args, **kwargs)
-
-
-def with_cursor(_request, *args, **kwargs):
-    """ create an iterator using the cursor parameter """
-    return CursorIterator(_request, *args, **kwargs)
+with_max_id = MaxIdIterator
+with_since_id = SinceIdIterator
+with_cursor = CursorIterator

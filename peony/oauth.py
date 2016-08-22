@@ -16,6 +16,8 @@ class OAuth1Headers(dict):
     def __init__(self, consumer_key, consumer_secret,
                  access_token=None, access_token_secret=None, **kwargs):
         """ create the OAuth1 client and a nice User-Agent """
+        super().__init__()
+
         self.oauthclient = oauthlib.oauth1.Client(
             client_key=consumer_key,
             client_secret=consumer_secret,

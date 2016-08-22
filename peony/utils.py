@@ -103,6 +103,11 @@ async def throw(response):
     return PeonyBaseException(**kwargs)
 
 
+def media_chunks(media, chunk_size, media_size):
+    while media.tell() < media_size:
+        yield media.read(chunk_size)
+
+
 def convert(img, formats):
     for kwargs in formats:
         f = io.BytesIO()
@@ -116,7 +121,7 @@ def optimize_media(path, max_size, formats):
 
         if ratio > 1:
             size = tuple(int(hw // ratio) for hw in img.size)
-            img.resize(size, Image.ANTIALIAS)
+            img = img.resize(size, Image.ANTIALIAS)
 
         files = list(convert(img, formats))
 

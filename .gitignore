@@ -60,3 +60,6 @@ target/
 
 # don't push my credentials
 /examples/api.py
+
+# PyCharm folder
+.idea

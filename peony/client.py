@@ -1,18 +1,15 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import json
-import io
 from types import GeneratorType
 from urllib.parse import urlparse
 
-from PIL import Image
 import aiohttp
 
 from . import general, utils
 from .oauth import OAuth1Headers
 from .stream import StreamContext
-from .exceptions import PeonyException, MediaProcessingError
+from .exceptions import MediaProcessingError
 from .commands import EventStreams, task
 
 
@@ -33,6 +30,7 @@ class BaseAPIPath:
     BaseAPIPath instance can be accessed as the "client" attribute of
     the instance.
 
+    >>> creds = {}
     >>> api = BaseAPIPath("http://{api}.twitter.com/{version}",
     ...                   api="api", version="1.1",
     ...                   client=PeonyClient(**creds))
@@ -83,7 +81,7 @@ class BaseAPIPath:
         else:
             if isinstance(k, (tuple, list)):
                 k = map(str, k)
-                path.extend(k)
+                self._path.extend(k)
             else:
                 self._path.append(str(k))
 
@@ -97,7 +95,8 @@ class BaseAPIPath:
         if your path contains an actual attribute of the instance
         you should call __getitem__ instead
 
-        >>> instance["client"]  # appends `client` to _path
+        >>> instance = APIPath()  # you would have to add more arguments
+        >>> instance["client"]    # appends `client` to _path
         """
         return self[k]
 
@@ -198,7 +197,6 @@ class APIPath(BaseAPIPath):
 
             if not media_ids:
                 media_ids = None
-
 
             kwargs, skip_params = self.sanitize_params(method,
                                                        media_ids=media_ids,
@@ -340,7 +338,7 @@ class BasePeonyClient:
 
             # values is either a tuple or a list and padding is an
             # instance of the same class as values
-            padding = values.__class__(None for i in range(padding_size))
+            padding = values.__class__([None] * padding_size)
             values += padding
 
         kwargs = {key: value or default
@@ -391,12 +389,8 @@ class BasePeonyClient:
 
         media_id = response['media_id']
 
-        def media_chunks(media, chunk_size, media_size):
-            while media.tell() < media_size:
-                yield media.read(chunk_size)
-
-        MB = 2**20
-        chunks = media_chunks(media, MB, media_size)
+        mb = 2**20
+        chunks = utils.media_chunks(media, mb, media_size)
 
         for i, chunk in enumerate(chunks):
             await self.upload.media.upload.post(command="APPEND",
@@ -433,21 +427,21 @@ class BasePeonyClient:
         return response
 
     async def upload_media(self, media,
-                            auto_convert=True,
-                            formats=general.formats,
-                            max_sizes=None,
-                            chunked=False,
-                            **params):
+                           auto_convert=True,
+                           formats=general.formats,
+                           max_size=None,
+                           chunked=False,
+                           **params):
         # try to get the path no matter how the input is
         path = urlparse(media).path.strip(" \"'")
 
         with open(path, 'rb') as original:
             media_type, media_category = utils.get_type(original)
-            isimage = not (media_type.endswith('gif')
+            is_image = not (media_type.endswith('gif')
                            or media_type.startswith('video'))
 
-        if isimage:
-            if not max_sizes:
+        if is_image:
+            if not max_size:
                 large_sizes = self.twitter_configuration.photo_sizes.large
                 max_size = large_sizes['h'], large_sizes['w']
 

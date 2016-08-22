@@ -12,17 +12,17 @@ class PeonyException(Exception):
                 if data['errors']:
                     return data['errors'][0]
 
-    def __init__(self, *args, response=None, data=None, message=None):
+    def __init__(self, response=None, data=None, message=None):
         """
             Add the response and data attributes
 
         Extract message from the error if not explicitly given
         """
         if not message:
-            error = self.get_error(data)
-            if error is not None:
-                if 'message' in error:
-                    message = error['message']
+            err = self.get_error(data)
+            if err is not None:
+                if 'message' in err:
+                    message = err['message']
 
             message = message or str(response)
 
@@ -66,17 +66,18 @@ class PeonyBaseException(PeonyException):
         super().__init__(*args, response=response, **kwargs)
 
 
+def convert_int_keys(func):
+    def decorated(self, key, *args, **kwargs):
+        if isinstance(key, int):  # convert int keys to str
+            key = str(key)
+
+        return func(self, key, *args, **kwargs)
+
+    return decorated
+
+
 class ErrorDict(dict):
     """ A dict to easily add exception associated to a code """
-
-    def convert_int_keys(func):
-        def decorated(self, key, *args, **kwargs):
-            if isinstance(key, int):  # convert int keys to str
-                key = str(key)
-
-            return func(self, key, *args, **kwargs)
-
-        return decorated
 
     @convert_int_keys
     def __getitem__(self, key):

@@ -51,6 +51,26 @@ def event_handler(*args, prefix=None, **values):
     return decorator
 
 
+def _test(data, keys, values):
+    if any(key not in data for key in keys):
+        return False
+
+    for key, value in values.items():
+        if isinstance(data[key], dict):
+            if isinstance(value, dict):
+                value = value.items()
+            elif not isinstance(value, (list, tuple, set)):
+                value = (value,)
+
+            if _test(data[key], *unpack(value)) is False:
+                return False
+        else:
+            if data[key] != value:
+                return False
+
+    return True
+
+
 class EventStream:
 
     def __init__(self, client):
@@ -82,26 +102,6 @@ class EventStream:
         else:
             return False
 
-    @staticmethod
-    def _test(data, keys, values):
-        if any(key not in data for key in keys):
-            return False
-
-        for key, value in values.items():
-            if isinstance(data[key], dict):
-                if isinstance(value, dict):
-                    value = value.items()
-                elif not isinstance(value, (list, tuple, set)):
-                    value = (value,)
-
-                if self._test(data[key], *unpack(value)) is False:
-                    return False
-            else:
-                if data[key] != val:
-                    return False
-
-        return True
-
     def _get(self, data):
         try:
             functions = [getattr(self, func)
@@ -109,7 +109,7 @@ class EventStream:
 
             for event_handler in functions:
                 keys, values = event_handler.keys, event_handler.values
-                if self._test(data, keys, values):
+                if _test(data, keys, values):
                     return event_handler
 
         except Exception as e:

@@ -11,7 +11,5 @@ rate_limit_notices = [
     b"Easy there, Turbo. Too many requests recently. Enhance your calm."
 ]
 
-formats = [
-    dict(format='PNG'),
-    dict(format='JPEG', quality=90, optimize=True)
-]
+formats = [dict(format='PNG'),
+           dict(format='JPEG', quality=90, optimize=True)]

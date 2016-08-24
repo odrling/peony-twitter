@@ -19,6 +19,7 @@ class StreamResponse:
                  session=None,
                  reconnect=150,
                  loads=utils.loads,
+                 timeout=90,
                  **kwargs):
         """ keep the arguments as instance attributes """
         self.session = session or aiohttp.ClientSession()
@@ -47,7 +48,8 @@ class StreamResponse:
         line = b''
         try:
             while not line:
-                line = await self.response.content.__aiter__().__anext__()
+                coro = self.response.content.__aiter__().__anext__()
+                line = await asyncio.wait_for(coro, 90)
                 line = line.rstrip(b'\r\n')
 
             if line in rate_limit_notices:
@@ -66,6 +68,10 @@ class StreamResponse:
         except json.decoder.JSONDecodeError as error:
             print("Decode error:", line)
             return await self.restartStream(error=error)
+
+        except asyncio.TimeoutError:
+            print("Timeout reached")
+            return await self.restartStream(error=error, reconnect=0)
 
         except GeneratorExit:
             await self.response.release()
@@ -87,11 +93,15 @@ class StreamResponse:
         if error:
             print(error)
 
+        reconnect = reconnect or self.reconnect
+
         await self.response.release()
 
-        if reconnect or self.reconnect:
-            print("restarting stream in %ss" % (reconnect or self.reconnect))
-            await asyncio.sleep(reconnect or self.reconnect)
+        if reconnect is not None:
+            if reconnect > 0:
+                print("restarting stream in %ss" % reconnect)
+                await asyncio.sleep(reconnect)
+
             print("restarting stream")
             await self.__aiter__()
             return await self.__anext__()

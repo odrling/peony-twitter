@@ -147,12 +147,25 @@ class EventStream:
 
 class EventStreams(list):
 
-    @property
-    def tasks(self):
+    def __init__(self):
+        super().__init__()
+        self.is_setup = False
+
+    def check_setup(func):
+        def decorated(self, client):
+            if not self.is_setup:
+                self.setup(client)
+
+            return func(self)
+
+        return decorated
+
+    @check_setup
+    def get_tasks(self):
         return [stream._start() for stream in self]
 
-    @property
-    def task(self):
+    @check_setup
+    def get_task(self):
         if len(self) == 1:
             return self[0]._start()
         elif self:
@@ -163,3 +176,5 @@ class EventStreams(list):
     def setup(self, client):
         for i in range(len(self)):
             self[i] = self[i](client=client)
+
+        self.is_setup = True

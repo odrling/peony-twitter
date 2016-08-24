@@ -12,7 +12,7 @@ class Events(dict):
 
     def alias(self, *keys):
         def decorator(func):
-            value = hasattr(func, '__call__') and self.get_value(func) or func
+            value = callable(func) and self.get_value(func) or func
             self(func, value)
 
             for key in keys:

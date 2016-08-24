@@ -160,7 +160,7 @@ class BaseAPIPath:
         pass
 
     def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__, self._url())
+        return "<%s %s>" % (self.__class__.__name__, self.url())
 
 
 class APIPath(BaseAPIPath):
@@ -299,8 +299,16 @@ class BasePeonyClient:
 
         self.loop = loop or asyncio.get_event_loop()
 
+        tasks = [self._get_twitter_configuration(),
+                 self._get_user()]
+        self.loop.run_until_complete(asyncio.wait(tasks))
+
+    async def _get_twitter_configuration(self):
         coro = self.api.help.configuration.get()
-        self.twitter_configuration = self.loop.run_until_complete(coro)
+        self.twitter_configuration = await coro
+
+    async def _get_user(self):
+        self.user = await self.api.account.verify_credentials.get()
 
     def __getitem__(self, values):
         """
@@ -442,7 +450,8 @@ class BasePeonyClient:
 
         if is_image:
             if not max_size:
-                large_sizes = self.twitter_configuration.photo_sizes.large
+                photo_sizes = self.twitter_configuration['photo_sizes']
+                large_sizes = photo_sizes['large']
                 max_size = large_sizes['h'], large_sizes['w']
 
             media = utils.optimize_media(path, max_size, formats)
@@ -545,22 +554,12 @@ class PeonyClient(BasePeonyClient):
     >>> loop.run_until_complete(asyncio.wait(client.tasks))
     """
 
-    def __init__(self, *args, **kwargs):
-        """ Setup streams and create tasks attribute """
-        super().__init__(*args, **kwargs)
-
-        if isinstance(self.streams, EventStreams):
-            self.streams.setup(client=self)
-
-        self.tasks = self.get_tasks()
-
     @classmethod
     def event_stream(cls, event_stream):
         """ Decorator to attach an event stream to the class """
-        if not hasattr(cls, "streams"):
-            cls.streams = EventStreams()
+        cls._streams = getattr(cls, '_streams', EventStreams())
 
-        cls.streams.append(event_stream)
+        cls._streams.append(event_stream)
         return event_stream
 
     def get_tasks(self):
@@ -573,8 +572,8 @@ class PeonyClient(BasePeonyClient):
         funcs = [getattr(self, key) for key in dir(self)]
         tasks = [func(self) for func in funcs if isinstance(func, task)]
 
-        if isinstance(self.streams, EventStreams):
-            tasks.extend(self.streams.tasks)
+        if isinstance(self._streams, EventStreams):
+            tasks.extend(self._streams.get_tasks(self))
 
         return tasks
 

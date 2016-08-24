@@ -328,6 +328,79 @@ if __name__ == '__main__':
     main()
 ```
 
+<h2 id="event_handler">Event handler</h2>
+
+Let's say that your awesome bot has become very popular, and so you'd like to
+add some new features to it that would make use of the Streaming API. You could
+use the `task` decorator but there is a better way to do it.  
+
+*keeping the code from above*
+```python
+
+from peony import EventStream, event_handler, events
+
+# adding permissions dirtily, you should probably try to load them in
+# AwesomePeonyClient.__init__ instead
+AwesomePeonyClient.permissions = {
+    "admin": [42]
+}
+
+@AwesomePeonyClient.event_stream
+class AwesomeUserStream(EventStream):
+
+    @property
+    def stream_request(self):
+        # stream_request must return the request used to access the stream
+        return self.userstream.user.get()
+
+    @event_handler(*events.on_connect)
+    def awesome_connection(self, data):
+        print("Connected to stream!")
+
+    @event_handler(*events.on_follow)
+    def awesome_follow(self, data, *args):
+        print("You have a new awesome follower @%s" % data.source.screen_name)
+
+    # when adding a prefix argument to an event handler it adds a
+    # command attribute to the function that you can use as a decorator
+    # to create commands
+    # it also adds a command argument to the event_handler
+    @event_handler(*events.on_dm, prefix='/')
+    async def awesome_dm_received(self, data, command):
+        # Important: command.run is a coroutine
+        msg = await command.run(self, data=data.direct_message)
+
+        if msg:
+            await self.api.direct_messages.new.post(
+                user_id=data.direct_message.sender.id,
+                text=msg
+            )
+
+    # Here a command is called when the dm contains:
+    # "{prefix}{command_name}"
+    # So this command is called when an user sends a dm which
+    # contains "/awesome_reply"
+    @on_awesome_dm_received.command
+    def awesome_reply(self, data):
+        return "I can send awesome dms too!"
+
+    # user must have op permission to use this command
+    @on_awesome_dm_received.command.restricted('op')
+    async def awesome_tweet(self, data):
+        awesome_status = " ".join(word for word in data.text.split()
+                                  if word != "/awesome_tweet")
+        await self.api.statuses.update.post(status=awesome_status)
+
+        return "sent " + awesome_status
+
+    # user must have admin or op permission to use this command
+    @on_awesome_dm_received.command.restricted('admin', 'op')
+    async def awesome_smiley(self, data):
+        return "( ﾟ▽ﾟ)/awesome"
+
+```
+
+
 <h1 id='adv_usage'>Advanced Usage</h1>
 
 <h2 id='adv_api'>Accessing an API using a different api version</h2>
@@ -337,6 +410,7 @@ There actually two ways:
 * provide the api version with the subdomain of the api when creating the path to the ressource
 
 ### Create a client with a custom api version
+
 ```python
 # creds being a dict with your api_keys
 # notice the use of the `suffix` argument to change the default

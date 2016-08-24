@@ -29,6 +29,12 @@ class EventHandler(Task):
         if prefix is not None:
             self.command = Commands(prefix=prefix)
 
+    def __call__(self, *args, **kwargs):
+        if hasattr(self, "command"):
+            return super().__call__(*args, self.command, **kwargs)
+        else:
+            return super().__call__(*args, **kwargs)
+
     def __repr__(self):
         return "<{clsname}: keys:{keys} prefix:{prefix}>".format(
             clsname=self.__class__.__name__,
@@ -85,10 +91,16 @@ class EventStream:
     @property
     def stream_request(self):
         clsname = self.__class__.__name__
-        raise RuntimeError("You must overload stream property in " + clsname)
+        raise RuntimeError("You must overload stream_request property in "
+                           + clsname)
 
     async def _start(self):
-        async with self.stream_request as ressource:
+        if callable(self.stream_request):
+            stream_request = self.stream_request()
+        else:
+            stream_request = self.stream_request
+
+        async with stream_request as ressource:
             async for data in ressource:
                 try:
                     await self._run(data)

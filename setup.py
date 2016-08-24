@@ -12,30 +12,28 @@ def get_metadata(metadatafile):
     with open(metadatafile) as stream:
         text = stream.read()
 
-        ex = "__(.*?)__ *?= *?[\"\'](.*?)[\"\']"
+        ex = "__(\w*?)__ *?= *?[\"\']([^\"\']*)"
         items = re.findall(ex, text)
         metadata = {key: value for key, value in items}
 
         metadata['keywords'] = metadata.get('keywords', '').split(', ')
 
-        ex = '"""[ \n]*(?P<name>.*)[ \n](?P<description>.*)'
+        ex = '"{3}[ \n]*(?P<name>.*)[ \t\n]+(?P<description>.*)'
         metadata.update(re.search(ex, text).groupdict())
 
     return metadata
 
 
-def get_requirements(requirementsfile, key=""):
+def get_requirements(requirementsfile):
     with open(requirementsfile) as stream:
-        prog = re.compile("(?:# (?P<key>\S+)|(?P<value>\S+))")
-        requires = {}
+        prog = re.compile("# (\S+)\n([^#]*)")
 
-        for match in (i.groupdict() for i in prog.finditer(stream.read())):
-            if match['key'] is not None:
-                key = match['key']
-                if key not in requires:
-                    requires[key] = []
-            elif match['value'] is not None and key:
-                requires[key].append(match['value'])
+        lines = (line.strip(" \n\t") for line in stream)
+        text = '\n'.join(line for line in lines if line)
+
+        matches = prog.findall(text)
+        requires = {key: value.splitlines()
+                    for key, value in matches}
 
     return requires
 

@@ -3,6 +3,7 @@
 import json
 import os
 import io
+from urllib.parse import urlparse
 
 try:
     from magic import Magic
@@ -144,6 +145,35 @@ def reset_io(func):
         return result
 
     return decorated
+
+
+@reset_io
+def get_media_metadata(f):
+    media_type, media_category = get_type(f)
+    is_image = not (media_type.endswith('gif')
+                   or media_type.startswith('video'))
+
+    return media_type, media_category, is_image
+
+
+def get_image_metadata(f):
+    # try to get the path no matter how the input is
+    if isinstance(f, str):
+        path = urlparse(f).path.strip(" \"'")
+
+        with open(path, 'rb') as original:
+            return (*get_media_metadata(original), path)
+
+    elif hasattr(f, 'read'):
+        if hasattr(f, 'name'):
+            path = urlparse(f.name).path.strip(" \"'")
+        else:
+            path = None
+
+        return (*get_media_metadata(original), path)
+    else:
+        raise TypeError("upload_media input must be a file object or a"
+                        "filename")
 
 
 @reset_io

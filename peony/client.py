@@ -2,7 +2,6 @@
 
 import asyncio
 from types import GeneratorType
-from urllib.parse import urlparse
 
 import aiohttp
 
@@ -299,9 +298,10 @@ class BasePeonyClient:
 
         self.loop = loop or asyncio.get_event_loop()
 
-        tasks = [self._get_twitter_configuration(),
-                 self._get_user()]
-        self.loop.run_until_complete(asyncio.wait(tasks))
+        self.loop.run_until_complete(asyncio.wait(self.init_tasks()))
+
+    def init_tasks(self):
+        return [self._get_twitter_configuration(), self._get_user()]
 
     async def _get_twitter_configuration(self):
         coro = self.api.help.configuration.get()
@@ -434,19 +434,14 @@ class BasePeonyClient:
 
         return response
 
-    async def upload_media(self, media,
+    async def upload_media(self, f,
                            auto_convert=True,
                            formats=general.formats,
                            max_size=None,
                            chunked=False,
                            **params):
-        # try to get the path no matter how the input is
-        path = urlparse(media).path.strip(" \"'")
-
-        with open(path, 'rb') as original:
-            media_type, media_category = utils.get_type(original)
-            is_image = not (media_type.endswith('gif')
-                           or media_type.startswith('video'))
+        image_metadata = utils.get_image_metadata(f)
+        media_type, media_category, is_image, path = image_metadata
 
         if is_image:
             if not max_size:

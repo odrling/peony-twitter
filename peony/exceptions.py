@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import time
 
 
 class PeonyException(Exception):
@@ -121,7 +122,14 @@ class MigrateToNewAPI(PeonyException):
 
 @error.code(88)
 class RateLimitExceeded(PeonyException):
-    pass
+
+    @property
+    def reset(self):
+        return int(self.response.headers['X-Rate-Limit-Reset'])
+
+    @property
+    def reset_in(self):
+        return self.reset - time.time()
 
 
 @error.code(92)

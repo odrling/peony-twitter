@@ -170,7 +170,7 @@ def get_image_metadata(f):
         else:
             path = None
 
-        return (*get_media_metadata(original), path)
+        return (*get_media_metadata(f), path)
     else:
         raise TypeError("upload_media input must be a file object or a"
                         "filename")

@@ -28,6 +28,7 @@ class StreamResponse:
         self.args = args
         self.kwargs = kwargs
         self.loads = loads
+        self.timeout = timeout
 
     async def __aiter__(self):
         """ create the connection """
@@ -40,8 +41,9 @@ class StreamResponse:
             try:
                 raise await utils.throw(self.response)
             except PeonyException as e:
+                print(e)
                 if self.reconnect:
-                    await self.restartStream(error=e)
+                    await self.restart_stream(error=e)
 
     async def __anext__(self):
         """ decode each line using json """
@@ -49,7 +51,7 @@ class StreamResponse:
         try:
             while not line:
                 coro = self.response.content.__aiter__().__anext__()
-                line = await asyncio.wait_for(coro, 90)
+                line = await asyncio.wait_for(coro, self.timeout)
                 line = line.rstrip(b'\r\n')
 
             if line in rate_limit_notices:
@@ -59,43 +61,46 @@ class StreamResponse:
 
         except StreamLimit as error:
             print("Error:", line)
-            return await self.restartStream(error=error)
+            return await self.restart_stream(error=error)
 
         except StopAsyncIteration as error:
             print("Stream stopped")
-            return await self.restartStream(error=error)
+            return await self.restart_stream(error=error)
 
         except json.decoder.JSONDecodeError as error:
             print("Decode error:", line)
-            return await self.restartStream(error=error)
+            return await self.restart_stream(error=error)
 
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as error:
             print("Timeout reached")
-            return await self.restartStream(error=error, reconnect=0)
+            return await self.restart_stream(reconnect=0, error=error)
 
         except GeneratorExit:
-            await self.response.release()
+            self.response.close()
             self.session.close()
 
         except KeyboardInterrupt:
-            await self.response.release()
+            self.response.close()
             self.session.close()
 
         except Exception as e:
             str(e) and print(e)
-            await self.response.release()
+            self.response.close()
             self.session.close()
             raise
 
-    async def restartStream(self, reconnect=None, error=None):
+    async def restart_stream(self, reconnect=None, error=None):
         """ restart the stream on error """
 
-        if error:
+        if error is not None:
             print(error)
 
-        reconnect = reconnect or self.reconnect
+        reconnect = reconnect is None and self.reconnect or reconnect
 
-        await self.response.release()
+        try:
+            self.response.close()
+        except Exception as e:
+            print(e)
 
         if reconnect is not None:
             if reconnect > 0:
@@ -124,10 +129,9 @@ class StreamContext:
         return self.stream
 
     async def __aexit__(self, *args, **kwargs):
-        """ release the response and close the session """
-
+        """ close the response and the session """
         if hasattr(self.stream, "response"):
-            await self.stream.response.release()
+            self.stream.response.close()
         if hasattr(self.stream, "session"):
             self.stream.session.close()
 

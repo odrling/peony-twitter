@@ -4,6 +4,7 @@
 import os
 import sys
 import re
+import inspect
 
 from setuptools import setup, find_packages
 
@@ -42,14 +43,13 @@ def main():
     if sys.version_info < (3, 5):
         raise RuntimeError("Peony requires Python 3.5+")
 
-    # calling this file from another directory should work as expected
-    os.chdir(os.path.dirname(__file__))
+    dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
 
     # get metadata and keywords from peony/__init__.py
-    metadata = get_metadata(os.path.join('peony', '__init__.py'))
+    metadata = get_metadata(os.path.join(dirname, 'peony', '__init__.py'))
 
     # get requirements from requirements.txt
-    requires = get_requirements('requirements.txt')
+    requires = get_requirements(os.path.join(dirname, 'requirements.txt'))
 
     # get long description from README.md
     with open('README.md') as stream:

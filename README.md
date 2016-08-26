@@ -18,6 +18,7 @@ Summary
     * [Since_id iterator](#since_id_iterator)
   * [Tasks](#tasks)
     * [The `task` decorator](#task)
+  * [Event handlers](#event_handlers)
 * [Advanced Usage](#adv_usage)
 
 <h2 id='install'>Installation</h2>
@@ -328,7 +329,7 @@ if __name__ == '__main__':
     main()
 ```
 
-<h2 id="event_handler">Event handler</h2>
+<h2 id="event_handlers">Event handlers</h2>
 
 Let's say that your awesome bot has become very popular, and so you'd like to
 add some new features to it that would make use of the Streaming API. You could

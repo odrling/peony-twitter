@@ -508,8 +508,6 @@ class BasePeonyClient:
                         request=req_kwargs
                     )
                 else:  # throw exceptions if status is not 2xx
-                    from pprint import pprint
-                    pprint(req_kwargs['headers'])
                     raise await utils.throw(response)
 
     def stream_request(self, method, url, headers={}, *args, **kwargs):

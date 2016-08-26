@@ -1,33 +1,58 @@
 # -*- coding: utf-8 -*-
+import asyncio
+
+from .exceptions import RateLimitExceeded
 
 
-class IdIterator:
+class BaseIterator:
+
+    def __init__(self, _request, *args, handle_ratelimits=True, **kwargs):
+        self.request = _request
+        self.handle_ratelimits = handle_ratelimits
+        self.args = args
+        self.kwargs = kwargs
+
+    def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        pass
+
+    async def sleep(self, reset_in):
+        print("sleeping for %ds" % reset_in)
+        await asyncio.sleep(reset_in)
+
+
+class IdIterator(BaseIterator):
     """
         Iterate using ids
 
     It is the parent class of MaxIdIterator and SinceIdIterator
     """
 
-    def __init__(self, _request, _parameter, _i, _force=False,
-                 **kwargs):
+    def __init__(self, _request, _parameter, _i, _force=False, **kwargs):
         """ Keep all the arguments as class attributes """
-        self.request = _request
-        self.kwargs = kwargs
         self.param = _parameter
         self.force = _force
         self.i = _i
-
-    def __aiter__(self):
-        return self
+        super().__init__(_request, **kwargs)
 
     async def __anext__(self):
         """ return each response until getting an empty response """
-        response = await self.request(**self.kwargs)
+        try:
+            response = await self.request(**self.kwargs)
 
-        if response:
-            response = await self.call_on_response(response)
-        elif not self.force:
-            raise StopAsyncIteration
+            if response:
+                response = await self.call_on_response(response)
+            elif not self.force:
+                raise StopAsyncIteration
+        except RateLimitExceeded as e:
+            if self.handle_ratelimits:
+                print(e)
+                await self.sleep(e.reset_in)
+                response = await self.__anext__()
+            else:
+                raise
 
         return response
 
@@ -44,12 +69,12 @@ class MaxIdIterator(IdIterator):
         Iterator for endpoints using max_id
     """
 
-    def __init__(self, _request, _force=False, **kwargs):
+    def __init__(self, _request, **kwargs):
         """ Keep all the arguments as class attributes """
         super().__init__(_request,
                          _parameter="max_id",
                          _i=-1,
-                         _force=_force,
+                         _force=False,
                          **kwargs)
 
 
@@ -104,27 +129,23 @@ class SinceIdIterator(IdIterator):
         return response[:-1]
 
 
-class CursorIterator:
+class CursorIterator(BaseIterator):
     """ Iterate using a cursor """
-
-    def __init__(self, _request, *args, **kwargs):
-        """
-            Keep the arguments as class attributes and initialize
-            the cursor
-        """
-        self.request = _request
-        self.args = args
-        self.kwargs = kwargs
-
-    def __aiter__(self):
-        return self
 
     async def __anext__(self):
         """ return each response until getting 0 as next cursor """
         if self.kwargs.get('cursor', -1) != 0:
-            response = await self.request(*self.args, **self.kwargs)
+            try:
+                response = await self.request(*self.args, **self.kwargs)
 
-            self.kwargs['cursor'] = response['next_cursor']
+                self.kwargs['cursor'] = response['next_cursor']
+            except RateLimitExceeded as e:
+                if self.handle_ratelimits:
+                    print(e)
+                    await self.sleep(e.reset_in)
+                    response = await self.__anext__()
+                else:
+                    raise
 
             return response
         else:

@@ -27,16 +27,13 @@ async def get_home(since_id=None, **params):
                                                        text=text))
             print("-"*10)
 
-        await asyncio.sleep(180)
+        await asyncio.sleep(0)
 
     return sorted(home, key=lambda tweet: tweet.id)
 
 def main():
     loop = asyncio.get_event_loop()
-    home_timeline = loop.run_until_complete(get_home())
-
-    for tweet in home_timeline[-10:]:
-        print(tweet.text)
+    loop.run_until_complete(get_home())
 
 if __name__ == '__main__':
     main()

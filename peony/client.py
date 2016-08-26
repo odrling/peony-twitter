@@ -56,7 +56,7 @@ class BaseAPIPath:
 
         self._suffix = suffix
         self._path = [base_url]
-        self.client = client
+        self._client = client
 
     def url(self, suffix=None):
         """
@@ -183,7 +183,7 @@ class APIPath(BaseAPIPath):
             media_ids = []
 
             for media in _medias:
-                media_response = await self.client.upload_media(
+                media_response = await self._client.upload_media(
                     media,
                     auto_convert=_auto_convert,
                     formats=_formats,
@@ -203,12 +203,15 @@ class APIPath(BaseAPIPath):
 
             skip_params = _skip_params is None and skip_params or _skip_params
 
-            return await self.client.request(method,
-                                             url=self.url(_suffix),
-                                             skip_params=skip_params,
-                                             **kwargs)
+            return await self._client.request(method,
+                                              url=self.url(_suffix),
+                                              skip_params=skip_params,
+                                              **kwargs)
 
-        return request
+        if self._client.error_handler:
+            return self._client.error_handler(request)
+        else:
+            return request
 
 
 class StreamingAPIPath(BaseAPIPath):
@@ -219,7 +222,7 @@ class StreamingAPIPath(BaseAPIPath):
         def request(_suffix=".json", **kwargs):
             kwargs, skip_params = self.sanitize_params(method, **kwargs)
 
-            return self.client.stream_request(method,
+            return self._client.stream_request(method,
                                               url=self.url(_suffix),
                                               skip_params=skip_params,
                                               **kwargs)
@@ -248,6 +251,7 @@ class BasePeonyClient:
                  auth=OAuth1Headers,
                  loads=utils.loads,
                  loop=None,
+                 error_handler=utils.requestdecorator,
                  **kwargs):
         """
             Set main attributes
@@ -295,6 +299,7 @@ class BasePeonyClient:
         self._suffix = suffix
 
         self._loads = loads
+        self.error_handler = error_handler
 
         self.loop = loop or asyncio.get_event_loop()
 

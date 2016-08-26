@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 import json
 import os
 import io
 from urllib.parse import urlparse
+
+from .exceptions import RateLimitExceeded
 
 try:
     from magic import Magic
@@ -80,6 +83,25 @@ class PeonyResponse:
 
     def __len__(self):
         return len(self.response)
+
+
+def requestdecorator(func):
+    if getattr(func, 'is_handled', False):
+        return func
+
+    async def decorated_request(**kwargs):
+        while True:
+            try:
+                return await func(**kwargs)
+            except RateLimitExceeded as e:
+                print(e)
+                print("sleeping for %ds" % e.reset_in)
+                await asyncio.sleep(e.reset_in)
+            else:
+                raise
+
+    decorated_request.is_handled = True
+    return decorated_request
 
 
 def loads(json_data, encoding="utf-8"):

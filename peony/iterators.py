@@ -1,15 +1,16 @@
 # -*- coding: utf-8 -*-
 import asyncio
 
-from .exceptions import RateLimitExceeded
+from . import utils
 
 
 class BaseIterator:
 
-    def __init__(self, _request, *args, handle_ratelimits=True, **kwargs):
-        self.request = _request
-        self.handle_ratelimits = handle_ratelimits
-        self.args = args
+    def __init__(self, _request, handle_ratelimits=True, **kwargs):
+        if handle_ratelimits:
+            self.request = utils.requestdecorator(_request)
+        else:
+            self.request = _request
         self.kwargs = kwargs
 
     def __aiter__(self):
@@ -17,10 +18,6 @@ class BaseIterator:
 
     async def __anext__(self):
         pass
-
-    async def sleep(self, reset_in):
-        print("sleeping for %ds" % reset_in)
-        await asyncio.sleep(reset_in)
 
 
 class IdIterator(BaseIterator):
@@ -39,20 +36,12 @@ class IdIterator(BaseIterator):
 
     async def __anext__(self):
         """ return each response until getting an empty response """
-        try:
-            response = await self.request(**self.kwargs)
+        response = await self.request(**self.kwargs)
 
-            if response:
-                response = await self.call_on_response(response)
-            elif not self.force:
-                raise StopAsyncIteration
-        except RateLimitExceeded as e:
-            if self.handle_ratelimits:
-                print(e)
-                await self.sleep(e.reset_in)
-                response = await self.__anext__()
-            else:
-                raise
+        if response:
+            response = await self.call_on_response(response)
+        elif not self.force:
+            raise StopAsyncIteration
 
         return response
 
@@ -135,18 +124,8 @@ class CursorIterator(BaseIterator):
     async def __anext__(self):
         """ return each response until getting 0 as next cursor """
         if self.kwargs.get('cursor', -1) != 0:
-            try:
-                response = await self.request(*self.args, **self.kwargs)
-
-                self.kwargs['cursor'] = response['next_cursor']
-            except RateLimitExceeded as e:
-                if self.handle_ratelimits:
-                    print(e)
-                    await self.sleep(e.reset_in)
-                    response = await self.__anext__()
-                else:
-                    raise
-
+            response = await self.request(**self.kwargs)
+            self.kwargs['cursor'] = response['next_cursor']
             return response
         else:
             raise StopAsyncIteration

@@ -25,11 +25,12 @@ async def get_home(since_id=None, **params):
             text = html.unescape(tweet.text)
             print("@{user.screen_name}: {text}".format(user=tweet.user,
                                                        text=text))
-            print("-"*10)
+            print("-" * 10)
 
         await asyncio.sleep(0)
 
     return sorted(home, key=lambda tweet: tweet.id)
+
 
 def main():
     loop = asyncio.get_event_loop()

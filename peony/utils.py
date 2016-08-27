@@ -173,7 +173,7 @@ def reset_io(func):
 def get_media_metadata(f):
     media_type, media_category = get_type(f)
     is_image = not (media_type.endswith('gif')
-                   or media_type.startswith('video'))
+                    or media_type.startswith('video'))
 
     return media_type, media_category, is_image
 

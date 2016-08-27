@@ -100,7 +100,7 @@ class SinceIdIterator(IdIterator):
             if self.fill_gaps:
                 responses = with_max_id(
                     _request=self.request,
-                    max_id=response[-1]['id']-1,
+                    max_id=response[-1]['id'] - 1,
                     **self.kwargs
                 )
 

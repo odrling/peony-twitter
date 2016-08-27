@@ -223,9 +223,9 @@ class StreamingAPIPath(BaseAPIPath):
             kwargs, skip_params = self.sanitize_params(method, **kwargs)
 
             return self._client.stream_request(method,
-                                              url=self.url(_suffix),
-                                              skip_params=skip_params,
-                                              **kwargs)
+                                               url=self.url(_suffix),
+                                               skip_params=skip_params,
+                                               **kwargs)
 
         return request
 
@@ -303,17 +303,22 @@ class BasePeonyClient:
 
         self.loop = loop or asyncio.get_event_loop()
 
-        self.loop.run_until_complete(asyncio.wait(self.init_tasks()))
+        init_tasks = self.init_tasks
+        if callable(init_tasks):
+            init_tasks = init_tasks()
+
+        self.loop.run_until_complete(asyncio.wait(init_tasks))
 
     def init_tasks(self):
-        return [self._get_twitter_configuration(), self._get_user()]
+        return [self.__get_twitter_configuration(), self.__get_user()]
 
-    async def _get_twitter_configuration(self):
-        coro = self.api.help.configuration.get()
-        self.twitter_configuration = await coro
+    async def __get_twitter_configuration(self):
+        api = self['api', general.twitter_api_version, ".json"]
+        self.twitter_configuration = await api.help.configuration.get()
 
-    async def _get_user(self):
-        self.user = await self.api.account.verify_credentials.get()
+    async def __get_user(self):
+        api = self['api', general.twitter_api_version, ".json"]
+        self.user = await api.account.verify_credentials.get()
 
     def __getitem__(self, values):
         """
@@ -448,7 +453,7 @@ class BasePeonyClient:
         image_metadata = utils.get_image_metadata(f)
         media_type, media_category, is_image, path = image_metadata
 
-        if is_image:
+        if is_image and auto_convert:
             if not max_size:
                 photo_sizes = self.twitter_configuration['photo_sizes']
                 large_sizes = photo_sizes['large']

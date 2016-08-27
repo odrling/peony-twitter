@@ -6,32 +6,36 @@ An asynchronous API client for Python
 Summary
 ===
 
-* [Installation](#install)
-* [Getting Started](#getstarted)
+* [Installation](#installation)
+* [Getting Started](#getting-started)
 * [Usage](#usage)
-  * [How to access the response data](#access)
-    * [From a REST API](#rest_access)
-    * [From a Streaming API](#stream_access)
+  * [Authorizing your client](#authorizing-your-client)
+  * [How to access the response data](#how-to-access-the-response-data)
+    * [From a REST API endpoint](#from-a-rest-api-endpoint)
+    * [From a Streaming API endpoint](#from-a-streaming-api-endpoint)
+  * [Upload medias](#upload-medias)
   * [Iterators](#iterators)
-    * [Cursor iterator](#cursor_iterator)
-    * [Max_id iterator](#max_id_iterator)
-    * [Since_id iterator](#since_id_iterator)
+    * [Cursor iterators](#cursor-iterators)
+    * [Max_id iterators](#max-id-iterators)
+    * [Since_id iterators](#since-id-iterators)
   * [Tasks](#tasks)
-    * [The `task` decorator](#task)
-  * [Event handlers](#event_handlers)
-* [Advanced Usage](#adv_usage)
+    * [The `task` decorator](#the-task-decorator)
+  * [Event handlers](#event-handlers)
+* [Advanced Usage](#advanced-usage)
+  * [Accessing an API using a different api version](#accessing-an-api-using-a-different-api-version)
 
-<h2 id='install'>Installation</h2>
+# Installation
 
 To install this module simply run:  
 
     pip install peony-twitter
 
-<h1 id='getstarted'>Getting started</h1>
+# Getting started
 
 You can easily create a client using the class `PeonyClient`.
 Make sure to get your api keys and access tokens from
-[Twitter's application management page][apps]
+[Twitter's application management page][apps] and/or to
+[authorize your application for your account](#authorizing-your-client)
 
 *Note: the package name is peony and not peony-twitter*
 
@@ -61,7 +65,7 @@ loop.run_until_complete(req)
 [apps]: <https://apps.twitter.com>
 
 
-<h1 id='usage'>Usage</h1>
+# Usage
 
 You can easily access any Twitter API endpoint
 
@@ -93,9 +97,25 @@ async def path():
 see [Accessing an API using a different api version](#adv_api) to access APIs
 that do not use the version '1.1'
 
-<h2 id='response_access'>How to access the response data</h2>
+*Note*: Arguments with a leading underscore are arguments that are used to
+change the behavior of peony for the request (e.g. `_headers` to add some
+additional headers to the request).  
+Arguments without a leading underscore are parameters for the request you send.
 
-<h3 id='rest_access'>From a REST API</h3>
+## Authorizing your client
+
+You can use `peony.oauth_dance` to authorize your client
+
+```python
+>>> from peony.oauth_dance import oauth_dance
+>>> tokens = oauth_dance(consumer_key, consumer_secret)
+```
+
+This should open a browser to get a pin to authorize your application.
+
+## How to access the response data
+
+### From a REST API endpoint
 
 A call to a REST API endpoint should return a PeonyResponse object.
 
@@ -121,7 +141,7 @@ async def home():
 ```
 
 
-<h3 id='stream_access'>From a Streaming API</h3>
+### From a Streaming API endpoint
 
 A call to a Streaming API endpoint should return a StreamContext object, that
 yields a StreamResponse object.
@@ -130,7 +150,7 @@ yields a StreamResponse object.
 async def track():
     ctx = client.stream.statuses.filter.post(track="uwu")
 
-    # this is an asynchronous context (StreamContext)
+    # ctx is an asynchronous context (StreamContext)
     async with ctx as stream:
         # stream is an asynchronous iterator (StreamResponse)
         async for tweet in stream:
@@ -144,14 +164,54 @@ async def track():
                                                       text=tweet.text))
 ```
 
-<h2 id='iterators'>Iterators</h2>
+## Upload medias
+
+You can easily upload a media with peony.
+
+```python
+import asyncio
+from peony import PeonyClient
+
+# creds being a dictionnary containing your api keys
+client = PeonyClient(**creds)
+
+async def upload_media(picture="picture.jpg"):
+    client.api.statuses.update.post(status="Wow! Look at this picture!",
+                                    _media=picture)
+
+loop = asyncio.get_event_loop()
+loop.run_until_complete(upload_media="picture.jpg")
+```
+
+You could also use PeonyClient.upload_media to upload a media without tweeting.
+This should be useful if you want to schedule a tweet that sends a picture.
+
+```python
+import time
+
+async def upload_media(picture):
+    media = await client.upload_media(picture)
+
+    # sleep until the next hour
+    await asyncio.sleep(-time.time() % 3600)
+    # upload the media using its media_id
+    # that you got from the response above
+    await client.api.statuses.update.post(status="Wow! Look at this picture!"
+                                          media_ids=media.media_id)
+```
+*Note*: The upload_media method will, by default, convert your picture to the
+format that gives the smallest size between JPEG and PNG. If you do not want to
+use this behavior you can set the `auto_convert` argument to `False`
+(or `_auto_convert` when using the `_media` argument in a request)
+
+## Iterators
 
 Sometimes you need to make several requests to the same API endpoint in order
 to get all the data you want (e.g. getting more than 200 tweets of an user).  
 Some iterators are included in Peony and usable through the peony.iterators
 module that deals with the actual iteration, getting all the responses you need.
 
-<h3 id='cursor_iterator'>Cursor iterator</h3>
+### Cursor iterators
 
 This is an iterator for endpoints using the `cursor` parameter
 (e.g. followers/ids.json). The first argument given to the iterator is the
@@ -180,7 +240,7 @@ async def get_followers(user_id, **additional_params):
     return followers
 ```
 
-<h3 id="max_id_iterator">Max_id iterator</h3>
+### Max_id iterators
 An iterator for endpoints using the `max_id` parameter
 (e.g. statuses/user_timeline.json)
 
@@ -211,7 +271,7 @@ async def get_tweets(user_id, n_tweets=1600, **additional_params):
       return user_tweets
 ```
 
-<h3 id='since_id_iterator'>Since_id iterator</h3>
+### Since_id iterators
 An iterator for endpoints using the `since_id` parameter
 (e.g. statuses/home_timeline.json)
 
@@ -249,7 +309,7 @@ async def get_home(since_id=None, **params):
     return sorted(home, key=lambda tweet: tweet.id)
 ```
 
-<h2 id='tasks'>Tasks</h2>
+## Tasks
 
 The main advantage of an asynchronous client is that it will be able to run
 multiple tasks... asynchronously.  
@@ -259,7 +319,50 @@ or perform some requests periodically while using a Streaming API.
 
 So I tried to make it easier to create such a program.
 
-<h2 id='task'>The `task` decorator</h2>
+### Init tasks
+
+By default the client makes 2 requests on initialization that are kept as
+attributes of the client:
+* account/verify_credentials.json (kept as self.user)
+* help/twitter_configuration.json (kept as self.twitter_configuration)
+
+If you need to have more informations during the initialization of a client you
+should override the `init_tasks` method of your subclass. This will run all the
+coroutines held by the list returned by the method at the same time during the
+initialization (that's the point of an asynchronous client after all).
+
+```python
+import asyncio
+from peony import PeonyClient
+import peony.iterators
+
+class Client(PeonyClient):
+
+    def init_tasks(self):
+        tasks = super().init_tasks()
+        tasks += [
+            self.get_settings(),
+            self.get_likes()
+        ]
+        return tasks
+
+    async def get_setting():
+        self.settings = await self.api.account.settings.get()
+
+    async def get_likes():
+        self.likes = await self.api.favorites.list.get(count=200)
+```
+
+*Note*: The attributes user and twitter_configuration are created by the tasks
+in PeonyClient.init_tasks() which are the respectively the responses from
+/1.1/account/verify_credentials.json and /1.1/help/configuration.json.  
+So you can access self.user.id in the class and this will give you the id of
+the authenticated user.  
+
+*Note*: The attribute twitter_configuration is used by the method upload_media
+when it converts your picture
+
+### The `task` decorator
 
 First you will need to create a subclass of PeonyClient and add a `task`
 decorator to the methods that you want to run.
@@ -329,7 +432,7 @@ if __name__ == '__main__':
     main()
 ```
 
-<h2 id="event_handlers">Event handlers</h2>
+### Event handlers
 
 Let's say that your awesome bot has become very popular, and so you'd like to
 add some new features to it that would make use of the Streaming API. You could
@@ -402,9 +505,9 @@ class AwesomeUserStream(EventStream):
 ```
 
 
-<h1 id='adv_usage'>Advanced Usage</h1>
+# Advanced Usage
 
-<h2 id='adv_api'>Accessing an API using a different api version</h2>
+## Accessing an API using a different api version
 
 There actually two ways:
 * create a client with an `api_version` argument

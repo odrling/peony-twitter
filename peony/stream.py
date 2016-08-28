@@ -5,7 +5,7 @@ import json
 
 import aiohttp
 
-from . import utils
+from . import utils, exceptions
 from .exceptions import StreamLimit, PeonyException
 from .general import rate_limit_notices
 
@@ -39,7 +39,7 @@ class StreamResponse:
             return self
         else:
             try:
-                raise await utils.throw(self.response)
+                await exceptions.throw(self.response)
             except PeonyException as e:
                 print(e)
                 if self.reconnect:

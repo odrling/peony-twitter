@@ -27,7 +27,7 @@ async def get_home(since_id=None, **params):
                                                        text=text))
             print("-" * 10)
 
-        await asyncio.sleep(0)
+        await asyncio.sleep(180)
 
     return sorted(home, key=lambda tweet: tweet.id)
 

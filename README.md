@@ -23,6 +23,7 @@ Summary
   * [Event handlers](#event-handlers)
 * [Advanced Usage](#advanced-usage)
   * [Accessing an API using a different api version](#accessing-an-api-using-a-different-api-version)
+  * [Use the Application only authentication](#use-the-application-only-authentication)
 
 # Installation
 
@@ -558,3 +559,21 @@ req = client[adsapi].accounts[id].reach_estimate.get(**kwargs,)
 ads = client['ads-api', '1', '', 'https://{api}.twitter.com/{version}']
 req = ads.accounts[id].reach_estimate.get(**kwargs)
 ```
+
+## Use the Application only authentication
+
+The application only authentication is restricted to some endpoints.
+See [the Twitter documentation page][app_only_doc]
+
+```python
+import peony
+from peony import PeonyClient
+
+# NOTE: the bearer_token argument is not necessary
+client = PeonyClient(consumer_key=YOUR_CONSUMER_KEY,
+                     consumer_secret=YOUR_CONSUMER_SECRET,
+                     bearer_token=YOUR_BEARER_TOKEN,
+                     auth=peony.oauth.OAuth2Headers)
+```
+
+[app_only_doc]: <https://dev.twitter.com/oauth/application-only>

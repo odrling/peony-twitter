@@ -317,11 +317,11 @@ class BasePeonyClient:
         return tasks
 
     async def __get_twitter_configuration(self):
-        api = self['api', '1.1', ".json"]
+        api = self['api', general.twitter_api_version, ".json"]
         self.twitter_configuration = await api.help.configuration.get()
 
     async def __get_user(self):
-        api = self['api', '1.1', ".json"]
+        api = self['api', general.twitter_api_version, ".json"]
         self.user = await api.account.verify_credentials.get()
 
     def __getitem__(self, values):

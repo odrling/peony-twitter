@@ -20,8 +20,6 @@ except:
 
 from PIL import Image
 
-from .exceptions import PeonyBaseException
-
 
 class JSONObject(dict):
     """
@@ -110,21 +108,6 @@ def loads(json_data, encoding="utf-8"):
         json_data = json_data.decode(encoding)
 
     return json.loads(json_data, object_hook=JSONObject)
-
-
-async def throw(response):
-    """ get the response data if possible and raise an exception """
-    kwargs = dict(response=response)
-
-    ctype = response.headers['CONTENT-TYPE'].lower()
-
-    if "json" in ctype:
-        try:
-            kwargs['data'] = await response.json(loads=loads)
-        except:
-            pass
-
-    return PeonyBaseException(**kwargs)
 
 
 def media_chunks(media, chunk_size, media_size):

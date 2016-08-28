@@ -5,9 +5,8 @@ from types import GeneratorType
 
 import aiohttp
 
-from . import general, utils, oauth
+from . import general, utils, oauth, exceptions
 from .stream import StreamContext
-from .exceptions import MediaProcessingError
 from .commands import EventStreams, task
 
 
@@ -430,9 +429,9 @@ class BasePeonyClient:
                     message = error.get('message',
                                         "No error message in the response")
 
-                    raise MediaProcessingError(data=status,
-                                               message=message,
-                                               **params)
+                    raise exceptions.MediaProcessingError(data=status,
+                                                          message=message,
+                                                          **params)
 
                 delay = status['processing_info']['check_after_secs']
                 await asyncio.sleep(delay)
@@ -518,7 +517,7 @@ class BasePeonyClient:
                         request=req_kwargs
                     )
                 else:  # throw exceptions if status is not 2xx
-                    raise await utils.throw(response)
+                    await exceptions.throw(response)
 
     def stream_request(self, method, url, headers={}, *args, **kwargs):
         """

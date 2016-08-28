@@ -1,17 +1,45 @@
 # -*- coding: utf-8 -*-
 import time
 
+from . import utils
+
+
+def get_error(data):
+    """ Get the error, this is quite a vertical code """
+    if data is not None:
+        if 'errors' in data:
+            if data['errors']:
+                return data['errors'][0]
+
+
+async def throw(response, **kwargs):
+    """ get the response data if possible and raise an exception """
+    ctype = response.headers['CONTENT-TYPE'].lower()
+
+    if "json" in ctype:
+        try:
+            data = await response.json(loads=utils.loads)
+        except:
+            data = None
+
+    err = get_error(data)
+    if err is not None:
+        if 'code' in err:
+            code = str(err['code'])
+            if code in error:
+                e = error[code]
+                raise e(response=response, data=data, **kwargs)
+
+    if str(response.status) in status:
+        e = status[response.status]
+        raise e(response=response, data=data, **kwargs)
+
+    # raise PeonyException if no specific exception was found
+    raise PeonyException(response=response, data=data, **kwargs)
+
 
 class PeonyException(Exception):
     """ Parent class of all the exceptions of Peony """
-
-    @staticmethod
-    def get_error(data):
-        """ Get the error, this is quite a vertical code """
-        if data is not None:
-            if 'errors' in data:
-                if data['errors']:
-                    return data['errors'][0]
 
     def __init__(self, response=None, data=None, message=None):
         """
@@ -20,7 +48,7 @@ class PeonyException(Exception):
         Extract message from the error if not explicitly given
         """
         if not message:
-            err = self.get_error(data)
+            err = get_error(data)
             if err is not None:
                 if 'message' in err:
                     message = err['message']
@@ -39,32 +67,6 @@ class MediaProcessingError(PeonyException):
 
 class StreamLimit(PeonyException):
     pass
-
-
-class PeonyBaseException(PeonyException):
-    """
-        This exception will actually try to raise another exception
-        depending on the error code or the status code received.
-        You should rarely actually receive a PeonyBaseException
-    """
-
-    def __init__(self, *args, response=None, data=None, **kwargs):
-        err = self.get_error(data)
-        if err is not None:
-            if 'code' in err:
-                code = str(err['code'])
-                if code in error:
-                    e = error[code]
-                    raise e(*args, response=response, data=data, **kwargs)
-
-        if str(response.status) in status:
-            e = status[response.status]
-            raise e(*args, response=response, data=data, **kwargs)
-
-        print("could not find a corresponding exception for this response:")
-        print(response, data, sep="\n")
-
-        super().__init__(*args, response=response, **kwargs)
 
 
 def convert_int_keys(func):

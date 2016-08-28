@@ -4,6 +4,7 @@ import asyncio
 import time
 import webbrowser
 
+from . import oauth
 from .client import PeonyClient
 
 
@@ -105,3 +106,10 @@ def oauth_dance(consumer_key, consumer_secret,
 
     coro = async_oauth_dance(consumer_key, consumer_secret, oauth_callback)
     return loop.run_until_complete(coro)
+
+
+def oauth2_dance(consumer_key, consumer_secret):
+    client = PeonyClient(consumer_key=consumer_key,
+                         consumer_secret=consumer_secret,
+                         auth=oauth.OAuth2Headers)
+    return client.headers['Authorization'][len("Bearer "):]

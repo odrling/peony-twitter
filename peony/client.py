@@ -5,8 +5,7 @@ from types import GeneratorType
 
 import aiohttp
 
-from . import general, utils
-from .oauth import OAuth1Headers
+from . import general, utils, oauth
 from .stream import StreamContext
 from .exceptions import MediaProcessingError
 from .commands import EventStreams, task
@@ -52,8 +51,7 @@ class BaseAPIPath:
         :version: str
         :client: a class instance that would be called in _request
         """
-        base_url = base_url.format(api=api, version=version).rstrip("/")
-
+        base_url = base_url.format(api=api, version=version).rstrip('/')
         self._suffix = suffix
         self._path = [base_url]
         self._client = client
@@ -64,7 +62,7 @@ class BaseAPIPath:
 
         :suffix: str, to be appended to the url
         """
-        return "/".join(self._path) + (suffix or self.suffix)
+        return "/".join(self._path) + (suffix or self._suffix)
 
     def __getitem__(self, k):
         """
@@ -167,7 +165,7 @@ class APIPath(BaseAPIPath):
     def _request(self, method):
         """ Perform request on a REST API """
 
-        async def request(_suffix=".json",
+        async def request(_suffix=None,
                           _media=None, _medias=[],
                           _auto_convert=True,
                           _formats=general.formats,
@@ -243,12 +241,13 @@ class BasePeonyClient:
     def __init__(self, consumer_key, consumer_secret,
                  access_token=None,
                  access_token_secret=None,
+                 bearer_token=None,
                  headers={},
                  streaming_apis=general.streaming_apis,
                  base_url=general.twitter_base_api_url,
                  api_version=general.twitter_api_version,
                  suffix='.json',
-                 auth=OAuth1Headers,
+                 auth=oauth.OAuth1Headers,
                  loads=utils.loads,
                  loop=None,
                  error_handler=utils.requestdecorator,
@@ -282,15 +281,7 @@ class BasePeonyClient:
                 to use utils.JSONObject for responses
         :loop: asyncio loop
         """
-
-        self.headers = auth(
-            consumer_key=consumer_key,
-            consumer_secret=consumer_secret,
-            access_token=access_token,
-            access_token_secret=access_token_secret,
-            **kwargs
-        )
-        self.headers.update(headers)
+        self.loop = loop or asyncio.get_event_loop()
 
         self.streaming_apis = streaming_apis
 
@@ -301,7 +292,18 @@ class BasePeonyClient:
         self._loads = loads
         self.error_handler = error_handler
 
-        self.loop = loop or asyncio.get_event_loop()
+        self.headers = auth(
+            consumer_key=consumer_key,
+            consumer_secret=consumer_secret,
+            access_token=access_token,
+            access_token_secret=access_token_secret,
+            bearer_token=bearer_token,
+            client=self,
+            **kwargs
+        )
+        self.headers.update(headers)
+
+        self.loop.run_until_complete(self.headers.prepare_headers())
 
         init_tasks = self.init_tasks
         if callable(init_tasks):
@@ -310,14 +312,17 @@ class BasePeonyClient:
         self.loop.run_until_complete(asyncio.wait(init_tasks))
 
     def init_tasks(self):
-        return [self.__get_twitter_configuration(), self.__get_user()]
+        tasks = [self.__get_twitter_configuration()]
+        if isinstance(self.headers, oauth.OAuth1Headers):
+            tasks.append(self.__get_user())
+        return tasks
 
     async def __get_twitter_configuration(self):
-        api = self['api', general.twitter_api_version, ".json"]
+        api = self['api', '1.1', ".json"]
         self.twitter_configuration = await api.help.configuration.get()
 
     async def __get_user(self):
-        api = self['api', general.twitter_api_version, ".json"]
+        api = self['api', '1.1', ".json"]
         self.user = await api.account.verify_credentials.get()
 
     def __getitem__(self, values):
@@ -359,22 +364,17 @@ class BasePeonyClient:
             padding = values.__class__([None] * padding_size)
             values += padding
 
-        kwargs = {key: value or default
+        kwargs = {key: (value is None) and default or value
                   for key, value, default in zip(keys, values, defaults)
-                  if value or default is not None}
+                  if (value, default) != (None,)*2}
 
-        kwargs.update(dict(client=self))
+        kwargs['client'] = self
 
-        # api must be in kwargs
-        if 'api' in kwargs:
-            # use StreamingAPIPath if subdomain is in self.streaming_apis
-            if kwargs['api'] in self.streaming_apis:
-                return StreamingAPIPath(**kwargs)
-            else:
-                return APIPath(**kwargs)
+        # use StreamingAPIPath if subdomain is in self.streaming_apis
+        if kwargs.get('api', '') in self.streaming_apis:
+            return StreamingAPIPath(**kwargs)
         else:
-            msg = 'You must provide an api to use for your request'
-            raise RuntimeError(msg)
+            return APIPath(**kwargs)
 
     def __getattr__(self, api):
         """

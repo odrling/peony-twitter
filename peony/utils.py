@@ -95,6 +95,8 @@ def requestdecorator(func):
                 print(e)
                 print("sleeping for %ds" % e.reset_in)
                 await asyncio.sleep(e.reset_in)
+            except TimeoutError:
+                pass
             else:
                 raise
 

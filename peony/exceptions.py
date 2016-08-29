@@ -15,12 +15,13 @@ def get_error(data):
 async def throw(response, **kwargs):
     """ get the response data if possible and raise an exception """
     ctype = response.headers['CONTENT-TYPE'].lower()
+    data = None
 
     if "json" in ctype:
         try:
             data = await response.json(loads=utils.loads)
         except:
-            data = None
+            pass
 
     err = get_error(data)
     if err is not None:

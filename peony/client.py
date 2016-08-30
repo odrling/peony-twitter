@@ -200,15 +200,18 @@ class APIPath(BaseAPIPath):
 
             skip_params = _skip_params is None and skip_params or _skip_params
 
-            return await self._client.request(method,
-                                              url=self.url(_suffix),
-                                              skip_params=skip_params,
-                                              **kwargs)
+            kwargs.update(method=method,
+                          url=self.url(_suffix),
+                          skip_params=skip_params)
 
-        if self._client.error_handler:
-            return self._client.error_handler(request)
-        else:
-            return request
+            client_request = self._client.request
+
+            if self._client.error_handler:
+                client_request = self._client.error_handler(client_request)
+
+            return await client_request(**kwargs)
+
+        return request
 
 
 class StreamingAPIPath(BaseAPIPath):
@@ -249,7 +252,7 @@ class BasePeonyClient:
                  auth=oauth.OAuth1Headers,
                  loads=utils.loads,
                  loop=None,
-                 error_handler=utils.requestdecorator,
+                 error_handler=utils.error_handler,
                  **kwargs):
         """
             Set main attributes
@@ -262,6 +265,8 @@ class BasePeonyClient:
             access token of the user
         :access_token_secret: :class:`str`
             access token secret of the user
+        :bearer_token: :class: `str`
+            bearer token of the client
         :headers: :class:`dict`
             custom headers (does not override `Authorization` headers)
         :streaming_apis: :class:`list`,
@@ -279,6 +284,7 @@ class BasePeonyClient:
         :loads: custom json.loads function override if you don't want
                 to use utils.JSONObject for responses
         :loop: asyncio loop
+        :error_handler: A decorator to use on a request to handle errors
         """
         self.loop = loop or asyncio.get_event_loop()
 

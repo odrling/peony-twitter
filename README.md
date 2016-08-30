@@ -1,7 +1,7 @@
 Peony
 ===
 
-An asynchronous API client for Python
+An asynchronous Twitter API client for Python
 
 Summary
 ===
@@ -22,8 +22,14 @@ Summary
     * [The `task` decorator](#the-task-decorator)
   * [Event handlers](#event-handlers)
 * [Advanced Usage](#advanced-usage)
-  * [Accessing an API using a different api version](#accessing-an-api-using-a-different-api-version)
-  * [Use the Application only authentication](#use-the-application-only-authentication)
+  * [Accessing an API using a different api version][adv_api]
+  * [Use the Application only authentication][app-only-auth]
+  * [Change the loads function used when decoding responses][loads]
+  * [Handle errors for every request](#handle-errors-for-every-request)
+
+[adv_api]: #accessing-an-api-using-a-different-api-version
+[app-only-auth]: #use-the-application-only-authentication
+[loads]: #change-the-loads-function-used-when-decoding-responses
 
 # Installation
 
@@ -63,7 +69,7 @@ loop.run_until_complete(req)
 ```
 
 
-[apps]: <https://apps.twitter.com>
+[apps]: https://apps.twitter.com
 
 
 # Usage
@@ -95,8 +101,8 @@ async def path():
     return await client.subdomain.path.get()
 ```
 
-see [Accessing an API using a different api version](#accessing-an-api-using-a-different-api-version)
-to access APIs that do not use the version '1.1'
+see [Accessing an API using a different api version][adv_api] to access APIs
+that do not use the version '1.1'
 
 *Note*: Arguments with a leading underscore are arguments that are used to
 change the behavior of peony for the request (e.g. `_headers` to add some
@@ -577,3 +583,106 @@ client = PeonyClient(consumer_key=YOUR_CONSUMER_KEY,
 ```
 
 [app_only_doc]: <https://dev.twitter.com/oauth/application-only>
+
+
+## Change the loads function used when decoding responses
+
+The responses sent by the Twitter API are commonly JSON data.
+By default the data is loaded using the `peony.utils.loads` so that each JSON
+Object is converted to a dict object which allows to access its items as you
+would access its attribute.
+
+
+Which means that
+
+```python
+response.data
+```
+
+returns the same as
+
+```python
+response['data']
+```
+
+To change this behavior, PeonyClient has a `loads` argument which is the
+function used when loading the data. So if you don't want to use the syntax
+above and want use the default Python's dicts, you can pass `json.loads` as
+argument when you create the client.
+
+```python
+from peony import PeonyClient
+import json
+
+client = PeonyClient(**creds, loads=json.loads)
+client.twitter_configuration  # this is a dict object
+client.twitter_configuration['photo_sizes']
+client.twitter_configuration.photo_sizes  # raises AttributeError
+```
+
+You can also use it to change how JSON data is decoded.
+
+```python
+import peony
+
+def loads(*args, **kwargs):
+    """ parse integers as strings """
+    return peony.utils.loads(*args, parse_int=str, **kwargs)
+
+client = peony.PeonyClient(**creds, loads=loads)
+```
+
+## Handle errors for every request
+
+By default `peony.exceptions.RateLimitExceeded` is handled by sleeping until
+the rate limit resets and the requests are resent on `TimeoutError`.  
+If you would handle these exceptions another way or want to handle other
+exceptions differently you can use the `error_handler` argument of PeonyClient
+
+```python
+import peony
+from peony import PeonyClient
+
+# client using application-only authentication
+backup_client = PeonyClient(**creds, auth=peony.oauth.OAuth2Headers)
+
+
+# This decorator permits the use of the `_error_handling` argument for
+# for your own function (see notes below code)
+@peony.handler_decorator
+def error_handler(request):
+    """
+        try to use backup_client during rate limits
+        retry requests three times before giving up
+    """
+
+    # NOTE: client.api.statuses.home_timeline.get(_tries=5) should try the
+    # request 5 times instead of 3
+    async def decorated_request(tries=3, **kwargs):
+        while True:
+            try:
+                return await request(**kwargs)
+            except peony.exceptions.RateLimitExceeded as e:
+                try:
+                    return backup_client.request(**kwargs)
+                except:
+                    print(e)
+                    print("sleeping for %ds" % e.reset_in)
+                    await asyncio.sleep(e.reset_in)
+            except TimeoutError:
+                pass
+            else:
+                tries -= 1
+                if not tries:
+                    raise
+
+    return decorated_request
+
+
+client = PeonyClient(**creds, error_handler=error_handler)
+```
+
+You can also choose to not use an error handler and disable the default one by
+setting the `error_handler` argument to `None`.  
+If you want to disable the global error handling for a specific request pass a
+`_error_handling` argument to this request with a value of `False`.

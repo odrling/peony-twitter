@@ -6,11 +6,8 @@ from . import utils
 
 class BaseIterator:
 
-    def __init__(self, _request, handle_ratelimits=True, **kwargs):
-        if handle_ratelimits:
-            self.request = utils.requestdecorator(_request)
-        else:
-            self.request = _request
+    def __init__(self, _request, **kwargs):
+        self.request = _request
         self.kwargs = kwargs
 
     def __aiter__(self):
@@ -107,12 +104,9 @@ class SinceIdIterator(IdIterator):
                 async for tweets in responses:
                     response.extend(tweets)
 
-                if since_id == response[-1]['id']:
-                    await self.set_param(response)
-                    return response[:-1]
-
-            await self.set_param(response)
-            return response
+            if since_id != response[-1]['id']:
+                await self.set_param(response)
+                return response
 
         await self.set_param(response)
         return response[:-1]

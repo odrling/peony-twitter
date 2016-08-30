@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import sys
+
 from . import utils
 from .commands import Commands
 from .tasks import Task
@@ -106,7 +108,7 @@ class EventStream:
                     await self._run(data)
                 except Exception as e:
                     msg = "error in %s._start:" % self.__class__.__name__
-                    print(msg, e)
+                    print(msg, e, file=sys.stderr)
 
     def _check(self, func):
         if not func.startswith("_"):
@@ -126,7 +128,7 @@ class EventStream:
 
         except Exception as e:
             msg = "error in %s._get:" % self.__class__.__name__
-            print(msg, e)
+            print(msg, e, file=sys.stderr)
 
     async def _run(self, data):
         event_handler = self._get(data)
@@ -142,7 +144,7 @@ class EventStream:
                              handler=event_handler.__name__,
                              error=e)
 
-            print(msg)
+            print(msg, file=sys.stderr)
 
 
 class EventStreams(list):

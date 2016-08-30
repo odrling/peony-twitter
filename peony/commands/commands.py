@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import re
+import sys
 
 from . import utils
 
@@ -66,7 +67,7 @@ class Functions(dict):
 
         except Exception as e:
             fmt = "Error occurred while running function {cmd}: {error}"
-            print(fmt.format(cmd=cmd, error=e))
+            print(fmt.format(cmd=cmd, error=e), file=sys.stderr)
 
     def __call__(self, func, name=None):
         name = name or func.__name__

@@ -20,11 +20,8 @@ class Events(dict):
                     key = key.format(name=func.__name__)
 
                 self[key] = value
-                try:
-                    self.aliases[key] = self[func.__name__]
-                except:
-                    print(func)
-                    raise
+                self.aliases[key] = self[func.__name__]
+
 
             return func
 

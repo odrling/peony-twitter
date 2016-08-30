@@ -508,7 +508,7 @@ class BasePeonyClient:
 
             # make the request
             async with session.request(**req_kwargs) as response:
-                if int(str(response.status)[0]) == 2:
+                if response.status // 100 == 2:
                     if json or url.endswith(".json") and json is not None:
                         # decode as json
                         content = await response.json(loads=self._loads)

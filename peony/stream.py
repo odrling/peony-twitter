@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import sys
 
 import aiohttp
 
@@ -41,7 +42,7 @@ class StreamResponse:
             try:
                 await exceptions.throw(self.response)
             except PeonyException as e:
-                print(e)
+                print(e, file=sys.stderr)
                 if self.reconnect:
                     await self.restart_stream(error=e)
 
@@ -60,19 +61,19 @@ class StreamResponse:
             return self.loads(line)
 
         except StreamLimit as error:
-            print("Error:", line)
+            print("Error:", line, file=sys.stderr)
             return await self.restart_stream(error=error)
 
         except StopAsyncIteration as error:
-            print("Stream stopped")
+            print("Stream stopped", file=sys.stderr)
             return await self.restart_stream(error=error)
 
         except json.decoder.JSONDecodeError as error:
-            print("Decode error:", line)
+            print("Decode error:", line, file=sys.stderr)
             return await self.restart_stream(error=error)
 
         except asyncio.TimeoutError as error:
-            print("Timeout reached")
+            print("Timeout reached", file=sys.stderr)
             return await self.restart_stream(reconnect=0, error=error)
 
         except GeneratorExit:
@@ -84,7 +85,7 @@ class StreamResponse:
             self.session.close()
 
         except Exception as e:
-            str(e) and print(e)
+            str(e) and print(e, file=sys.stderr)
             self.response.close()
             self.session.close()
             raise
@@ -93,14 +94,14 @@ class StreamResponse:
         """ restart the stream on error """
 
         if error is not None:
-            print(error)
+            print(error, file=sys.stderr)
 
         reconnect = reconnect is None and self.reconnect or reconnect
 
         try:
             self.response.close()
         except Exception as e:
-            print(e)
+            print(e, file=sys.stderr)
 
         if reconnect is not None:
             if reconnect > 0:

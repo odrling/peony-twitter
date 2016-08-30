@@ -83,33 +83,44 @@ class PeonyResponse:
         return len(self.response)
 
 
-def requestdecorator(func):
-    if getattr(func, 'is_handled', False):
-        return func
+def handler_decorator(handler):
+    def decorated_handler(request):
+        def decorated_request(error_handling=True, **kwargs):
+            if error_handling:
+                return handler(request)(**kwargs)
+            else:
+                return request(**kwargs)
 
-    async def decorated_request(**kwargs):
+        return decorated_request
+
+    return decorated_handler
+
+
+@handler_decorator
+def error_handler(request):
+    async def decorated_request(error_handling=True, **kwargs):
         while True:
             try:
-                return await func(**kwargs)
+                return await request(**kwargs)
             except RateLimitExceeded as e:
                 print(e)
-                print("sleeping for %ds" % e.reset_in)
-                await asyncio.sleep(e.reset_in)
+                delay = int(e.reset_in) + 1
+                print("sleeping for %ds" % delay)
+                await asyncio.sleep(delay)
             except TimeoutError:
-                pass
+                print("connection timed out")
             else:
                 raise
 
-    decorated_request.is_handled = True
     return decorated_request
 
 
-def loads(json_data, encoding="utf-8"):
+def loads(json_data, *args, encoding="utf-8", **kwargs):
     """ custom loads function with an object_hook and automatic decoding """
     if isinstance(json_data, bytes):
         json_data = json_data.decode(encoding)
 
-    return json.loads(json_data, object_hook=JSONObject)
+    return json.loads(json_data, *args, object_hook=JSONObject, **kwargs)
 
 
 def media_chunks(media, chunk_size, media_size):

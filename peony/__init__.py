@@ -16,3 +16,4 @@ __keywords__ = "twitter, asyncio, asynchronous"
 
 from .client import PeonyClient, BasePeonyClient
 from .commands import EventStream, task, event_handler, events
+from .utils import handler_decorator

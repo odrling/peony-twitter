@@ -5,7 +5,7 @@ from types import GeneratorType
 
 import aiohttp
 
-from . import general, utils, oauth, exceptions
+from . import general, utils, oauth, exceptions, requests
 from .stream import StreamContext
 from .commands import EventStreams, task
 
@@ -73,7 +73,7 @@ class BaseAPIPath:
         otherwise append the key to the _path attribute
         """
         if k.lower() in general.request_methods:
-            return self._request(k)
+            return self._request(self, k)
         else:
             if isinstance(k, (tuple, list)):
                 k = map(str, k)
@@ -161,73 +161,12 @@ class BaseAPIPath:
 
 class APIPath(BaseAPIPath):
 
-    def _request(self, method):
-        """ Perform request on a REST API """
-
-        async def request(_suffix=None,
-                          _media=None, _medias=[],
-                          _auto_convert=True,
-                          _formats=general.formats,
-                          _max_sizes=None,
-                          _medias_params={},
-                          _skip_params=None,
-                          _chunked_upload=False,
-                          **kwargs):
-
-            if _media and not _medias:
-                _medias = [_media]
-
-            media_ids = []
-
-            for media in _medias:
-                media_response = await self._client.upload_media(
-                    media,
-                    auto_convert=_auto_convert,
-                    formats=_formats,
-                    max_sizes=_max_sizes,
-                    chunked=_chunked_upload,
-                    **_medias_params
-                )
-
-                media_ids.append(media_response['media_id'])
-
-            if not media_ids:
-                media_ids = None
-
-            kwargs, skip_params = self.sanitize_params(method,
-                                                       media_ids=media_ids,
-                                                       **kwargs)
-
-            skip_params = _skip_params is None and skip_params or _skip_params
-
-            kwargs.update(method=method,
-                          url=self.url(_suffix),
-                          skip_params=skip_params)
-
-            client_request = self._client.request
-
-            if self._client.error_handler:
-                client_request = self._client.error_handler(client_request)
-
-            return await client_request(**kwargs)
-
-        return request
+    _request = requests.Request
 
 
 class StreamingAPIPath(BaseAPIPath):
 
-    def _request(self, method):
-        """ Perform request on a Streaming API """
-
-        def request(_suffix=".json", **kwargs):
-            kwargs, skip_params = self.sanitize_params(method, **kwargs)
-
-            return self._client.stream_request(method,
-                                               url=self.url(_suffix),
-                                               skip_params=skip_params,
-                                               **kwargs)
-
-        return request
+    _request = requests.StreamingRequest
 
 
 class BasePeonyClient:

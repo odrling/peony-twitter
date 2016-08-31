@@ -1,4 +1,3 @@
-
 .. highlighting: python
 
 .. _auth:
@@ -9,8 +8,9 @@ Authorize your client
 You can use ``peony.oauth_dance`` to authorize your client::
 
     >>> from peony.oauth_dance import oauth_dance
-    >>> tokens = oauth_dance(consumer_key, consumer_secret)
-
+    >>> tokens = oauth_dance(YOUR_CONSUMER_KEY, YOUR_CONSUMER_SECRET)
+    >>> from peony import PeonyClient
+    >>> client = PeonyClient(**tokens)
 
 This should open a browser to get a pin to authorize your application.
 
@@ -29,12 +29,14 @@ You can easily access any Twitter API endpoint::
     # to access api.twitter.com/1.1/statuses/home_timeline.json
     # using the GET method with the parameters count and since_id
     async def home():
-        return await client.api.statuses.home_timeline.get(count=200, since_id=0)
+        return await client.api.statuses.home_timeline.get(count=200,
+                                                           since_id=0)
 
     # to access userstream.twitter.com/1.1/statuses/filter.json
     # using the POST method with the parameter track
     async def track():
-        async with client.stream.statuses.filter.post(track="uwu") as ressource:
+        req = client.stream.statuses.filter.post(track="uwu")
+        async with req as ressource:
             pass  # do something, see next chapter
 
     # would GET subdomain.twitter.com/1.1/path.json if it were
@@ -93,9 +95,10 @@ yields a StreamResponse object.::
                 user_id = tweet['user']['id']
                 username = tweet.user.screen_name
 
-                print("@{username} ({id}): {text}".format(username=username,
-                                                          id=user_id,
-                                                          text=tweet.text))
+                msg = "@{username} ({id}): {text}"
+                print(.format(username=username,
+                              id=user_id,
+                              text=tweet.text))
 
 Upload medias
 =============
@@ -150,15 +153,13 @@ This is an iterator for endpoints using the `cursor` parameter
 (e.g. followers/ids.json). The first argument given to the iterator is the
 coroutine function that will make the request.::
 
-    import peony.iterators
     from peony import PeonyClient
 
     # creds being a dictionnary containing your api keys
     client = PeonyClient(**creds)
 
     async def get_followers(user_id, **additional_params):
-        followers_ids = peony.iterators.with_cursor(
-            client.api.followers.ids.get,
+        followers_ids = client.api.followers.ids.get.iterator.with_cursor(
             id=user_id,
             count=5000,
             **additional_params
@@ -177,28 +178,27 @@ An iterator for endpoints using the `max_id` parameter
 (e.g. statuses/user_timeline.json)::
 
     from peony import PeonyClient
-    import peony.iterators
 
     client = PeonyClient(**creds)
 
     async def get_tweets(user_id, n_tweets=1600, **additional_params):
-          responses = peony.iterators.with_max_id(
-              client.api.statuses.user_timeline.get,
-              user_id=user,
-              count=200,
-              **additional_params
-          )
+        request = client.api.statuses.user_timeline.get
+        responses = request.iterator.with_max_id(
+            user_id=user,
+            count=200,
+            **additional_params
+        )
 
-          user_tweets = []
+        user_tweets = []
 
-          async for tweets in responses:
-              user_tweets.extend(tweets)
+        async for tweets in responses:
+            user_tweets.extend(tweets)
 
-              if len(user_tweets) >= n_tweets:
-                  user_tweets = user_tweets[:n_tweets]
-                  break
+            if len(user_tweets) >= n_tweets:
+                user_tweets = user_tweets[:n_tweets]
+                break
 
-          return user_tweets
+        return user_tweets
 
 Since_id iterators
 ------------------
@@ -209,18 +209,12 @@ An iterator for endpoints using the `since_id` parameter
     import asyncio
     import html
 
-    try:
-        from . import peony, api, testdir
-    except SystemError:
-        from __init__ import peony, testdir
-        import api
+    from peony import PeonyClient
 
-
-    client = peony.PeonyClient(**api.keys)
+    client = peony.PeonyClient(**creds)
 
     async def get_home(since_id=None, **params):
-        responses = peony.iterators.with_since_id(
-            client.api.statuses.home_timeline.get,
+        responses = client.api.statuses.home_timeline.get.iterator.with_since_id(
             count=200,
             **params
         )
@@ -233,7 +227,7 @@ An iterator for endpoints using the `since_id` parameter
                                                            text=text))
                 print("-"*10)
 
-            await asyncio.sleep(180)
+            await asyncio.sleep(120)
 
         return sorted(home, key=lambda tweet: tweet.id)
 

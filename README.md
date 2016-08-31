@@ -226,15 +226,13 @@ coroutine function that will make the request.
 
 
 ```python
-import peony.iterators
 from peony import PeonyClient
 
 # creds being a dictionnary containing your api keys
 client = PeonyClient(**creds)
 
 async def get_followers(user_id, **additional_params):
-    followers_ids = peony.iterators.with_cursor(
-        client.api.followers.ids.get,
+    followers_ids = client.api.followers.ids.get.iterator.with_cursor(
         id=user_id,
         count=5000,
         **additional_params
@@ -254,13 +252,11 @@ An iterator for endpoints using the `max_id` parameter
 
 ```python
 from peony import PeonyClient
-import peony.iterators
 
 client = PeonyClient(**creds)
 
 async def get_tweets(user_id, n_tweets=1600, **additional_params):
-      responses = peony.iterators.with_max_id(
-          client.api.statuses.user_timeline.get,
+      responses = client.api.statuses.user_timeline.get.iterator.with_max_id(
           user_id=user,
           count=200,
           **additional_params
@@ -286,19 +282,12 @@ An iterator for endpoints using the `since_id` parameter
 ```python
 import asyncio
 import html
+from peony import PeonyClient
 
-try:
-    from . import peony, api, testdir
-except SystemError:
-    from __init__ import peony, testdir
-    import api
-
-
-client = peony.PeonyClient(**api.keys)
+client = PeonyClient(**creds)
 
 async def get_home(since_id=None, **params):
-    responses = peony.iterators.with_since_id(
-        client.api.statuses.home_timeline.get,
+    responses = client.api.statuses.home_timeline.get.iterator.with_since_id(
         count=200,
         **params
     )
@@ -312,8 +301,6 @@ async def get_home(since_id=None, **params):
             print("-"*10)
 
         await asyncio.sleep(180)
-
-    return sorted(home, key=lambda tweet: tweet.id)
 ```
 
 ## Tasks

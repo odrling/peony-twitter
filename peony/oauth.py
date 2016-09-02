@@ -11,6 +11,9 @@ from . import __version__
 class PeonyHeaders(dict):
     """
         Dynamic headers for Peony
+
+    This is the base class of :class:`OAuth1Headers` and
+    :class:`OAuth2Headers`.
     """
 
     def __init__(self, **kwargs):
@@ -52,9 +55,9 @@ class PeonyHeaders(dict):
 
 class OAuth1Headers(PeonyHeaders):
     """
-        Dynamic headers for OAuth1
+        Dynamic headers implementing OAuth1
 
-    sign needs to be called before each request
+    :func:`sign` is called before each request
     """
 
     def __init__(self, consumer_key, consumer_secret,
@@ -100,6 +103,10 @@ class OAuth1Headers(PeonyHeaders):
 
 
 class OAuth2Headers(PeonyHeaders):
+    """
+        Dynamic headers implementing OAuth2
+
+    """
 
     def __init__(self, consumer_key, consumer_secret, client,
                  bearer_token=None,

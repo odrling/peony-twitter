@@ -82,30 +82,31 @@ class PeonyResponse:
     def __len__(self):
         return len(self.response)
 
+class handler_decorator:
 
-def handler_decorator(handler):
-    def decorated_handler(request):
-        def decorated_request(error_handling=True, **kwargs):
-            if error_handling:
-                return handler(request)(**kwargs)
-            else:
-                return request(**kwargs)
+    def __init__(self, handler):
+        self.handler = handler
 
-        return decorated_request
+    def __call__(self, request, error_handling=True):
+        if error_handling:
+            return self.handler(request)
+        else:
+            return request
 
-    return decorated_handler
+    def __repr__(self):
+        return repr(self.handler)
 
 
 @handler_decorator
 def error_handler(request):
-    async def decorated_request(error_handling=True, **kwargs):
+    async def decorated_request(**kwargs):
         while True:
             try:
                 return await request(**kwargs)
             except RateLimitExceeded as e:
-                print(e)
+                print(e, file=sys.stderr)
                 delay = int(e.reset_in) + 1
-                print("sleeping for %ds" % delay)
+                print("sleeping for %ds" % delay, file=sys.stderr)
                 await asyncio.sleep(delay)
             except TimeoutError:
                 print("connection timed out")

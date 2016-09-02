@@ -13,13 +13,13 @@ def get_metadata(metadatafile):
     with open(metadatafile) as stream:
         text = stream.read()
 
-        ex = "__(\w*?)__ *?= *?[\"\']([^\"\']*)"
+        ex = r"__(\w*?)__ *?= *?[\"\']([^\"\']*)"
         items = re.findall(ex, text)
         metadata = {key: value for key, value in items}
 
         metadata['keywords'] = metadata.get('keywords', '').split(', ')
 
-        ex = '"{3}[ \n]*(?P<name>.*)[ \t\n]+(?P<description>.*)'
+        ex = r'"{3}[^\w]*(?P<name>.*)[^\w]+(?P<description>.*)'
         metadata.update(re.search(ex, text).groupdict())
 
     return metadata
@@ -27,7 +27,7 @@ def get_metadata(metadatafile):
 
 def get_requirements(requirementsfile):
     with open(requirementsfile) as stream:
-        prog = re.compile("# (\S+)\n([^#]*)")
+        prog = re.compile(r"# (\S+)\n([^#]*)")
 
         lines = (line.strip(" \n\t") for line in stream)
         text = '\n'.join(line for line in lines if line)

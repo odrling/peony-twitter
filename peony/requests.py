@@ -43,6 +43,7 @@ class Request(BaseRequest):
                        _medias_params={},
                        _skip_params=None,
                        _chunked_upload=False,
+                       _error_handling=True,
                        **kwargs):
 
         if _media and not _medias:
@@ -77,7 +78,8 @@ class Request(BaseRequest):
         client_request = self.api._client.request
 
         if self.api._client.error_handler:
-            client_request = self.api._client.error_handler(client_request)
+            client_request = self.api._client.error_handler(client_request,
+                                                            _error_handling)
 
         return await client_request(**kwargs)
 

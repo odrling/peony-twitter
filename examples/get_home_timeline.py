@@ -13,8 +13,7 @@ except SystemError:
 client = peony.PeonyClient(**api.keys)
 
 async def get_home(since_id=None, **params):
-    responses = peony.iterators.with_since_id(
-        client.api.statuses.home_timeline.get,
+    responses = client.api.statuses.home_timeline.get.iterator.with_since_id(
         count=200,
         **params
     )

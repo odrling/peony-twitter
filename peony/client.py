@@ -23,21 +23,9 @@ class BaseAPIPath:
     /!\ You must create a child class of BaseAPIPath to perform
     requests (you have to overload the _request method)
 
-    The client given as an argument during the creation of the
+    The client given as an parameter during the creation of the
     BaseAPIPath instance can be accessed as the "client" attribute of
     the instance.
-
-    >>> creds = {}
-    >>> api = BaseAPIPath("http://{api}.twitter.com/{version}",
-    ...                   api="api", version="1.1",
-    ...                   client=PeonyClient(**creds))
-    >>>
-    >>> # path to /account/verify_credentials.json
-    >>> path = api.account.verify_credentials
-    >>>
-    >>> # should call /account/verify_credentials.json
-    >>> path.get() # or api.account.verify_credentials.get()
-    >>>
     """
 
     def __init__(self, base_url, api, version, suffix, client):
@@ -71,6 +59,9 @@ class BaseAPIPath:
         attribute with the method as argument
 
         otherwise append the key to the _path attribute
+
+        >>> instance = APIPath()  # you would have to add more arguments
+        >>> instance["client"]    # appends `client` to _path
         """
         if k.lower() in general.request_methods:
             return self._request(self, k)
@@ -90,9 +81,6 @@ class BaseAPIPath:
 
         if your path contains an actual attribute of the instance
         you should call __getitem__ instead
-
-        >>> instance = APIPath()  # you would have to add more arguments
-        >>> instance["client"]    # appends `client` to _path
         """
         return self[k]
 
@@ -488,17 +476,13 @@ class PeonyClient(BasePeonyClient):
         A client with an easy handling of tasks
 
     You can create tasks by decorating a function from a child
-    class with :class:`commands.task`
+    class with :class:`peony.task`
 
-    You also attach a :class:`EventStream` to a child class using
-    PeonyClientChild.event_stream
+    You also attach a :class:`EventStream` to a subclass using
+    the :func:`event_stream` of the subclass
 
     After creating an instance of the child class you will be able
-    to run all the tasks easily by accessing the tasks attribute
-
-    >>> loop = asyncio.get_event_loop()
-    >>> client = PeonyClientChild()
-    >>> loop.run_until_complete(asyncio.wait(client.tasks))
+    to run all the tasks easily by executing :func:`get_tasks`
     """
 
     @classmethod

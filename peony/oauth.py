@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
+import base64
+from urllib.parse import quote
+
 import oauthlib.oauth1
 from oauthlib.common import add_params_to_uri
-from urllib.parse import quote
-import base64
 
 from . import __version__
 

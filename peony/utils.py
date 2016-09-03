@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import io
 import json
 import os
-import io
 from urllib.parse import urlparse
 
-from .exceptions import RateLimitExceeded
+from PIL import Image
+
+from . import exceptions
 
 try:
     from magic import Magic
@@ -17,8 +19,6 @@ except:
     import mimetypes
     mime = mimetypes.MimeTypes()
     magic = False
-
-from PIL import Image
 
 
 class JSONObject(dict):
@@ -82,6 +82,7 @@ class PeonyResponse:
     def __len__(self):
         return len(self.response)
 
+
 class handler_decorator:
 
     def __init__(self, handler):
@@ -103,7 +104,7 @@ def error_handler(request):
         while True:
             try:
                 return await request(**kwargs)
-            except RateLimitExceeded as e:
+            except exceptions.RateLimitExceeded as e:
                 print(e, file=sys.stderr)
                 delay = int(e.reset_in) + 1
                 print("sleeping for %ds" % delay, file=sys.stderr)

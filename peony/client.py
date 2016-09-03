@@ -5,9 +5,9 @@ from types import GeneratorType
 
 import aiohttp
 
-from . import general, utils, oauth, exceptions, requests
-from .stream import StreamContext
+from . import exceptions, general, oauth, requests, utils
 from .commands import EventStreams, task
+from .stream import StreamContext
 
 
 class BaseAPIPath:
@@ -298,7 +298,7 @@ class BasePeonyClient:
 
         kwargs = {key: (value is None) and default or value
                   for key, value, default in zip(keys, values, defaults)
-                  if (value, default) != (None,)*2}
+                  if (value, default) != (None,) * 2}
 
         kwargs['client'] = self
 

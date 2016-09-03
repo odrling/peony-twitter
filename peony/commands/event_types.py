@@ -22,7 +22,6 @@ class Events(dict):
                 self[key] = value
                 self.aliases[key] = self[func.__name__]
 
-
             return func
 
         return decorator

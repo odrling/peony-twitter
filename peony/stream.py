@@ -6,8 +6,8 @@ import sys
 
 import aiohttp
 
-from . import utils, exceptions
-from .exceptions import StreamLimit, PeonyException
+from . import exceptions, utils
+from .exceptions import PeonyException, StreamLimit
 from .general import rate_limit_notices
 
 

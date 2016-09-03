@@ -7,7 +7,6 @@ import webbrowser
 from . import oauth
 from .client import PeonyClient
 
-
 async def get_oauth_token(consumer_key, consumer_secret, callback_uri="oob"):
     """ get a temporary oauth token """
 

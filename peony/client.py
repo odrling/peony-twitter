@@ -462,11 +462,11 @@ class BasePeonyClient:
                   headers)
         """
         return StreamContext(
+            method, url,
             *args,
-            method=method,
-            url=url,
             headers=headers,
             _headers=self.headers,
+            _error_handler=self.error_handler,
             **kwargs
         )
 

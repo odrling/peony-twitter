@@ -21,21 +21,24 @@ class StreamResponse:
                  reconnect=150,
                  loads=utils.loads,
                  timeout=90,
+                 _error_handler=None,
                  **kwargs):
         """ keep the arguments as instance attributes """
         self.session = session or aiohttp.ClientSession()
         self.reconnect = reconnect
         self.headers = _headers
-        self.args = args
-        self.kwargs = kwargs
         self.loads = loads
         self.timeout = timeout
+        self.error_handler = _error_handler
+        self.args = args
+        self.kwargs = kwargs
 
     async def __aiter__(self):
         """ create the connection """
         kwargs = self.headers.prepare_request(**self.kwargs)
+        request = self.error_handler(self.session.request)
 
-        self.response = await self.session.request(*self.args, **kwargs)
+        self.response = await request(*self.args, **kwargs)
         if self.response.status == 200:
             return self
         else:
@@ -118,14 +121,18 @@ class StreamResponse:
 class StreamContext:
     """ A context that should close the session on exit """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, method, url, *args, **kwargs):
         """ keep the arguments as instance attributes """
+        self.method = method
+        self.url = url
         self.args = args
         self.kwargs = kwargs
 
     async def __aenter__(self):
         """ create stream and return it """
-        self.stream = StreamResponse(*self.args, **self.kwargs)
+        self.stream = StreamResponse(method=self.method,
+                                     url=self.url,
+                                     *self.args, **self.kwargs)
 
         return self.stream
 

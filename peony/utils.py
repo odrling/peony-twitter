@@ -110,9 +110,11 @@ def error_handler(request):
                 print("sleeping for %ds" % delay, file=sys.stderr)
                 await asyncio.sleep(delay)
             except TimeoutError:
-                print("connection timed out")
+                print("connection timed out", file=sys.stderr)
             else:
                 raise
+
+    decorated_request.is_handled = True
 
     return decorated_request
 

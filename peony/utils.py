@@ -4,6 +4,7 @@ import asyncio
 import io
 import json
 import os
+import sys
 from urllib.parse import urlparse
 
 from PIL import Image

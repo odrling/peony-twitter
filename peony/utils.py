@@ -16,7 +16,8 @@ try:
     mime = Magic(mime=True)
     magic = True
 except:
-    print('Could not load python-magic, fallback to mimetypes')
+    print('Could not load python-magic, fallback to mimetypes',
+          file=sys.stderr)
     import mimetypes
     mime = mimetypes.MimeTypes()
     magic = False

@@ -33,12 +33,17 @@ class StreamResponse:
         self.args = args
         self.kwargs = kwargs
 
-    async def __aiter__(self):
-        """ create the connection """
+    async def connect(self):
         kwargs = self.headers.prepare_request(**self.kwargs)
         request = self.error_handler(self.session.request)
 
-        self.response = await request(*self.args, **kwargs)
+        return await request(*self.args, **kwargs)
+
+    async def __aiter__(self):
+        """ create the connection """
+        request = self.error_handler(self.connect)
+
+        self.response = await request()
         if self.response.status == 200:
             return self
         else:
@@ -79,20 +84,6 @@ class StreamResponse:
             print("Timeout reached", file=sys.stderr)
             return await self.restart_stream(reconnect=0, error=error)
 
-        except GeneratorExit:
-            self.response.close()
-            self.session.close()
-
-        except KeyboardInterrupt:
-            self.response.close()
-            self.session.close()
-
-        except Exception as e:
-            str(e) and print(e, file=sys.stderr)
-            self.response.close()
-            self.session.close()
-            raise
-
     async def restart_stream(self, reconnect=None, error=None):
         """ restart the stream on error """
 
@@ -101,10 +92,7 @@ class StreamResponse:
 
         reconnect = reconnect is None and self.reconnect or reconnect
 
-        try:
-            self.response.close()
-        except Exception as e:
-            print(e, file=sys.stderr)
+        self.response.close()
 
         if reconnect is not None:
             if reconnect > 0:
@@ -130,8 +118,7 @@ class StreamContext:
 
     async def __aenter__(self):
         """ create stream and return it """
-        self.stream = StreamResponse(method=self.method,
-                                     url=self.url,
+        self.stream = StreamResponse(method=self.method, url=self.url,
                                      *self.args, **self.kwargs)
 
         return self.stream

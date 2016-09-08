@@ -52,7 +52,7 @@ def main():
     requires = get_requirements(os.path.join(dirname, 'requirements.txt'))
 
     # get long description from README.md
-    with open('README.md') as stream:
+    with open('README.rst') as stream:
         long_description = stream.read()
 
     setup(

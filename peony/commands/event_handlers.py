@@ -5,6 +5,7 @@ import sys
 from . import utils
 from .commands import Commands
 from .tasks import Task
+from ..utils import print_error
 
 
 def unpack(*args, **values):
@@ -107,8 +108,8 @@ class EventStream:
                 try:
                     await self._run(data)
                 except Exception as e:
-                    msg = "error in %s._start:" % self.__class__.__name__
-                    print(msg, e, file=sys.stderr)
+                    msg = "error in %s._start:\n" % self.__class__.__name__
+                    print_error(e, msg)
 
     def _check(self, func):
         if not func.startswith("_"):
@@ -127,8 +128,8 @@ class EventStream:
                     return event_handler
 
         except Exception as e:
-            msg = "error in %s._get:" % self.__class__.__name__
-            print(msg, e, file=sys.stderr)
+            msg = "error in %s._get:\n" % self.__class__.__name__
+            print(e, msg)
 
     async def _run(self, data):
         event_handler = self._get(data)
@@ -139,12 +140,11 @@ class EventStream:
                 return await utils.execute(coro)
 
         except Exception as e:
-            fmt = "error occurred while running {classname} {handler}: {error}"
+            fmt = "error occurred while running {classname} {handler}:\n"
             msg = fmt.format(classname=self.__class__.__name__,
-                             handler=event_handler.__name__,
-                             error=e)
+                             handler=event_handler.__name__)
 
-            print(msg, file=sys.stderr)
+            print_error(e, msg)
 
 
 class EventStreams(list):

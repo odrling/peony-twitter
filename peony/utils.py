@@ -5,6 +5,7 @@ import io
 import json
 import os
 import sys
+import traceback
 from urllib.parse import urlparse
 
 from PIL import Image
@@ -116,9 +117,13 @@ def error_handler(request):
             else:
                 raise
 
-    decorated_request.is_handled = True
-
     return decorated_request
+
+
+def print_error(error, msg=""):
+    traceback.print_tb(error.__traceback__)
+    print("%s%s: %s" % (msg, error.__class__.__name__, error),
+          file=sys.stderr)
 
 
 def loads(json_data, *args, encoding="utf-8", **kwargs):

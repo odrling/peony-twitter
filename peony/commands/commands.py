@@ -4,6 +4,7 @@ import re
 import sys
 
 from . import utils
+from ..utils import print_error
 
 
 class Functions(dict):
@@ -66,8 +67,8 @@ class Functions(dict):
                 return await utils.execute(command)
 
         except Exception as e:
-            fmt = "Error occurred while running function {cmd}: {error}"
-            print(fmt.format(cmd=cmd, error=e), file=sys.stderr)
+            fmt = "Error occurred while running function {cmd}:\n"
+            print_error(e, fmt.format(cmd=cmd))
 
     def __call__(self, func, name=None):
         name = name or func.__name__

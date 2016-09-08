@@ -13,7 +13,7 @@ def get_metadata(metadatafile):
     with open(metadatafile) as stream:
         text = stream.read()
 
-        ex = r"__(\w*?)__ *?= *?[\"\']([^\"\']*)"
+        ex = r"__(\w*?)__\s*?=\s*?[\"\']([^\"\']*)"
         items = re.findall(ex, text)
         metadata = {key: value for key, value in items}
 

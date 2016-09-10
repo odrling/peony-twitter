@@ -2,6 +2,7 @@
 
 import asyncio
 import io
+import functools
 import json
 import os
 import sys
@@ -89,20 +90,21 @@ class PeonyResponse:
 class handler_decorator:
 
     def __init__(self, handler):
-        self.handler = handler
+        functools.update_wrapper(self, handler)
 
     def __call__(self, request, error_handling=True):
         if error_handling:
-            return self.handler(request)
+            return self.__wrapped__(request)
         else:
             return request
 
     def __repr__(self):
-        return repr(self.handler)
+        return repr(self.__wrapped__)
 
 
 @handler_decorator
 def error_handler(request):
+    @functools.wraps(request)
     async def decorated_request(**kwargs):
         while True:
             try:
@@ -166,6 +168,7 @@ def optimize_media(path, max_size, formats):
 
 
 def reset_io(func):
+    @functools.wraps(func)
     def decorated(media):
         media.seek(0)
         result = func(media)

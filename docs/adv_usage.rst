@@ -1,4 +1,4 @@
-
+.. highlighting: python
 .. _adv_api:
 
 Accessing an API using a different API version

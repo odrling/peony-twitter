@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from functools import wraps
 import re
 import sys
 
@@ -109,6 +110,7 @@ class Commands(Functions):
 
     def restricted(self, *permissions):
         def decorator(func):
+            @wraps(func)
             async def decorated(_self, data, *args, **kwargs):
                 permission = utils.permission_check(
                     data,
@@ -121,9 +123,8 @@ class Commands(Functions):
 
                     return await utils.execute(cmd)
 
-            decorated.__doc__ = func.__doc__
             decorated.permissions = permissions
 
-            return self(decorated, name=func.__name__)
+            return self(decorated)
 
         return decorator

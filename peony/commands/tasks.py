@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
-
+from functools import update_wrapper
 
 class Task:
 
     def __init__(self, func):
-        self.func = func
-        self.__name__ = func.__name__
+        update_wrapper(self, func)
 
     def __call__(self, *args, **kwargs):
-        return self.func(*args, **kwargs)
+        return self.__wrapped__(*args, **kwargs)

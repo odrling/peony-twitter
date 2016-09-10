@@ -1,7 +1,7 @@
 Peony
 =====
 
-An asynchronous Twitter API client for Python
+An asynchronous Twitter API client for Python 3.5+
 
 Installation
 ------------

@@ -1,6 +1,7 @@
 =========================================
  Use the Application only authentication
 =========================================
+.. highlighting: python
 
 The application only authentication is restricted to some endpoints.
 See `the Twitter documentation page`_::

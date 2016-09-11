@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 import base64
 from urllib.parse import quote
 
@@ -7,6 +8,7 @@ import oauthlib.oauth1
 from oauthlib.common import add_params_to_uri
 
 from . import __version__
+from . import utils
 
 
 class PeonyHeaders(dict):
@@ -19,12 +21,14 @@ class PeonyHeaders(dict):
 
     def __init__(self, **kwargs):
         """ Add a nice User-Agent """
-        super().__init__()
-
         self['User-Agent'] = "peony v%s" % __version__
 
-    def prepare_request(self, method, url, headers={},
-                        skip_params=False, **kwargs):
+        super().__init__(**kwargs)
+
+    def prepare_request(self, method, url,
+                        headers=None,
+                        skip_params=False,
+                        **kwargs):
         """ prepare all the arguments for the request """
 
         if method.lower() == "post":
@@ -41,7 +45,8 @@ class PeonyHeaders(dict):
 
         request_params['headers'] = self.sign(**request_params,
                                               skip_params=skip_params)
-        request_params['headers'].update(headers)
+        if headers is not None:
+            request_params['headers'].update(headers)
 
         kwargs.update(request_params)
 
@@ -64,7 +69,7 @@ class OAuth1Headers(PeonyHeaders):
     def __init__(self, consumer_key, consumer_secret,
                  access_token=None, access_token_secret=None, **kwargs):
         """ create the OAuth1 client """
-        super().__init__()
+        super().__init__(**kwargs)
 
         self.oauthclient = oauthlib.oauth1.Client(
             client_key=consumer_key,
@@ -74,13 +79,13 @@ class OAuth1Headers(PeonyHeaders):
         )
 
     def sign(self, method, url,
-             data={},
-             params={},
+             data=None,
+             params=None,
              skip_params=False,
              **kwargs):
         """ sign, that is, generate the `Authorization` headers """
 
-        headers = self.copy()
+        headers = super().sign()
 
         if data:
             if skip_params:
@@ -97,7 +102,7 @@ class OAuth1Headers(PeonyHeaders):
 
             body = None
 
-        uri, headers, body = self.oauthclient.sign(
+        ___, headers, ____ = self.oauthclient.sign(
             uri=url, http_method=method, headers=headers, body=body, **kwargs)
 
         return headers
@@ -113,7 +118,7 @@ class OAuth2Headers(PeonyHeaders):
                  bearer_token=None,
                  encoding="utf-8",
                  **kwargs):
-        super().__init__()
+        super().__init__(**kwargs)
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.client = client
@@ -151,3 +156,39 @@ class OAuth2Headers(PeonyHeaders):
                               _json=True)
 
         self.set_token(token['access_token'])
+
+
+class Client:
+
+    def __init__(self, consumer_key, consumer_secret,
+                 access_token=None,
+                 access_token_secret=None,
+                 bearer_token=None,
+                 auth=OAuth1Headers,
+                 headers=None,
+                 loop=None):
+        if headers is None:
+            headers = {}
+
+        # all the possible args required by headers in :mod:`peony.oauth`
+        kwargs = {
+            'consumer_key': consumer_key,
+            'consumer_secret': consumer_secret,
+            'access_token': access_token,
+            'access_token_secret': access_token_secret,
+            'bearer_token': bearer_token,
+            'client': self
+        }
+
+        # get the args needed by the auth parameter on initialization
+        args = utils.get_args(auth.__init__, skip=1)
+
+        # keep only the arguments required by auth on init
+        kwargs = {key: value for key, value in kwargs.items()
+                  if key in args}
+
+        self.headers = auth(**kwargs, **headers)
+
+        self.loop = loop or asyncio.get_event_loop()
+
+        self.loop.run_until_complete(self.headers.prepare_headers())

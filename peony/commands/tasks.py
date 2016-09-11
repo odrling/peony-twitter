@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
+
 from functools import update_wrapper
+
 
 class Task:
 

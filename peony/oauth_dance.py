@@ -31,12 +31,12 @@ def get_oauth_verifier(oauth_token):
     url += oauth_token
 
     try:
-        wb = webbrowser.open(url)
+        browser = webbrowser.open(url)
         time.sleep(2)
 
-        if not wb:
-            raise Exception
-    except:
+        if not browser:
+            raise RuntimeError
+    except RuntimeError:
         print("could not open a browser\ngo here to enter your PIN: " + url)
 
     return input("\nEnter your PIN: ")
@@ -108,6 +108,10 @@ def oauth_dance(consumer_key, consumer_secret,
 
 
 def oauth2_dance(consumer_key, consumer_secret):
+    """
+        oauth2 dance actually dealt with on creation of
+        :class:`peony.PeonyClient`
+    """
     client = PeonyClient(consumer_key=consumer_key,
                          consumer_secret=consumer_secret,
                          auth=oauth.OAuth2Headers)

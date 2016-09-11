@@ -19,7 +19,9 @@ async def send_tweet_with_media():
         dirname = os.path.dirname(os.path.abspath(__file__))
         path = os.path.join(dirname, "test.gif")
 
-    await client.api.statuses.update.post(status=status, _media=path)
+    media = await client.upload_media(path, auto_convert=True)
+    await client.api.statuses.update.post(status=status,
+                                          media_ids=media.media_id)
 
 
 if __name__ == '__main__':

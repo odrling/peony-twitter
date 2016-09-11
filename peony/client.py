@@ -1,4 +1,11 @@
 # -*- coding: utf-8 -*-
+"""
+Peony Clients
+
+:class:`BasePeonyClient` only handles requests while
+:class:`PeonyClient` adds some methods that could help when using
+the Twitter APIs, with a method to upload a media
+"""
 
 import asyncio
 from types import GeneratorType
@@ -6,179 +13,26 @@ from types import GeneratorType
 import aiohttp
 
 from . import exceptions, general, oauth, requests, utils
+from .api import APIPath, StreamingAPIPath
 from .commands import EventStreams, task
 from .stream import StreamContext
 
 
-class BaseAPIPath:
-    """
-        The syntactic sugar factory
-
-    Everytime you get an attribute or an item from an instance of this
-    class this will be appended to its _path variable (that you should
-    not call) until you call a request method (like get or post)
-
-    It makes it easy to call any endpoint of the api
-
-    /!\ You must create a child class of BaseAPIPath to perform
-    requests (you have to overload the _request method)
-
-    The client given as an parameter during the creation of the
-    BaseAPIPath instance can be accessed as the "client" attribute of
-    the instance.
-    """
-
-    def __init__(self, base_url, api, version, suffix, client):
-        """
-            build the base url of the api and create the _path and
-            client attributes
-
-        :base_url: str that should contain `{api}` and `{version}`
-        :api: str
-        :version: str
-        :client: a class instance that would be called in _request
-        """
-        base_url = base_url.format(api=api, version=version).rstrip('/')
-        self._suffix = suffix
-        self._path = [base_url]
-        self._client = client
-
-    def url(self, suffix=None):
-        """
-            build the url using the _path attribute
-
-        :suffix: str, to be appended to the url
-        """
-        return "/".join(self._path) + (suffix or self._suffix)
-
-    def __getitem__(self, k):
-        """
-            Where the magic happens
-
-        if the key is a request method (eg. get) call the _request
-        attribute with the method as argument
-
-        otherwise append the key to the _path attribute
-
-        >>> instance = APIPath()  # you would have to add more arguments
-        >>> instance["client"]    # appends `client` to _path
-        """
-        if k.lower() in general.request_methods:
-            return self._request(self, k)
-        else:
-            if isinstance(k, (tuple, list)):
-                k = map(str, k)
-                self._path.extend(k)
-            else:
-                self._path.append(str(k))
-
-            return self
-
-    def __getattr__(self, k):
-        """
-            Call __getitem__ when trying to get an attribute from the
-            instance
-
-        if your path contains an actual attribute of the instance
-        you should call __getitem__ instead
-        """
-        return self[k]
-
-    @staticmethod
-    def sanitize_params(method, **kwargs):
-        """
-            Request params can be extracted from the **kwargs
-
-        Arguments starting with `_` will be stripped from it, so they
-        can be used as an argument for the request
-        (eg. "_headers" → "headers" in the kwargs returned by this
-        function while "headers" would be inserted in the params)
-        """
-        # items which does not have a key starting with `_`
-        items = [(key, value) for key, value in kwargs.items()
-                 if not key.startswith("_")]
-        params, skip_params = {}, False
-
-        iterable = (list, set, tuple, GeneratorType)
-
-        for key, value in items:
-            # binary data
-            if hasattr(value, 'read') or isinstance(value, bytes):
-                params[key] = value
-                # The params won't be used to make the signature
-                skip_params = True
-
-            # booleans conversion
-            elif isinstance(value, bool):
-                params[key] = value and "true" or "false"
-
-            # integers conversion
-            elif isinstance(value, int):
-                params[key] = str(value)
-
-            # iterables conversion
-            elif isinstance(value, iterable):
-                params[key] = ",".join(map(str, value))
-
-            # skip params with value None
-            elif value is None:
-                pass
-
-            # the rest is sent as is
-            else:
-                params[key] = value
-
-        # dict with other items (+ strip "_" from keys)
-        kwargs = {key[1:]: value for key, value in kwargs.items()
-                  if key.startswith("_")}
-
-        if method.lower() == "post":
-            kwargs['data'] = params  # post requests use the data argument
-        else:
-            kwargs['params'] = params
-
-        return kwargs, skip_params
-
-    def _request(self, method):
-        """ method to be overloaded """
-        pass
-
-    def __repr__(self):
-        return "<%s %s>" % (self.__class__.__name__, self.url())
-
-
-class APIPath(BaseAPIPath):
-
-    _request = requests.Request
-
-
-class StreamingAPIPath(BaseAPIPath):
-
-    _request = requests.StreamingRequest
-
-
-class BasePeonyClient:
+class BasePeonyClient(oauth.Client):
     """
         Attributes/items become a :class:`APIPath` or
         :class:`StreamingAPIPath` automatically
 
-    This class only handles the requests and makes accessing twitter's
+    This class only handles the requests and makes accessing Twitter's
     APIs easy.
-    (see BasePeonyClient.__getitem__ and BasePeonyClient.__getattr__)
     """
 
-    def __init__(self, consumer_key, consumer_secret,
-                 access_token=None,
-                 access_token_secret=None,
-                 bearer_token=None,
-                 headers={},
-                 streaming_apis=general.streaming_apis,
-                 base_url=general.twitter_base_api_url,
-                 api_version=general.twitter_api_version,
+    def __init__(self, *args,
+                 streaming_apis=None,
+                 base_url=None,
+                 api_version=None,
                  suffix='.json',
-                 auth=oauth.OAuth1Headers,
                  loads=utils.loads,
-                 loop=None,
                  error_handler=utils.error_handler,
                  **kwargs):
         """
@@ -213,49 +67,40 @@ class BasePeonyClient:
         :loop: asyncio loop
         :error_handler: A decorator to use on a request to handle errors
         """
-        self.loop = loop or asyncio.get_event_loop()
 
-        self.streaming_apis = streaming_apis
+        if streaming_apis is None:
+            self.streaming_apis = general.streaming_apis
+        else:
+            self.streaming_apis = streaming_apis
 
-        self.base_url = base_url
-        self.api_version = api_version
+        if base_url is None:
+            self.base_url = general.twitter_base_api_url
+        else:
+            self.base_url = base_url
+
+        if api_version is None:
+            self.api_version = general.twitter_api_version
+        else:
+            self.api_version = api_version
+
         self._suffix = suffix
 
         self._loads = loads
         self.error_handler = error_handler
 
-        self.headers = auth(
-            consumer_key=consumer_key,
-            consumer_secret=consumer_secret,
-            access_token=access_token,
-            access_token_secret=access_token_secret,
-            bearer_token=bearer_token,
-            client=self,
-            **kwargs
-        )
-        self.headers.update(headers)
+        super().__init__(*args, **kwargs)
 
-        self.loop.run_until_complete(self.headers.prepare_headers())
+        if callable(self.init_tasks):
+            init_tasks = self.init_tasks()
+        else:
+            init_tasks = self.init_tasks
 
-        init_tasks = self.init_tasks
-        if callable(init_tasks):
-            init_tasks = init_tasks()
-
-        self.loop.run_until_complete(asyncio.wait(init_tasks))
+        if init_tasks is not None:
+            # loop attribute was created in oauth.Client.__init__
+            self.loop.run_until_complete(asyncio.wait(init_tasks))
 
     def init_tasks(self):
-        tasks = [self.__get_twitter_configuration()]
-        if isinstance(self.headers, oauth.OAuth1Headers):
-            tasks.append(self.__get_user())
-        return tasks
-
-    async def __get_twitter_configuration(self):
-        api = self['api', general.twitter_api_version, ".json"]
-        self.twitter_configuration = await api.help.configuration.get()
-
-    async def __get_user(self):
-        api = self['api', general.twitter_api_version, ".json"]
-        self.user = await api.account.verify_credentials.get()
+        pass
 
     def __getitem__(self, values):
         """
@@ -284,29 +129,26 @@ class BasePeonyClient:
         elif isinstance(values, set):
             raise TypeError('Cannot use a set to access an api, '
                             'please use a dict, a tuple or a list instead')
-        elif not isinstance(values, (tuple, list)):
-            # make values an iterable
-            values = values,
+        elif isinstance(values, str):
+            values = [values, *defaults[1:]]
+        elif values:
+            if len(values) < len(keys):
+                padding = (None,) * (len(keys) - len(values))
+                values += padding
 
-        if len(values) < len(keys):
-            padding_size = len(keys) - len(values)
+            values = [default if value is None else value
+                      for value, default in zip(values, defaults)
+                      if (value, default) != (None, None)]
 
-            # values is either a tuple or a list and padding is an
-            # instance of the same class as values
-            padding = values.__class__([None] * padding_size)
-            values += padding
+        api, version, suffix, base_url = values
 
-        kwargs = {key: (value is None) and default or value
-                  for key, value, default in zip(keys, values, defaults)
-                  if (value, default) != (None,) * 2}
-
-        kwargs['client'] = self
+        base_url = base_url.format(api=api, version=version).rstrip('/')
 
         # use StreamingAPIPath if subdomain is in self.streaming_apis
-        if kwargs.get('api', '') in self.streaming_apis:
-            return StreamingAPIPath(**kwargs)
+        if api in self.streaming_apis:
+            return StreamingAPIPath([base_url], suffix=suffix, client=self)
         else:
-            return APIPath(**kwargs)
+            return APIPath([base_url], suffix=suffix, client=self)
 
     def __getattr__(self, api):
         """
@@ -319,102 +161,12 @@ class BasePeonyClient:
         """
         return self[api]
 
-    async def _chunked_upload(self, media,
-                              path=None,
-                              media_type=None,
-                              media_category=None,
-                              **params):
-        media_size = utils.get_size(media)
-
-        if media_type is None or media_category is None:
-            media_type, media_category = utils.get_type(media, path)
-
-        response = await self.upload.media.upload.post(
-            command="INIT",
-            total_bytes=media_size,
-            media_type=media_type,
-            media_category=media_category,
-            **params
-        )
-
-        media_id = response['media_id']
-
-        mb = 2**20
-        chunks = utils.media_chunks(media, mb, media_size)
-
-        for i, chunk in enumerate(chunks):
-            await self.upload.media.upload.post(command="APPEND",
-                                                media_id=media_id,
-                                                media=chunk,
-                                                segment_index=i,
-                                                _json=None)
-
-        status = await self.upload.media.upload.post(command="FINALIZE",
-                                                     media_id=media_id)
-
-        if 'processing_info' in status:
-            while status['processing_info']['state'] != "succeeded":
-                if 'status' not in status['processing_info']:
-                    pass
-                elif status['processing_info']['status'] == "failed":
-                    error = status['processing_info'].get('error', {})
-
-                    message = error.get('message',
-                                        "No error message in the response")
-
-                    raise exceptions.MediaProcessingError(data=status,
-                                                          message=message,
-                                                          **params)
-
-                delay = status['processing_info']['check_after_secs']
-                await asyncio.sleep(delay)
-                status = await self.upload.media.upload.get(
-                    command="STATUS",
-                    media_id=media_id,
-                    **params
-                )
-
-        return response
-
-    async def upload_media(self, f,
-                           auto_convert=True,
-                           formats=general.formats,
-                           max_size=None,
-                           chunked=False,
-                           **params):
-        image_metadata = utils.get_image_metadata(f)
-        media_type, media_category, is_image, path = image_metadata
-
-        if is_image and auto_convert:
-            if not max_size:
-                photo_sizes = self.twitter_configuration['photo_sizes']
-                large_sizes = photo_sizes['large']
-                max_size = large_sizes['h'], large_sizes['w']
-
-            media = utils.optimize_media(path, max_size, formats)
-        else:
-            media = open(path, 'rb')
-
-        size_limit = self.twitter_configuration['photo_size_limit']
-
-        if utils.get_size(media) > size_limit or chunked:
-            args = media, path, media_type, media_category
-            response = await self._chunked_upload(*args, **params)
-        else:
-            response = await self.upload.media.upload.post(media=media,
-                                                           **params)
-
-        if not media.closed:
-            media.close()
-
-        return response
-
     async def request(self, method, url,
-                      headers={},
+                      headers=None,
                       json=False,
                       **kwargs):
         """
-            Make request to the REST API
+            Make requests to the REST API
 
         :method: str, method to be used by the request
         :url: str, url of the ressource
@@ -452,7 +204,7 @@ class BasePeonyClient:
                 else:  # throw exceptions if status is not 2xx
                     await exceptions.throw(response)
 
-    def stream_request(self, method, url, headers={}, *args, **kwargs):
+    def stream_request(self, method, url, headers=None, *args, **kwargs):
         """
             Make requests to the Streaming API
 
@@ -484,6 +236,112 @@ class PeonyClient(BasePeonyClient):
     After creating an instance of the child class you will be able
     to run all the tasks easily by executing :func:`get_tasks`
     """
+
+    def init_tasks(self):
+        tasks = [self.__get_twitter_configuration()]
+        if isinstance(self.headers, oauth.OAuth1Headers):
+            tasks.append(self.__get_user())
+        return tasks
+
+    async def __get_twitter_configuration(self):
+        api = self['api', general.twitter_api_version, ".json"]
+        self.twitter_configuration = await api.help.configuration.get()
+
+    async def __get_user(self):
+        api = self['api', general.twitter_api_version, ".json"]
+        self.user = await api.account.verify_credentials.get()
+
+    async def _chunked_upload(self, media,
+                              path=None,
+                              media_type=None,
+                              media_category=None,
+                              **params):
+        media_size = utils.get_size(media)
+
+        if media_type is None or media_category is None:
+            media_type, media_category = utils.get_type(media, path)
+
+        response = await self.upload.media.upload.post(
+            command="INIT",
+            total_bytes=media_size,
+            media_type=media_type,
+            media_category=media_category,
+            **params
+        )
+
+        media_id = response['media_id']
+
+        size_limit = 2**20
+        chunks = utils.media_chunks(media, size_limit, media_size)
+
+        for i, chunk in enumerate(chunks):
+            await self.upload.media.upload.post(command="APPEND",
+                                                media_id=media_id,
+                                                media=chunk,
+                                                segment_index=i,
+                                                _json=None)
+
+        status = await self.upload.media.upload.post(command="FINALIZE",
+                                                     media_id=media_id)
+
+        if 'processing_info' in status:
+            while status['processing_info']['state'] != "succeeded":
+                if 'status' not in status['processing_info']:
+                    pass
+                elif status['processing_info']['status'] == "failed":
+                    error = status['processing_info'].get('error', {})
+
+                    message = error.get('message',
+                                        "No error message in the response")
+
+                    raise exceptions.MediaProcessingError(data=status,
+                                                          message=message,
+                                                          **params)
+
+                delay = status['processing_info']['check_after_secs']
+                await asyncio.sleep(delay)
+                status = await self.upload.media.upload.get(
+                    command="STATUS",
+                    media_id=media_id,
+                    **params
+                )
+
+        return response
+
+    async def upload_media(self, file_,
+                           auto_convert=False,
+                           formats=None,
+                           max_size=None,
+                           chunked=False,
+                           **params):
+        formats = formats or general.formats
+
+        image_metadata = utils.get_image_metadata(file_)
+        media_type, media_category, is_image, file_ = image_metadata
+
+        if is_image and auto_convert:
+            if not max_size:
+                photo_sizes = self.twitter_configuration['photo_sizes']
+                large_sizes = photo_sizes['large']
+                max_size = large_sizes['h'], large_sizes['w']
+
+            media = utils.optimize_media(file_, max_size, formats)
+        else:
+            media = open(path, 'rb')
+
+        size_limit = self.twitter_configuration['photo_size_limit']
+
+        if utils.get_size(media) > size_limit or chunked:
+            args = media, path, media_type, media_category
+            response = await self._chunked_upload(*args, **params)
+        else:
+            response = await self.upload.media.upload.post(media=media,
+                                                           **params)
+
+        if not media.closed:
+            media.close()
+
+        return response
 
     @classmethod
     def event_stream(cls, event_stream):

@@ -109,7 +109,7 @@ class EventStream:
                     await self._run(data)
                 except Exception as e:
                     msg = "error in %s._start:\n" % self.__class__.__name__
-                    print_error(e, msg)
+                    print_error(msg)
 
     def _check(self, func):
         if not func.startswith("_"):
@@ -144,7 +144,7 @@ class EventStream:
             msg = fmt.format(classname=self.__class__.__name__,
                              handler=event_handler.__name__)
 
-            print_error(e, msg)
+            print_error(msg)
 
 
 class EventStreams(list):

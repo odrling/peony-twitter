@@ -110,7 +110,8 @@ def error_handler(request):
             try:
                 return await request(**kwargs)
             except exceptions.RateLimitExceeded as e:
-                print(e, file=sys.stderr)
+                traceback.print_exc(file=sys.stderr)
+                # print(e, file=sys.stderr)
                 delay = int(e.reset_in) + 1
                 print("sleeping for %ds" % delay, file=sys.stderr)
                 await asyncio.sleep(delay)
@@ -122,10 +123,26 @@ def error_handler(request):
     return decorated_request
 
 
-def print_error(error, msg=""):
-    traceback.print_tb(error.__traceback__)
-    print("%s%s: %s" % (msg, error.__class__.__name__, error),
-          file=sys.stderr)
+def get_args(func, skip=0):
+    """
+        hackish way to get the arguments of a function
+
+    Arguments:
+        func (function): function to get the arguments from
+        skip (Optional[int]): arguments to skip, defaults to 0
+                              set it to 1 to skip the ``self`` argument
+                              of a method.
+
+    """
+    argcount = func.__code__.co_argcount
+    return func.__code__.co_varnames[skip:argcount]
+
+
+def print_error(msg=None, stderr=sys.stderr):
+    output = [] if msg is None else [msg]
+    output.append(traceback.format_exc().strip())
+
+    print(*output, sep='\n', file=stderr)
 
 
 def loads(json_data, *args, encoding="utf-8", **kwargs):
@@ -148,21 +165,29 @@ def convert(img, formats):
         yield f
 
 
-def optimize_media(path, max_size, formats):
-    with Image.open(path) as img:
-        ratio = max(hw / max_hw for hw, max_hw in zip(img.size, max_size))
+def optimize_media(file_, max_size, formats):
+    img = Image.open(file_)
+    ratio = max(hw / max_hw for hw, max_hw in zip(img.size, max_size))
 
-        if ratio > 1:
-            size = tuple(int(hw // ratio) for hw in img.size)
-            img = img.resize(size, Image.ANTIALIAS)
+    # resize the picture (defaults to the 'large' photo size of Twitter
+    # in peony.PeonyClient.upload_media)
+    if ratio > 1:
+        size = tuple(int(hw // ratio) for hw in img.size)
+        img = img.resize(size, Image.ANTIALIAS)
 
-        files = list(convert(img, formats))
+    files = list(convert(img, formats))
+
+    # do not close a file opened by the user
+    # only close if a filename was given
+    if not hasattr(file_, 'read'):
+        img.close()
 
     files.sort(key=get_size)
     media = files.pop(0)
 
     for f in files:
-        f.close()
+        if not f.closed:
+            f.close()
 
     return media
 
@@ -188,21 +213,16 @@ def get_media_metadata(f):
     return media_type, media_category, is_image
 
 
-def get_image_metadata(f):
+def get_image_metadata(file_):
     # try to get the path no matter how the input is
-    if isinstance(f, str):
-        path = urlparse(f).path.strip(" \"'")
+    if isinstance(file_, str):
+        path = urlparse(file_).path.strip(" \"'")
 
         with open(path, 'rb') as original:
             return (*get_media_metadata(original), path)
 
-    elif hasattr(f, 'read'):
-        if hasattr(f, 'name'):
-            path = urlparse(f.name).path.strip(" \"'")
-        else:
-            path = None
-
-        return (*get_media_metadata(f), path)
+    elif hasattr(file_, 'read'):
+        return (*get_media_metadata(file_), file_)
     else:
         raise TypeError("upload_media input must be a file object or a"
                         "filename")

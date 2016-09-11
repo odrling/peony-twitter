@@ -27,13 +27,13 @@ async def throw(response, **kwargs):
     if err is not None:
         if 'code' in err:
             code = str(err['code'])
-            if code in error:
-                e = error[code]
-                raise e(response=response, data=data, **kwargs)
+            if code in errors:
+                exception = errors[code]
+                raise exception(response=response, data=data, **kwargs)
 
-    if str(response.status) in status:
-        e = status[response.status]
-        raise e(response=response, data=data, **kwargs)
+    if str(response.status) in statuses:
+        exception = statuses[response.status]
+        raise exception(response=response, data=data, **kwargs)
 
     # raise PeonyException if no specific exception was found
     raise PeonyException(response=response, data=data, **kwargs)
@@ -99,31 +99,31 @@ class ErrorDict(dict):
         return decorator
 
 
-status = ErrorDict()
-error = ErrorDict()
+statuses = ErrorDict()
+errors = ErrorDict()
 
 
-@error.code(32)
+@errors.code(32)
 class NotAuthenticated(PeonyException):
     pass
 
 
-@error.code(34)
+@errors.code(34)
 class DoesNotExist(PeonyException):
     pass
 
 
-@error.code(64)
+@errors.code(64)
 class AccountSuspended(PeonyException):
     pass
 
 
-@error.code(68)
+@errors.code(68)
 class MigrateToNewAPI(PeonyException):
     pass
 
 
-@error.code(88)
+@errors.code(88)
 class RateLimitExceeded(PeonyException):
 
     @property
@@ -135,156 +135,156 @@ class RateLimitExceeded(PeonyException):
         return self.reset - time.time()
 
 
-@error.code(92)
+@errors.code(92)
 class SSLRequired(PeonyException):
     pass
 
 
-@error.code(130)
+@errors.code(130)
 class OverCapacity(PeonyException):
     pass
 
 
-@error.code(131)
+@errors.code(131)
 class InternalError(PeonyException):
     pass
 
 
-@error.code(135)
+@errors.code(135)
 class CouldNotAuthenticate(PeonyException):
     pass
 
 
-@error.code(136)
+@errors.code(136)
 class Blocked(PeonyException):
     pass
 
 
-@error.code(161)
+@errors.code(161)
 class FollowLimit(PeonyException):
     pass
 
 
-@error.code(179)
+@errors.code(179)
 class ProtectedTweet(PeonyException):
     pass
 
 
-@error.code(185)
+@errors.code(185)
 class StatusLimit(PeonyException):
     pass
 
 
-@error.code(187)
+@errors.code(187)
 class DuplicatedStatus(PeonyException):
     pass
 
 
-@error.code(215)
+@errors.code(215)
 class BadAuthentication(PeonyException):
     pass
 
 
-@error.code(226)
+@errors.code(226)
 class AutomatedRequest(PeonyException):
     pass
 
 
-@error.code(231)
+@errors.code(231)
 class VerifyLogin(PeonyException):
     pass
 
 
-@error.code(251)
+@errors.code(251)
 class RetiredEndpoint(PeonyException):
     pass
 
 
-@error.code(261)
+@errors.code(261)
 class ReadOnlyApplication(PeonyException):
     pass
 
 
-@error.code(271)
+@errors.code(271)
 class CannotMuteYourself(PeonyException):
     pass
 
 
-@error.code(272)
+@errors.code(272)
 class NotMutingUser(PeonyException):
     pass
 
 
-@error.code(354)
+@errors.code(354)
 class DMCharacterLimit(PeonyException):
     pass
 
 
-@status.code(304)
+@statuses.code(304)
 class NotModified(PeonyException):
     pass
 
 
-@status.code(400)
+@statuses.code(400)
 class BadRequest(PeonyException):
     pass
 
 
-@status.code(401)
+@statuses.code(401)
 class Unauthorized(PeonyException):
     pass
 
 
-@status.code(403)
+@statuses.code(403)
 class Forbidden(PeonyException):
     pass
 
 
-@status.code(404)
+@statuses.code(404)
 class NotFound(PeonyException):
     pass
 
 
-@status.code(406)
+@statuses.code(406)
 class NotAcceptable(PeonyException):
     pass
 
 
-@status.code(410)
+@statuses.code(410)
 class Gone(PeonyException):
     pass
 
 
-@status.code(420)
+@statuses.code(420)
 class EnhanceYourCalm(PeonyException):
     pass
 
 
-@status.code(422)
+@statuses.code(422)
 class UnprocessableEntity(PeonyException):
     pass
 
 
-@status.code(429)
+@statuses.code(429)
 class TooManyRequests(PeonyException):
     pass
 
 
-@status.code(500)
+@statuses.code(500)
 class InternalServerError(PeonyException):
     pass
 
 
-@status.code(502)
+@statuses.code(502)
 class BadGateway(PeonyException):
     pass
 
 
-@status.code(503)
+@statuses.code(503)
 class ServiceUnavailable(PeonyException):
     pass
 
 
-@status.code(504)
+@statuses.code(504)
 class GatewayTimeout(PeonyException):
     pass

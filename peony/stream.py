@@ -50,7 +50,7 @@ class StreamResponse:
             try:
                 await exceptions.throw(self.response)
             except PeonyException as e:
-                utils.print_error(error)
+                utils.print_error()
                 if self.reconnect:
                     await self.restart_stream(error=e)
 
@@ -69,26 +69,26 @@ class StreamResponse:
             return self.loads(line)
 
         except StreamLimit as error:
-            utils.print_error(error)
+            utils.print_error()
             return await self.restart_stream(error=error)
 
         except StopAsyncIteration as error:
-            utils.print_error(error)
+            utils.print_error()
             return await self.restart_stream(error=error)
 
         except json.decoder.JSONDecodeError as error:
-            utils.print_error(error)
+            utils.print_error()
             return await self.restart_stream(error=error)
 
         except asyncio.TimeoutError as error:
-            utils.print_error(error)
+            utils.print_error()
             return await self.restart_stream(reconnect=0, error=error)
 
     async def restart_stream(self, reconnect=None, error=None):
         """ restart the stream on error """
 
         if error is not None:
-            utils.print_error(error)
+            utils.print_error()
 
         reconnect = reconnect is None and self.reconnect or reconnect
 

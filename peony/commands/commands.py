@@ -68,8 +68,8 @@ class Functions(dict):
                 return await utils.execute(command)
 
         except Exception as e:
-            fmt = "Error occurred while running function {cmd}:\n"
-            print_error(e, fmt.format(cmd=cmd))
+            fmt = "Error occurred while running function {cmd}:"
+            print_error(fmt.format(cmd=cmd))
 
     def __call__(self, func, name=None):
         name = name or func.__name__

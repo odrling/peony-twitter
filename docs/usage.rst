@@ -149,31 +149,17 @@ You can easily upload a media with peony.::
     client = PeonyClient(**creds)
 
     async def upload_media(picture="picture.jpg"):
+        media = await client.upload_media(path, auto_convert=True)
         client.api.statuses.update.post(status="Wow! Look at this picture!",
-                                        _media=picture)
+                                        media_ids=[media.media_id])
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(upload_media="picture.jpg")
 
-You could also use PeonyClient.upload_media to upload a media without tweeting.
-This should be useful if you want to schedule a tweet that sends a picture.::
-
-    import time
-
-    async def upload_media(picture):
-        media = await client.upload_media(picture)
-
-        # sleep until the next hour
-        await asyncio.sleep(-time.time() % 3600)
-        # upload the media using its media_id
-        # that you got from the response above
-        await client.api.statuses.update.post(status="Wow! Look at this picture!"
-                                              media_ids=media.media_id)
-
-*Note*: The upload_media method will, by default, convert your picture to the
-format that gives the smallest size between JPEG and PNG. If you do not want to
-use this behavior you can set the ``auto_convert`` argument to ``False``
-(or ``_auto_convert`` when using the ``_media`` argument in a request)
+.. note:: The auto_convert argument of :func:`peony.PeonyClient.upload_media`
+          can be used if you want to convert your picture to the format that
+          gives the smallest size. It also resizes the picture to the
+          'large' photo size of Twitter (1024x2048 at the time of writing)
 
 Iterators
 =========

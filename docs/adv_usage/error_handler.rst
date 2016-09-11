@@ -1,6 +1,8 @@
 =================================
  Handle errors for every request
 =================================
+.. highlighting: python
+
 
 By default `peony.exceptions.RateLimitExceeded` is handled by sleeping until
 the rate limit resets and the requests are resent on ``TimeoutError``.

@@ -1,7 +1,6 @@
 ================
    Quickstart
 ================
-.. highlighting: python
 
 Installation
 ------------
@@ -15,6 +14,8 @@ To install this module simply run::
 Authorize your client
 ---------------------
 
+.. highlighting: python
+
 You can use :func:`peony.oauth_dance.oauth_dance` to authorize your client::
 
     >>> from peony.oauth_dance import oauth_dance
@@ -27,8 +28,6 @@ This should open a browser to get a pin to authorize your application.
 Getting started
 ---------------
 
-.. highlighting: python
-
 You can easily create a client using the class `PeonyClient`.
 Make sure to get your api keys and access tokens from
 `Twitter's application management page`_ and/or to :ref:`auth`
@@ -39,7 +38,6 @@ Make sure to get your api keys and access tokens from
 
     import asyncio
 
-    # Note: the package name is peony and not peony-twitter
     from peony import PeonyClient
 
     loop = asyncio.get_event_loop()

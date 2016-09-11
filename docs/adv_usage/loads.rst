@@ -1,6 +1,7 @@
 ========================================================
  Change the loads function used when decoding responses
 ========================================================
+.. highlighting: python
 
 The responses sent by the Twitter API are commonly JSON data.
 By default the data is loaded using the `peony.utils.loads` so that each JSON

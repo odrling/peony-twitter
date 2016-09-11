@@ -327,12 +327,12 @@ class PeonyClient(BasePeonyClient):
 
             media = utils.optimize_media(file_, max_size, formats)
         else:
-            media = open(path, 'rb')
+            media = open(file_, 'rb')
 
         size_limit = self.twitter_configuration['photo_size_limit']
 
         if utils.get_size(media) > size_limit or chunked:
-            args = media, path, media_type, media_category
+            args = media, file_, media_type, media_category
             response = await self._chunked_upload(*args, **params)
         else:
             response = await self.upload.media.upload.post(media=media,

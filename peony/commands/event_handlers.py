@@ -127,9 +127,9 @@ class EventStream:
                 if _test(data, keys, values):
                     return event_handler
 
-        except Exception as e:
+        except:
             msg = "error in %s._get:\n" % self.__class__.__name__
-            print(e, msg)
+            print_error(msg)
 
     async def _run(self, data):
         event_handler = self._get(data)

@@ -41,9 +41,7 @@ class StreamResponse:
 
     async def __aiter__(self):
         """ create the connection """
-        request = self.error_handler(self.connect)
-
-        self.response = await request()
+        self.response = await self.connect()
         if self.response.status == 200:
             return self
         else:
@@ -68,21 +66,20 @@ class StreamResponse:
 
             return self.loads(line)
 
-        except StreamLimit as error:
-            utils.print_error()
-            return await self.restart_stream(error=error)
+        except StreamLimit:
+            return await self.restart_stream(error=True)
 
-        except StopAsyncIteration as error:
-            utils.print_error()
-            return await self.restart_stream(error=error)
+        except StopAsyncIteration:
+            return await self.restart_stream(error=True)
 
-        except json.decoder.JSONDecodeError as error:
-            utils.print_error()
-            return await self.restart_stream(error=error)
+        except json.decoder.JSONDecodeError:
+            return await self.restart_stream(error=True)
 
-        except asyncio.TimeoutError as error:
-            utils.print_error()
-            return await self.restart_stream(reconnect=0, error=error)
+        except asyncio.TimeoutError:
+            return await self.restart_stream(reconnect=0, error=True)
+
+        except TimeoutError:
+            return await self.restart_stream(reconnect=0, error=True)
 
     async def restart_stream(self, reconnect=None, error=None):
         """ restart the stream on error """

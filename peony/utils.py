@@ -111,7 +111,6 @@ def error_handler(request):
                 return await request(**kwargs)
             except exceptions.RateLimitExceeded as e:
                 traceback.print_exc(file=sys.stderr)
-                # print(e, file=sys.stderr)
                 delay = int(e.reset_in) + 1
                 print("sleeping for %ds" % delay, file=sys.stderr)
                 await asyncio.sleep(delay)

@@ -9,6 +9,7 @@ import sys
 import traceback
 from urllib.parse import urlparse
 
+import aiohttp
 from PIL import Image
 
 from . import exceptions
@@ -105,17 +106,18 @@ class handler_decorator:
 @handler_decorator
 def error_handler(request):
     @functools.wraps(request)
-    async def decorated_request(**kwargs):
+    async def decorated_request(timeout=10, **kwargs):
         while True:
             try:
-                return await request(**kwargs)
+                with aiohttp.Timeout(timeout):
+                    return await request(**kwargs)
             except exceptions.RateLimitExceeded as e:
                 traceback.print_exc(file=sys.stderr)
                 delay = int(e.reset_in) + 1
                 print("sleeping for %ds" % delay, file=sys.stderr)
                 await asyncio.sleep(delay)
-            except TimeoutError:
-                print("connection timed out", file=sys.stderr)
+            except asyncio.TimeoutError:
+                print("Request timed out, retrying", file=sys.stderr)
             else:
                 raise
 

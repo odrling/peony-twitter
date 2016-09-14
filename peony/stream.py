@@ -20,7 +20,8 @@ class StreamResponse:
                  session=None,
                  reconnect=150,
                  loads=utils.loads,
-                 timeout=90,
+                 timeout=10,
+                 _timeout=90,
                  _error_handler=None,
                  **kwargs):
         """ keep the arguments as instance attributes """
@@ -29,6 +30,7 @@ class StreamResponse:
         self.headers = _headers
         self.loads = loads
         self.timeout = timeout
+        self._timeout = _timeout
         self.error_handler = _error_handler
         self.args = args
         self.kwargs = kwargs
@@ -37,7 +39,7 @@ class StreamResponse:
         kwargs = self.headers.prepare_request(**self.kwargs)
         request = self.error_handler(self.session.request)
 
-        return await request(*self.args, **kwargs)
+        return await request(*self.args, timeout=self.timeout, **kwargs)
 
     async def __aiter__(self):
         """ create the connection """
@@ -57,9 +59,9 @@ class StreamResponse:
         line = b''
         try:
             while not line:
-                coro = self.response.content.__aiter__().__anext__()
-                line = await asyncio.wait_for(coro, self.timeout)
-                line = line.rstrip(b'\r\n')
+                with aiohttp.Timeout(self._timeout):
+                    line = await self.response.content.__aiter__().__anext__()
+                    line = line.rstrip(b'\r\n')
 
             if line in rate_limit_notices:
                 raise StreamLimit(line)
@@ -76,9 +78,6 @@ class StreamResponse:
             return await self.restart_stream(error=True)
 
         except asyncio.TimeoutError:
-            return await self.restart_stream(reconnect=0, error=True)
-
-        except TimeoutError:
             return await self.restart_stream(reconnect=0, error=True)
 
     async def restart_stream(self, reconnect=None, error=None):

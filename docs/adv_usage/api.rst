@@ -3,7 +3,6 @@
 ================================================
  Accessing an API using a different API version
 ================================================
-.. highlighting: python
 
 There actually two ways:
 
@@ -13,7 +12,7 @@ There actually two ways:
 Create a client with a custom api version
 -----------------------------------------
 
-::
+.. code-block:: python
 
     # creds being a dict with your api_keys
     # notice the use of the `suffix` argument to change the default
@@ -27,7 +26,7 @@ Create a client with a custom api version
 Add a version when creating the request
 ---------------------------------------
 
-::
+.. code-block:: python
 
     # notice the use of the `_suffix` argument to change the default
     # extension for a request
@@ -40,7 +39,9 @@ Add a version when creating the request
     ads = client[dict(api='ads-api', version='1')]
     req = ads.accounts[id].reach_estimate.get(**kwargs, _suffix='')
 
-You can also add more arguments to the tuple or dictionnary::
+You can also add more arguments to the tuple or dictionnary:
+
+.. code-block:: python
 
     # with a dictionnary
     adsapi = dict(

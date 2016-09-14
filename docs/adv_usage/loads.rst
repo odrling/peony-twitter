@@ -1,7 +1,6 @@
 ========================================================
  Change the loads function used when decoding responses
 ========================================================
-.. highlighting: python
 
 The responses sent by the Twitter API are commonly JSON data.
 By default the data is loaded using the `peony.utils.loads` so that each JSON
@@ -20,7 +19,9 @@ returns the same as::
 To change this behavior, PeonyClient has a `loads` argument which is the
 function used when loading the data. So if you don't want to use the syntax
 above and want use the default Python's dicts, you can pass `json.loads` as
-argument when you create the client.::
+argument when you create the client.
+
+.. code-block:: python
 
     from peony import PeonyClient
     import json
@@ -30,7 +31,9 @@ argument when you create the client.::
     client.twitter_configuration['photo_sizes']
     client.twitter_configuration.photo_sizes  # raises AttributeError
 
-You can also use it to change how JSON data is decoded.::
+You can also use it to change how JSON data is decoded.
+
+.. code-block:: python
 
     import peony
 

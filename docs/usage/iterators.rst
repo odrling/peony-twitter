@@ -1,7 +1,6 @@
 ===========
  Iterators
 ===========
-.. highlighting: python
 
 Sometimes you need to make several requests to the same API endpoint in order
 to get all the data you want (e.g. getting more than 200 tweets of an user).
@@ -14,7 +13,9 @@ Cursor iterators
 
 This is an iterator for endpoints using the `cursor` parameter
 (e.g. followers/ids.json). The first argument given to the iterator is the
-coroutine function that will make the request.::
+coroutine function that will make the request.
+
+.. code-block:: python
 
     from peony import PeonyClient
 
@@ -38,7 +39,9 @@ Max_id iterators
 ----------------
 
 An iterator for endpoints using the `max_id` parameter
-(e.g. statuses/user_timeline.json)::
+(e.g. statuses/user_timeline.json):
+
+.. code-block:: python
 
     from peony import PeonyClient
 
@@ -66,7 +69,9 @@ Since_id iterators
 ------------------
 
 An iterator for endpoints using the `since_id` parameter
-(e.g. statuses/home_timeline.json)::
+(e.g. statuses/home_timeline.json):
+
+.. code-block:: python
 
     import asyncio
     import html

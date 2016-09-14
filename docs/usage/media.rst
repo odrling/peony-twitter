@@ -1,9 +1,10 @@
 ===============
  Upload medias
 ===============
-.. highlighting: python
 
-You can easily upload a media with peony.::
+You can easily upload a media with peony:
+
+.. code-block:: python
 
     import asyncio
     from peony import PeonyClient

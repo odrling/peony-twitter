@@ -1,10 +1,11 @@
 =========================================
  Use the Application only authentication
 =========================================
-.. highlighting: python
 
 The application only authentication is restricted to some endpoints.
-See `the Twitter documentation page`_::
+See `the Twitter documentation page`_:
+
+.. code-block:: python
 
     import peony
     from peony import PeonyClient

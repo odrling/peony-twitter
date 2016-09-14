@@ -7,16 +7,16 @@ Installation
 
 To install this module simply run::
 
-    pip install peony-twitter
+    $ pip install peony-twitter
 
 .. _auth:
 
 Authorize your client
 ---------------------
 
-.. highlighting: python
+You can use :func:`peony.oauth_dance.oauth_dance` to authorize your client:
 
-You can use :func:`peony.oauth_dance.oauth_dance` to authorize your client::
+.. code-block:: python
 
     >>> from peony.oauth_dance import oauth_dance
     >>> tokens = oauth_dance(YOUR_CONSUMER_KEY, YOUR_CONSUMER_SECRET)
@@ -34,7 +34,7 @@ Make sure to get your api keys and access tokens from
 
 .. note:: The package name is ``peony`` and not ``peony-twitter``
 
-::
+.. code-block:: python
 
     import asyncio
 

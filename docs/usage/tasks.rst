@@ -1,7 +1,6 @@
 =======
  Tasks
 =======
-.. highlighting: python
 
 The main advantage of an asynchronous client is that it will be able to run
 multiple tasks... asynchronously.
@@ -22,7 +21,9 @@ attributes of the client:
 If you need to have more informations during the initialization of a client you
 should override the `init_tasks` method of your subclass. This will run all the
 coroutines held by the list returned by the method at the same time during the
-initialization (that's the point of an asynchronous client after all).::
+initialization (that's the point of an asynchronous client after all).
+
+.. code-block:: python
 
     import asyncio
     from peony import PeonyClient
@@ -57,7 +58,9 @@ The ``task`` decorator
 ----------------------
 
 First you will need to create a subclass of PeonyClient and add a ``task``
-decorator to the methods that you want to run.::
+decorator to the methods that you want to run.
+
+.. code-block:: python
 
     import asyncio
     import time
@@ -128,7 +131,9 @@ Let's say that your awesome bot has become very popular, and so you'd like to
 add some new features to it that would make use of the Streaming API. You could
 use the `task` decorator but there is a better way to do it.
 
-*keeping the code from above*::
+*keeping the code from above*
+
+.. code-block:: python
 
     from peony import EventStream, event_handler, events
 

@@ -3,7 +3,9 @@
 =======================
 .. highlighting: python
 
-You can easily access any Twitter API endpoint::
+You can easily access any Twitter API endpoint:
+
+.. code-block:: python
 
     creds = dict(consumer_key=YOUR_CONSUMER_KEY,
                  consumer_secret=YOUR_CONSUMER_SECRET,
@@ -42,7 +44,9 @@ Arguments without a leading underscore are parameters of the request you send.
 Access the response data of a REST API endpoint
 -----------------------------------------------
 
-A call to a REST API endpoint should return a PeonyResponse object.::
+A call to a REST API endpoint should return a PeonyResponse object.
+
+.. code-block:: python
 
     async def home():
         req = client.api.statuses.home_timeline.get(count=200, since_id=0)
@@ -67,7 +71,9 @@ Access the response data of a Streaming API endpoint
 ----------------------------------------------------
 
 A call to a Streaming API endpoint should return a StreamContext object, that
-yields a StreamResponse object.::
+yields a StreamResponse object.
+
+.. code-block:: python
 
     async def track():
         ctx = client.stream.statuses.filter.post(track="uwu")

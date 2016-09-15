@@ -69,16 +69,17 @@ class StreamResponse:
             return self.loads(line)
 
         except StreamLimit:
-            return await self.restart_stream(error=True)
+            return await self.restart_stream(error=*sys.exc_info())
 
         except StopAsyncIteration:
-            return await self.restart_stream(error=True)
+            return await self.restart_stream(error=*sys.exc_info())
 
         except json.decoder.JSONDecodeError:
-            return await self.restart_stream(error=True)
+            return await self.restart_stream(error=*sys.exc_info())
 
         except asyncio.TimeoutError:
-            return await self.restart_stream(reconnect=0, error=True)
+            return await self.restart_stream(reconnect=0,
+                                             error=*sys.exc_info())
 
     async def restart_stream(self, reconnect=None, error=None):
         """ restart the stream on error """
@@ -121,9 +122,10 @@ class StreamContext:
 
     async def __aexit__(self, *args, **kwargs):
         """ close the response and the session """
+
+        utils.print_error()
+
         if hasattr(self.stream, "response"):
             self.stream.response.close()
         if hasattr(self.stream, "session"):
             self.stream.session.close()
-
-        return True

@@ -139,9 +139,12 @@ def get_args(func, skip=0):
     return func.__code__.co_varnames[skip:argcount]
 
 
-def print_error(msg=None, stderr=sys.stderr):
+def print_error(msg=None, stderr=sys.stderr, error=None):
+    if not error:
+        error = sys.exc_info()
+
     output = [] if msg is None else [msg]
-    output.append(traceback.format_exc().strip())
+    output.append(traceback.format_exception(*error).strip())
 
     print(*output, sep='\n', file=stderr)
 

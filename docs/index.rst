@@ -1,5 +1,6 @@
-Peony's documentation
-=====================
+=======================
+ Peony's documentation
+=======================
 
 Peony is an asynchronous Twitter API client.
 

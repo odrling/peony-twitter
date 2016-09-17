@@ -140,13 +140,12 @@ def get_args(func, skip=0):
 
 
 def print_error(msg=None, stderr=sys.stderr, error=None):
-    if not error:
-        error = sys.exc_info()
-
     output = [] if msg is None else [msg]
-    output.append(traceback.format_exception(*error).strip())
+    output.append(traceback.format_exc().strip())
 
-    print(*output, sep='\n', file=stderr)
+    with open("/home/amoethyst/peony.log", 'a') as logs:
+        print(*output, sep='\n', file=stderr)
+        print(*output, sep='\n', file=logs)
 
 
 def loads(json_data, *args, encoding="utf-8", **kwargs):

@@ -143,9 +143,7 @@ def print_error(msg=None, stderr=sys.stderr, error=None):
     output = [] if msg is None else [msg]
     output.append(traceback.format_exc().strip())
 
-    with open("/home/amoethyst/peony.log", 'a') as logs:
-        print(*output, sep='\n', file=stderr)
-        print(*output, sep='\n', file=logs)
+    print(*output, sep='\n', file=stderr)
 
 
 def loads(json_data, *args, encoding="utf-8", **kwargs):

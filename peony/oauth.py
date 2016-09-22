@@ -163,7 +163,6 @@ class OAuth2Headers(PeonyHeaders):
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.client = client
-        self.encoding = encoding
         if bearer_token:
             self.set_token(bearer_token)
         else:

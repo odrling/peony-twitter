@@ -156,7 +156,7 @@ def error_handler(request):
             except asyncio.TimeoutError:
                 print("Request timed out, retrying", file=sys.stderr)
 
-            else:
+            except:
                 raise
 
     return decorated_request
@@ -174,6 +174,10 @@ def get_args(func, skip=0):
         Arguments to skip, defaults to 0 set it to 1 to skip the
         ``self`` argument of a method.
 
+    Returns
+    -------
+    tuple
+        Function's arguments
     """
     argcount = func.__code__.co_argcount
     return func.__code__.co_varnames[skip:argcount]

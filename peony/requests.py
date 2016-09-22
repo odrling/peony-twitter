@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from . import general, iterators
+from . import iterators
 
 
 class BaseRequest:
@@ -67,7 +67,7 @@ class Request(BaseRequest):
         super().__init__(api, method)
         self.iterator = Iterators(api, method)
 
-    async def __call__(self, _skip_params=None,
+    def __call__(self, _skip_params=None,
                        _error_handling=True,
                        **kwargs):
         kwargs, skip_params, url = super().__call__(**kwargs)
@@ -84,7 +84,7 @@ class Request(BaseRequest):
             client_request = self.api._client.error_handler(client_request,
                                                             _error_handling)
 
-        return await client_request(**kwargs)
+        return client_request(**kwargs)
 
 
 class StreamingRequest(BaseRequest):

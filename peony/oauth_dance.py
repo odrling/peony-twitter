@@ -179,13 +179,15 @@ def oauth_dance(consumer_key, consumer_secret,
         Your consumer key
     consumer_secret : str
         Your consumer secret
-    callback_uri : str
+    oauth_callback : str
         Callback uri, defaults to 'oob'
     loop
         asyncio event loop
 
-    Returns:
-        dict: access tokens
+    Returns
+    -------
+    dict
+        Access tokens
     """
     loop = loop or asyncio.get_event_loop()
 

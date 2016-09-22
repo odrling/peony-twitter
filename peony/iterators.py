@@ -131,7 +131,7 @@ class SinceIdIterator(IdIterator):
 
         Parameters
         ----------
-        Response : dict
+        response : dict
             The response
         """
         since_id = self.kwargs.get(self.param, 0)

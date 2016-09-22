@@ -2,9 +2,8 @@
 
 from functools import wraps
 import re
-import sys
 
-from .tasks import Task as task
+from .tasks import task
 from .event_types import events
 
 from . import utils

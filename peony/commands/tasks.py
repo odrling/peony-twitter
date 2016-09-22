@@ -3,7 +3,7 @@
 from functools import update_wrapper
 
 
-class Task:
+class task:
 
     def __init__(self, func):
         update_wrapper(self, func)

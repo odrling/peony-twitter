@@ -20,11 +20,26 @@ from .stream import StreamContext
 
 class BasePeonyClient(oauth.Client):
     """
-        Attributes/items become a :class:`APIPath` or
-        :class:`StreamingAPIPath` automatically
+        Attributes/items become a :class:`api.APIPath` or
+        :class:`api.StreamingAPIPath` automatically
 
     This class only handles the requests and makes accessing Twitter's
     APIs easy.
+
+    Parameters
+    ----------
+    streaming_apis : iterable, optional
+        Iterable containing the streaming APIs subdomains
+    base_url : :obj:`str`, optional
+        Format of the url for all the requests
+    api_version : :obj:`str`, optional
+        Default API version
+    suffix : :obj:`str`, optional
+        Default suffix of API endpoints
+    loads : :obj:`function`, optional
+        Function used to load JSON data
+    error_handler : :obj:`function`, optional
+        Requests decorator
     """
 
     def __init__(self, *args,
@@ -35,38 +50,6 @@ class BasePeonyClient(oauth.Client):
                  loads=utils.loads,
                  error_handler=utils.error_handler,
                  **kwargs):
-        """
-            Set main attributes
-
-        :consumer_key: :class:`str`
-            consumer key of your application
-        :consumer_secret: :class:`str`
-            consumer secret of your application
-        :access_token: :class:`str`
-            access token of the user
-        :access_token_secret: :class:`str`
-            access token secret of the user
-        :bearer_token: :class: `str`
-            bearer token of the client
-        :headers: :class:`dict`
-            custom headers (does not override `Authorization` headers)
-        :streaming_apis: :class:`list`,
-                         :class:`tuple` or
-                         :class:`set`
-            contains the streaming api subdomains
-        :base_url: :class:`str`
-            base_url passed to APIPath and StreamingAPIPath
-        :api_version: :class:`str`
-            version passed to APIPath and StreamingAPIPath
-        :suffix: :class:`str`
-            suffix passed to APIPath and StreamingAPIPath
-        :auth: dynamic headers that generate the `Authorization`
-               headers for each request (needed for OAuth1)
-        :loads: custom json.loads function override if you don't want
-                to use utils.JSONObject for responses
-        :loop: asyncio loop
-        :error_handler: A decorator to use on a request to handle errors
-        """
 
         if streaming_apis is None:
             self.streaming_apis = general.streaming_apis
@@ -100,6 +83,7 @@ class BasePeonyClient(oauth.Client):
             self.loop.run_until_complete(asyncio.wait(init_tasks))
 
     def init_tasks(self):
+        """ tasks executed on initialization """
         pass
 
     def __getitem__(self, values):
@@ -109,16 +93,21 @@ class BasePeonyClient(oauth.Client):
         This permits the use of any API you could know about
 
         For most api you only need to type
+
         >>> client[api]  # api is the api you want to access
 
         You can specify a custom api version using the syntax
+
         >>> client[api, version]  # version is the api version as a str
 
         For more complex requests
+
         >>> client[api, version, suffix, base_url]
 
-        :returns: :class:`StreamingAPIPath` or
-                  :class:`APIPath`
+        Returns
+        -------
+        api.BaseAPIPath
+            To access an API endpoint
         """
         defaults = (None, self.api_version, self._suffix, self.base_url)
         keys = ['api', 'version', 'suffix', 'base_url']
@@ -156,8 +145,10 @@ class BasePeonyClient(oauth.Client):
 
         Same as calling client[api]
 
-        :returns: :class:`StreamingAPIPath` or
-                  :class:`APIPath`
+        Returns
+        -------
+        api.BaseAPIPath
+            To access an API endpoint
         """
         return self[api]
 
@@ -168,11 +159,21 @@ class BasePeonyClient(oauth.Client):
         """
             Make requests to the REST API
 
-        :method: str, method to be used by the request
-        :url: str, url of the ressource
-        :headers: dict, custom headers (doesn't overwrite `Authorization`
-                  headers)
-        :json: bool, force json decoding
+        Parameters
+        ----------
+        method : str
+            Method to be used by the request
+        url : str
+            URL of the ressource
+        headers : dict
+            Custom headers (doesn't overwrite `Authorization` headers)
+        json : bool
+            Force json decoding
+
+        Returns
+        -------
+        utils.PeonyResponse
+            Response to the request
         """
 
         # prepare request arguments, particularly the headers
@@ -208,10 +209,18 @@ class BasePeonyClient(oauth.Client):
         """
             Make requests to the Streaming API
 
-        :method: str, method to be used by the request
-        :url: str, url of the ressource
-        :headers: dict, custom headers (doesn't overwrite `Authorization`
-                  headers)
+        Parameters
+        method : str
+            Method to be used by the request
+        url : str
+            URL of the ressource
+        headers : dict
+            Custom headers (doesn't overwrite `Authorization` headers)
+
+        Returns
+        -------
+        stream.StreamContext
+            Stream context for the request
         """
         return StreamContext(
             method, url,
@@ -244,11 +253,22 @@ class PeonyClient(BasePeonyClient):
         return tasks
 
     async def __get_twitter_configuration(self):
-        api = self['api', general.twitter_api_version, ".json"]
+        """
+        create a ``twitter_configuration`` attribute with the response
+        of the endpoint
+        https://api.twitter.com/1.1/help/configuration.json
+        """
+        api = self['api', general.twitter_api_version,
+                   ".json", general.twitter_base_api_url]
         self.twitter_configuration = await api.help.configuration.get()
 
     async def __get_user(self):
-        api = self['api', general.twitter_api_version, ".json"]
+        """
+        create a ``user`` attribute with the response of the endpoint
+        https://api.twitter.com/1.1/account/verify_credentials.json
+        """
+        api = self['api', general.twitter_api_version,
+                   ".json", general.twitter_base_api_url]
         self.user = await api.account.verify_credentials.get()
 
     async def _chunked_upload(self, media,
@@ -314,6 +334,23 @@ class PeonyClient(BasePeonyClient):
                            max_size=None,
                            chunked=False,
                            **params):
+        """
+            upload a media on twitter
+
+        Parameters
+        ----------
+        file_ : :obj:`str` or file
+            Path to the file or file object
+        auto_convert : :obj:`bool`, optional
+            If set to True the media will be optimized by calling
+            :func:`utils.optimize_media`
+        formats : :obj:`list`, optional
+            A list of all the formats to try to optimize the media
+        max_size : :obj:`tuple`, optional
+            Max size of the picture in the (width, height) format
+        chunked : :obj:`bool`, optional
+            If True, force the use of the chunked upload for the media
+        """
         formats = formats or general.formats
 
         image_metadata = utils.get_image_metadata(file_)
@@ -323,7 +360,7 @@ class PeonyClient(BasePeonyClient):
             if not max_size:
                 photo_sizes = self.twitter_configuration['photo_sizes']
                 large_sizes = photo_sizes['large']
-                max_size = large_sizes['h'], large_sizes['w']
+                max_size = large_sizes['w'], large_sizes['h']
 
             media = utils.optimize_media(file_, max_size, formats)
         else:
@@ -355,8 +392,10 @@ class PeonyClient(BasePeonyClient):
         """
             Get tasks attached to the instance
 
-        You should not need to use this method and call directly
-        the tasks attribute of the instance
+        Returns
+        -------
+        list
+            List of tasks (:class:`asyncio.Task`)
         """
         funcs = [getattr(self, key) for key in dir(self)]
         tasks = [func(self) for func in funcs if isinstance(func, task)]
@@ -367,7 +406,12 @@ class PeonyClient(BasePeonyClient):
         return tasks
 
     def get_task(self):
-        """ Get the only task of the instance """
+        """
+        Returns
+        -------
+        asyncio.Task
+            The only task of the instance
+        """
         tasks = self.get_tasks()
 
         if len(tasks) == 1:

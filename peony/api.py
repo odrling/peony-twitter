@@ -15,7 +15,7 @@ class BaseAPIPath:
 
     It makes it easy to call any endpoint of the api
 
-    /!\ You must create a child class of BaseAPIPath to perform
+    ⚠ You must create a child class of BaseAPIPath to perform
     requests (you have to overload the _request method)
 
     The client given as an parameter during the creation of the
@@ -30,9 +30,17 @@ class BaseAPIPath:
 
     def url(self, suffix=None):
         """
-            build the url using the _path attribute
+            Build the url using the _path attribute
 
-        :suffix: str, to be appended to the url
+        Parameters
+        ----------
+        suffix : str
+            String to be appended to the url
+
+        Returns
+        -------
+        str
+            Path to the endpoint
         """
         return "/".join(self._path) + (suffix or self._suffix)
 
@@ -40,13 +48,24 @@ class BaseAPIPath:
         """
             Where the magic happens
 
-        if the key is a request method (eg. get) call the _request
+        If the key is a request method (eg. get) call the _request
         attribute with the method as argument
 
         otherwise append the key to the _path attribute
 
         >>> instance = APIPath()  # you would have to add more arguments
         >>> instance["client"]    # appends `client` to _path
+
+        Parameters
+        ----------
+        k : str
+            Key used to access an API endpoint and appended to the
+            path attribute
+
+        Returns
+        -------
+        BaseAPIPath
+            New APIPath instance with a new ``path`` value
         """
         if k.lower() in general.request_methods:
             return self._request(self, k)
@@ -66,7 +85,7 @@ class BaseAPIPath:
             Call __getitem__ when trying to get an attribute from the
             instance
 
-        if your path contains an actual attribute of the instance
+        If your path contains an actual attribute of the instance
         you should call __getitem__ instead
         """
         return self[k]
@@ -74,12 +93,22 @@ class BaseAPIPath:
     @staticmethod
     def sanitize_params(method, **kwargs):
         """
-            Request params can be extracted from the **kwargs
+            Request params can be extracted from the ``**kwargs``
 
         Arguments starting with `_` will be stripped from it, so they
         can be used as an argument for the request
         (eg. "_headers" → "headers" in the kwargs returned by this
         function while "headers" would be inserted in the params)
+
+        Parameters
+        ----------
+        **kwargs
+            Keywords arguments given to the request
+
+        Returns
+        -------
+        dict
+            New requests parameters, correctly formatted
         """
         # items which does not have a key starting with `_`
         items = [(key, value) for key, value in kwargs.items()
@@ -135,12 +164,12 @@ class BaseAPIPath:
 
 
 class APIPath(BaseAPIPath):
-    """ class to make requests to a REST API """
+    """ Class to make requests to a REST API """
 
     _request = requests.Request
 
 
 class StreamingAPIPath(BaseAPIPath):
-    """ class to make requests to a Streaming API """
+    """ Class to make requests to a Streaming API """
 
     _request = requests.StreamingRequest

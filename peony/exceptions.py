@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 import time
+from functools import wraps
 
 from . import utils
 
 
-def get_error(data):
+def _get_error(data):
     """ Get the error, this is quite a vertical code """
     if data is not None:
         if 'errors' in data:
@@ -13,7 +14,7 @@ def get_error(data):
 
 
 async def throw(response, **kwargs):
-    """ get the response data if possible and raise an exception """
+    """ Get the response data if possible and raise an exception """
     ctype = response.headers['CONTENT-TYPE'].lower()
     data = None
 
@@ -23,7 +24,7 @@ async def throw(response, **kwargs):
         except:
             pass
 
-    err = get_error(data)
+    err = _get_error(data)
     if err is not None:
         if 'code' in err:
             code = str(err['code'])
@@ -49,7 +50,7 @@ class PeonyException(Exception):
         Extract message from the error if not explicitly given
         """
         if not message:
-            err = get_error(data)
+            err = _get_error(data)
             if err is not None:
                 if 'message' in err:
                     message = err['message']
@@ -70,7 +71,9 @@ class StreamLimit(PeonyException):
     pass
 
 
-def convert_int_keys(func):
+def _convert_int_keys(func):
+    """ convert input keys to str """
+    @wraps(func)
     def decorated(self, key, *args, **kwargs):
         if isinstance(key, int):  # convert int keys to str
             key = str(key)
@@ -83,15 +86,16 @@ def convert_int_keys(func):
 class ErrorDict(dict):
     """ A dict to easily add exception associated to a code """
 
-    @convert_int_keys
+    @_convert_int_keys
     def __getitem__(self, key):
         return super().__getitem__(key)
 
-    @convert_int_keys
+    @_convert_int_keys
     def __setitem__(self, key, value):
         super().__setitem__(key, value)
 
     def code(self, code):
+        """ Decorator to associate a code to an exception """
         def decorator(exception):
             self[code] = exception
             return exception
@@ -125,13 +129,30 @@ class MigrateToNewAPI(PeonyException):
 
 @errors.code(88)
 class RateLimitExceeded(PeonyException):
+    """ Exception raised on rate limit """
 
     @property
     def reset(self):
+        """
+            Time when the limit will be reset
+
+        Returns
+        -------
+        int
+            Time when the limit will be reset
+        """
         return int(self.response.headers['X-Rate-Limit-Reset'])
 
     @property
     def reset_in(self):
+        """
+            Time in seconds until the limit will be reset
+
+        Returns
+        -------
+        int
+            Time in seconds until the limit will be reset
+        """
         return self.reset - time.time()
 
 

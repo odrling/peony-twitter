@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-*************
-peony-twitter
-*************
+===============
+ peony-twitter
+===============
 
   An asynchronous Twitter API client for Python 3.5+
 

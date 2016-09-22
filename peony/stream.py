@@ -14,6 +14,28 @@ from .general import rate_limit_notices
 class StreamResponse:
     """
         Asynchronous iterator for streams
+
+    Parameters
+    ----------
+    *args : optional
+        Positional arguments
+    _headers : dict
+        Headers to authorize the request
+    session : :obj:`aiohttp.Session`, optional
+        Session used by the request
+    reconnect : :obj:`int`, optional
+        Time to wait for on error
+    loads : function, optional
+        function used to decode the JSON data received
+    timeout : :obj:`int`, optional
+        Timeout for requests
+    _timeout : :obj:`int`, optional
+        Stream timeout, the connection will be closed if this timeout
+        is exceeded
+    _error_handler : function, optional
+        Request's error handler
+    **kwargs
+        Keyword parameters of the request
     """
 
     def __init__(self, *args, _headers,
@@ -24,7 +46,7 @@ class StreamResponse:
                  _timeout=90,
                  _error_handler=None,
                  **kwargs):
-        """ keep the arguments as instance attributes """
+
         self.session = session or aiohttp.ClientSession()
         self.reconnect = reconnect
         self.headers = _headers
@@ -36,13 +58,32 @@ class StreamResponse:
         self.kwargs = kwargs
 
     async def connect(self):
+        """
+            Connect to the stream
+
+        Returns
+        -------
+        aiohttp.StreamReader
+            The streaming response
+        """
         kwargs = self.headers.prepare_request(**self.kwargs)
         request = self.error_handler(self.session.request)
 
         return await request(*self.args, timeout=self.timeout, **kwargs)
 
     async def __aiter__(self):
-        """ create the connection """
+        """
+            Create the connection
+
+        Returns
+        -------
+        self
+
+        Raises
+        ------
+        exception.PeonyException
+            On a response status != 2xx
+        """
         self.response = await self.connect()
         if self.response.status == 200:
             return self
@@ -55,7 +96,14 @@ class StreamResponse:
                     await self.restart_stream(error=e)
 
     async def __anext__(self):
-        """ decode each line using json """
+        """
+            Decode each line using json
+
+        Returns
+        -------
+        dict
+            Decoded JSON data
+        """
         line = b''
         try:
             while not line:
@@ -82,7 +130,16 @@ class StreamResponse:
                                              error=True)
 
     async def restart_stream(self, reconnect=None, error=None):
-        """ restart the stream on error """
+        """
+            Restart the stream on error
+
+        Parameters
+        ----------
+        reconnect : :obj:`int`, optional
+            Time to wait for before reconnecting
+        error : bool
+            Whether to print the error or not
+        """
 
         if error is not None:
             utils.print_error()
@@ -104,24 +161,45 @@ class StreamResponse:
 
 
 class StreamContext:
-    """ A context that should close the session on exit """
+    """
+        A context that should close the session on exit
+
+    Parameters
+    ----------
+    method : str
+        HTTP method used to make the request
+    url : str
+        The API endpoint
+    *args : optional
+        Positional arguments
+    **kwargs
+        Keyword parameters of the request and of :class:`StreamResponse`
+    """
 
     def __init__(self, method, url, *args, **kwargs):
-        """ keep the arguments as instance attributes """
         self.method = method
         self.url = url
         self.args = args
         self.kwargs = kwargs
 
     async def __aenter__(self):
-        """ create stream and return it """
+        """
+            Create stream
+
+        Returns
+        -------
+        StreamResponse
+            The stream iterator
+        """
         self.stream = StreamResponse(method=self.method, url=self.url,
                                      *self.args, **self.kwargs)
 
         return self.stream
 
     async def __aexit__(self, *args, **kwargs):
-        """ close the response and the session """
+        """
+            Close the response and the session on error
+        """
 
         utils.print_error()
 
@@ -131,4 +209,3 @@ class StreamContext:
             self.stream.session.close()
 
         return True
-

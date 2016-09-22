@@ -4,6 +4,16 @@ from . import general, iterators
 
 
 class BaseRequest:
+    """
+        Does what all requests need
+
+    Parameters
+    ----------
+    api : api.BaseAPIPath
+        API path of the request
+    method : str
+        HTTP method to be used by the request
+    """
 
     def __init__(self, api, method):
         self.api = api
@@ -15,14 +25,24 @@ class BaseRequest:
 
 
 class Iterators:
+    """
+    Access the iterators from :mod:`peony.iterators` right from a
+    request object
+
+    Parameters
+    ----------
+    api : api.BaseAPIPath
+        API path of the request
+    method : str
+        HTTP method to be used by the request
+    """
 
     def __init__(self, api, method):
-        self.api = api
-        self.method = method
+        self.request = getattr(api, method)
 
     def _get_iterator(self, iterator):
         def iterate(**kwargs):
-            return iterator(getattr(self.api, self.method), **kwargs)
+            return iterator(self.request, **kwargs)
         return iterate
 
     def __getattr__(self, key):
@@ -30,6 +50,16 @@ class Iterators:
 
 
 class Request(BaseRequest):
+    """
+        Requests to REST APIs
+
+    Parameters
+    ----------
+    api : api.BaseAPIPath
+        API path of the request
+    method : str
+        HTTP method to be used by the request
+    """
 
     def __init__(self, api, method):
         super().__init__(api, method)
@@ -56,6 +86,16 @@ class Request(BaseRequest):
 
 
 class StreamingRequest(BaseRequest):
+    """
+        Requests to Streaming APIs
+
+    Parameters
+    ----------
+    api : api.BaseAPIPath
+        API path of the request
+    method : str
+        HTTP method to be used by the request
+    """
 
     def __call__(self, **kwargs):
         kwargs, skip_params, url = super().__call__(**kwargs)

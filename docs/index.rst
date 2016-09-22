@@ -22,6 +22,11 @@ Peony is an asynchronous Twitter API client.
     adv_usage/loads
     adv_usage/error_handler
 
+.. toctree::
+    :caption: Module
+    :maxdepth: 4
+
+    peony
 
 Indices and tables
 ==================

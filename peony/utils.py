@@ -31,7 +31,8 @@ class JSONObject(dict):
         A dict in which you can access items as attributes
 
     >>> obj = JSONObject(key=True)
-    >>> obj['key'] is obj.key  # returns True
+    >>> obj['key'] is obj.key
+    True
     """
 
     def __getattr__(self, key):
@@ -60,35 +61,61 @@ class PeonyResponse:
     >>> # iterate over peonyresponse.response
     >>> for key in peonyresponse:
     ...     pass  # do whatever you want
+
+    Parameters
+    ----------
+    response : dict or list
+        Response object
+    headers : dict
+        Headers of the response
+    url : str
+        URL of the request
+    request : dict
+        Requests arguments
     """
 
     def __init__(self, response, headers, url, request):
-        """ keep informations about the response as instance attributes """
         self.response = response
         self.headers = headers
         self.url = url
         self.request = request
 
     def __getattr__(self, key):
+        """ get attributes from the response """
         return getattr(self.response, key)
 
     def __getitem__(self, key):
+        """ get items from the response """
         return self.response[key]
 
     def __iter__(self):
+        """ iterate over the response """
         return iter(self.response)
 
     def __str__(self):
+        """ use the string of the response """
         return str(self.response)
 
     def __repr__(self):
+        """ use the representation of the response """
         return repr(self.response)
 
     def __len__(self):
+        """ get the lenght of the response """
         return len(self.response)
 
 
 class handler_decorator:
+    """
+        A decorator for requests handlers
+
+    implements the ``_error_handling`` argument
+
+    Parameters
+    ----------
+    handler : function
+        The error handler to decorate
+    """
 
     def __init__(self, handler):
         functools.update_wrapper(self, handler)
@@ -105,19 +132,30 @@ class handler_decorator:
 
 @handler_decorator
 def error_handler(request):
+    """
+        The default error_handler
+
+    The decorated request will retry infinitely on any handled error
+    The exceptions handled are :class:`asyncio.TimeoutError` and
+    :class:`exceptions.RateLimitExceeded`
+    """
+
     @functools.wraps(request)
     async def decorated_request(timeout=10, **kwargs):
         while True:
             try:
                 with aiohttp.Timeout(timeout):
                     return await request(**kwargs)
+
             except exceptions.RateLimitExceeded as e:
                 traceback.print_exc(file=sys.stderr)
                 delay = int(e.reset_in) + 1
                 print("sleeping for %ds" % delay, file=sys.stderr)
                 await asyncio.sleep(delay)
+
             except asyncio.TimeoutError:
                 print("Request timed out, retrying", file=sys.stderr)
+
             else:
                 raise
 
@@ -126,13 +164,15 @@ def error_handler(request):
 
 def get_args(func, skip=0):
     """
-        hackish way to get the arguments of a function
+        Hackish way to get the arguments of a function
 
-    Arguments:
-        func (function): function to get the arguments from
-        skip (Optional[int]): arguments to skip, defaults to 0
-                              set it to 1 to skip the ``self`` argument
-                              of a method.
+    Parameters
+    ----------
+    func : function
+        Function to get the arguments from
+    skip : :obj:`int`, optional
+        Arguments to skip, defaults to 0 set it to 1 to skip the
+        ``self`` argument of a method.
 
     """
     argcount = func.__code__.co_argcount
@@ -140,6 +180,16 @@ def get_args(func, skip=0):
 
 
 def print_error(msg=None, stderr=sys.stderr, error=None):
+    """
+        Print an exception and its traceback to stderr
+
+    Parameters
+    ----------
+    msg : :obj:`str`, optional
+        A message to add to the error
+    stderr : file object
+        A file object to write the errors to
+    """
     output = [] if msg is None else [msg]
     output.append(traceback.format_exc().strip())
 
@@ -147,19 +197,72 @@ def print_error(msg=None, stderr=sys.stderr, error=None):
 
 
 def loads(json_data, *args, encoding="utf-8", **kwargs):
-    """ custom loads function with an object_hook and automatic decoding """
+    """
+        Custom loads function with an object_hook and automatic decoding
+
+    Parameters
+    ----------
+    json_data : str
+        The JSON data to decode
+    *args
+        Positional arguments, passed to :func:`json.loads`
+    encoding : :obj:`str`, optional
+        The encoding of the bytestring
+    **kwargs
+        Keyword arguments passed to :func:`json.loads`
+
+    Returns
+    -------
+    :obj:`dict` or :obj:`list`
+        Decoded json data
+    """
     if isinstance(json_data, bytes):
         json_data = json_data.decode(encoding)
 
     return json.loads(json_data, *args, object_hook=JSONObject, **kwargs)
 
 
-def media_chunks(media, chunk_size, media_size):
+def media_chunks(media, chunk_size, media_size=None):
+    """
+        read the file by chunks
+
+    Parameters
+    ----------
+    media : file
+        The file object to read
+    chunk_size : int
+        The size of a chunk in bytes
+    media_size : :obj:`int`, optional
+        Size of the file in bytes
+
+    Yields
+    ------
+    bytes
+        A chunk of the file
+    """
+    if media_size is None:
+        media_size = get_size(media)
+
     while media.tell() < media_size:
         yield media.read(chunk_size)
 
 
 def convert(img, formats):
+    """
+        Convert the image to all the formats specified
+
+    Parameters
+    ----------
+    img : PIL.Image.Image
+        The image to convert
+    formats : list
+        List of all the formats to use
+
+    Yields
+    ------
+    io.BytesIO
+        A file object containing the converted image
+    """
     for kwargs in formats:
         f = io.BytesIO()
         img.save(f, **kwargs)
@@ -167,6 +270,28 @@ def convert(img, formats):
 
 
 def optimize_media(file_, max_size, formats):
+    """
+        Optimize an image
+
+    Resize the picture to the ``max_size``, defaulting to the large
+    photo size of Twitter in :meth:`PeonyClient.upload_media` when
+    used with the ``optimize_media`` argument.
+
+    Parameters
+    ----------
+    file_ : file object
+        the file object of an image
+    max_size : :obj:`tuple` or :obj:`list` of :obj:`int`
+        a tuple in the format (width, height) which is maximum size of
+        the picture returned by this function
+    formats : :obj`list` or :obj:`tuple` of :obj:`dict`
+        a list of all the formats to convert the picture to
+
+    Returns
+    -------
+    file
+        The smallest file created in this function
+    """
     img = Image.open(file_)
     ratio = max(hw / max_hw for hw, max_hw in zip(img.size, max_size))
 
@@ -194,6 +319,10 @@ def optimize_media(file_, max_size, formats):
 
 
 def reset_io(func):
+    """
+    A decorator to set the pointer of the file to beginning
+    of the file before and after the decorated function
+    """
     @functools.wraps(func)
     def decorated(media):
         media.seek(0)
@@ -206,8 +335,25 @@ def reset_io(func):
 
 
 @reset_io
-def get_media_metadata(f):
-    media_type, media_category = get_type(f)
+def get_media_metadata(media):
+    """
+        Get the metadata of the file
+
+    Parameters
+    ----------
+    media : file
+        The file to analyze
+
+    Returns
+    -------
+    str
+        The mimetype of the media
+    str
+        The category of the media on Twitter
+    bool
+        Tell whether this file is an image or a video
+    """
+    media_type, media_category = get_type(media)
     is_image = not (media_type.endswith('gif')
                     or media_type.startswith('video'))
 
@@ -215,6 +361,25 @@ def get_media_metadata(f):
 
 
 def get_image_metadata(file_):
+    """
+        Get all the file's metadata and read any kind of file object
+
+    Parameters
+    ----------
+    file_ : file object
+        A file object of the image
+
+    Returns
+    -------
+    str
+        The mimetype of the media
+    str
+        The category of the media on Twitter
+    bool
+        Tell whether this file is an image or a video
+    str
+        Path to the file
+    """
     # try to get the path no matter how the input is
     if isinstance(file_, str):
         path = urlparse(file_).path.strip(" \"'")
@@ -231,12 +396,40 @@ def get_image_metadata(file_):
 
 @reset_io
 def get_size(media):
+    """
+        Get the size of a file
+
+    Parameters
+    ----------
+    media : file object
+        The file object of the media
+
+    Returns
+    -------
+    int
+        The size of the file
+    """
     media.seek(0, os.SEEK_END)
     return media.tell()
 
 
 @reset_io
 def get_type(media, path=None):
+    """
+    Parameters
+    ----------
+    media : file object
+        A file object of the image
+    path : str, optional
+        The path to the file
+
+    Returns
+    -------
+    str
+        The mimetype of the media
+    str
+        The category of the media on Twitter
+    """
     if magic:
         media_type = mime.from_buffer(media.read(1024))
     elif path:

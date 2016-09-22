@@ -19,7 +19,11 @@ def get_metadata(metadatafile):
 
         metadata['keywords'] = metadata.get('keywords', '').split(', ')
 
-        ex = r'"{3}[^\w]*(?P<name>.*)[^\w]+(?P<description>.*)'
+        ex = r'"{3}[^\w]*(?P<name>[^\s]*)[^\w]+(?P<description>.*)'
+        match = re.search(ex, text)
+
+        package_info = {key: value.strip()
+                        for key, value in match.groupdict().items()}
         metadata.update(re.search(ex, text).groupdict())
 
     return metadata

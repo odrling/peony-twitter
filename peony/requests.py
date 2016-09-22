@@ -43,7 +43,7 @@ class Iterators:
 
     def _get_iterator(self, iterator):
         def iterate(**kwargs):
-            request = getattr(api, method)
+            request = getattr(self.api, self.method)
             return iterator(request, **kwargs)
         return iterate
 

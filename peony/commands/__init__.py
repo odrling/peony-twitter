@@ -98,6 +98,7 @@ class Functions(dict):
                     return word
 
     async def run(self, *args, data, **kwargs):
+        """ run the function you want """
         cmd = self._get(data.text)
 
         try:

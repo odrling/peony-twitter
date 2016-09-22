@@ -44,11 +44,16 @@ sys.path.insert(0, maindir)
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
-    'sphinx.ext.doctest',
-    'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx'
+    'sphinx.ext.intersphinx',
+    'sphinx.ext.napoleon'
 ]
+
+rtd = "https://%s.readthedocs.io/en/stable"
+python_docs = "https://docs.python.org/3"
+intersphinx_mapping = {'python': (python_docs, None),
+                       'aiohttp': (rtd % "aiohttp", None),
+                       'Pillow': (rtd % "pillow", None)}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

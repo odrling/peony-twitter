@@ -8,7 +8,23 @@ from . import oauth
 from .client import PeonyClient
 
 async def get_oauth_token(consumer_key, consumer_secret, callback_uri="oob"):
-    """ get a temporary oauth token """
+    """
+    Get a temporary oauth token
+
+    Parameters
+    ----------
+    consumer_key : str
+        Your consumer key
+    consumer_secret : str
+        Your consumer secret
+    callback_uri : :obj:`str`, optional
+        Callback uri, defaults to 'oob'
+
+    Returns
+    -------
+    dict
+        Temporary tokens
+    """
 
     client = PeonyClient(consumer_key=consumer_key,
                          consumer_secret=consumer_secret,
@@ -22,10 +38,18 @@ async def get_oauth_token(consumer_key, consumer_secret, callback_uri="oob"):
 
 def get_oauth_verifier(oauth_token):
     """
-        open authorize page in a browser,
-        print the url if it didn't work
+    Open authorize page in a browser,
+    print the url if it didn't work
 
-        returns the PIN entered by the user
+    Arguments
+    ---------
+    oauth_token : str
+        The oauth token received in :func:`get_oauth_token`
+
+    Returns
+    -------
+    str
+        The PIN entered by the user
     """
     url = "https://api.twitter.com/oauth/authorize?oauth_token="
     url += oauth_token
@@ -45,7 +69,27 @@ def get_oauth_verifier(oauth_token):
 async def get_access_token(consumer_key, consumer_secret,
                            oauth_token, oauth_token_secret,
                            oauth_verifier):
-    """ get the access token of the user """
+    """
+        get the access token of the user
+
+    Parameters
+    ----------
+    consumer_key : str
+        Your consumer key
+    consumer_secret : str
+        Your consumer secret
+    oauth_token : str
+        OAuth token from :func:`get_oauth_token`
+    oauth_token_secret : str
+        OAuth token secret from :func:`get_oauth_token`
+    oauth_verifier : str
+        OAuth verifier from :func:`get_oauth_verifier`
+
+    Returns
+    -------
+    dict
+        Access tokens
+    """
 
     client = PeonyClient(consumer_key=consumer_key,
                          consumer_secret=consumer_secret,
@@ -63,7 +107,23 @@ async def get_access_token(consumer_key, consumer_secret,
 
 
 async def async_oauth_dance(consumer_key, consumer_secret, callback_uri="oob"):
-    """ oauth dance to get the user's access token """
+    """
+        OAuth dance to get the user's access token
+
+    Parameters
+    ----------
+    consumer_key : str
+        Your consumer key
+    consumer_secret : str
+        Your consumer secret
+    callback_uri : str
+        Callback uri, defaults to 'oob'
+
+    Returns
+    -------
+    dict
+        Access tokens
+    """
 
     token = await get_oauth_token(consumer_key, consumer_secret, callback_uri)
 
@@ -87,7 +147,19 @@ async def async_oauth_dance(consumer_key, consumer_secret, callback_uri="oob"):
 
 
 def parse_token(response):
-    """ parse the responses containing the tokens """
+    """
+    parse the responses containing the tokens
+
+    Parameters
+    ----------
+    response : str
+        The response containing the tokens
+
+    Returns
+    -------
+    dict
+        The parsed tokens
+    """
     items = response.split("&")
     items = [item.split("=") for item in items]
 
@@ -97,9 +169,23 @@ def parse_token(response):
 def oauth_dance(consumer_key, consumer_secret,
                 oauth_callback="oob", loop=None):
     """
-        oauth dance to get the user's access token
+        OAuth dance to get the user's access token
 
-    calls async_oauth_dance, create event loop of not given
+    It calls async_oauth_dance and create event loop of not given
+
+    Parameters
+    ----------
+    consumer_key : str
+        Your consumer key
+    consumer_secret : str
+        Your consumer secret
+    callback_uri : str
+        Callback uri, defaults to 'oob'
+    loop
+        asyncio event loop
+
+    Returns:
+        dict: access tokens
     """
     loop = loop or asyncio.get_event_loop()
 
@@ -111,6 +197,18 @@ def oauth2_dance(consumer_key, consumer_secret):
     """
         oauth2 dance actually dealt with on creation of
         :class:`peony.PeonyClient`
+
+    Parameters
+    ----------
+    consumer_key : str
+        Your consumer key
+    consumer_secret : str
+        Your consumer secret
+
+    Returns
+    -------
+    str
+        Bearer token
     """
     client = PeonyClient(consumer_key=consumer_key,
                          consumer_secret=consumer_secret,

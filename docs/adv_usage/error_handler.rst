@@ -4,7 +4,7 @@
 
 
 By default `peony.exceptions.RateLimitExceeded` is handled by sleeping until
-the rate limit resets and the requests are resent on ``TimeoutError``.
+the rate limit resets and the requests are resent on ``asyncio.TimeoutError``.
 If you would handle these exceptions another way or want to handle other
 exceptions differently you can use the ``error_handler`` argument of
 PeonyClient.

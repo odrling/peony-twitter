@@ -2,8 +2,7 @@
 
 import sys
 
-from . import utils
-from .commands import Commands
+from . import utils, Commands
 from .tasks import Task
 from ..utils import print_error
 

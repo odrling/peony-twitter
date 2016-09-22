@@ -29,7 +29,24 @@ class PeonyHeaders(dict):
                         headers=None,
                         skip_params=False,
                         **kwargs):
-        """ prepare all the arguments for the request """
+        """
+        prepare all the arguments for the request
+
+        Parameters
+        ----------
+        method : str
+            HTTP method used by the request
+        url str
+            The url to request
+        headers : :obj:`dict`, optional
+            Additionnal headers
+        skip_params : bool
+            Don't use the parameters to sign the request
+
+        Returns:
+        dict
+            Parameters of the request correctly formatted
+        """
 
         if method.lower() == "post":
             key = "data"
@@ -63,7 +80,20 @@ class OAuth1Headers(PeonyHeaders):
     """
         Dynamic headers implementing OAuth1
 
-    :func:`sign` is called before each request
+    :meth:`sign` is called before each request
+
+    Parameters
+    ----------
+    consumer_key : str
+        Your consumer key
+    consumer_secret : str
+        Your consumer secret
+    access_token : str
+        Your access token
+    access_token_secret : str
+        Your access token secret
+    **kwargs
+        Other headers
     """
 
     def __init__(self, consumer_key, consumer_secret,
@@ -112,11 +142,22 @@ class OAuth2Headers(PeonyHeaders):
     """
         Dynamic headers implementing OAuth2
 
+    Parameters
+    ----------
+    consumer_key : str
+        Your consumer key
+    consumer_secret : str
+        Your consumer secret
+    client : Client
+        The client to authenticate
+    bearer_token : :obj:`str`, optional
+        Your bearer_token
+    **kwargs
+        Other headers
     """
 
     def __init__(self, consumer_key, consumer_secret, client,
                  bearer_token=None,
-                 encoding="utf-8",
                  **kwargs):
         super().__init__(**kwargs)
         self.consumer_key = consumer_key
@@ -132,9 +173,9 @@ class OAuth2Headers(PeonyHeaders):
 
     def get_basic_authorization(self):
         encoded_keys = map(quote, (self.consumer_key, self.consumer_secret))
-        creds = ':'.join(encoded_keys).encode(self.encoding)
+        creds = ':'.join(encoded_keys).encode('utf-8')
 
-        auth = "Basic " + base64.b64encode(creds).decode(self.encoding)
+        auth = "Basic " + base64.b64encode(creds).decode('utf-8')
 
         return {'Authorization': auth}
 
@@ -159,6 +200,32 @@ class OAuth2Headers(PeonyHeaders):
 
 
 class Client:
+    """
+        A authenticated client
+
+    This class should not be used directly as it has no way to make a
+    request
+
+    Parameters
+    ----------
+    consumer_key : str
+        Your consumer key
+    consumer_secret : str
+        Your consumer secret
+    access_token : :obj:`str`, optional
+        Your access token
+    access_token_secret : :obj:`str`, optional
+        Your access token secret
+    bearer_token : :obj:`str`, optional
+        Your bearer_token
+    auth : PeonyHeaders
+        The authentication headers to use
+    headers : dict
+        Additional headers
+    loop : event loop, optional
+        An event loop, if not specified :func:`asyncio.get_event_loop`
+        is called
+    """
 
     def __init__(self, consumer_key, consumer_secret,
                  access_token=None,

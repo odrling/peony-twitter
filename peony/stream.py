@@ -126,8 +126,10 @@ class StreamResponse:
             return await self.restart_stream(error=True)
 
         except asyncio.TimeoutError:
-            return await self.restart_stream(reconnect=0,
-                                             error=True)
+            return await self.restart_stream(reconnect=0, error=True)
+
+        except aiohttp.errors.ContentEncodingError:
+            return await self.restart_stream(reconnect=0, error=True)
 
     async def restart_stream(self, reconnect=None, error=None):
         """

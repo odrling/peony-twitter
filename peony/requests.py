@@ -38,11 +38,13 @@ class Iterators:
     """
 
     def __init__(self, api, method):
-        self.request = getattr(api, method)
+        self.api = api
+        self.method = method
 
     def _get_iterator(self, iterator):
         def iterate(**kwargs):
-            return iterator(self.request, **kwargs)
+            request = getattr(api, method)
+            return iterator(request, **kwargs)
         return iterate
 
     def __getattr__(self, key):

@@ -8,11 +8,10 @@ the Twitter APIs, with a method to upload a media
 """
 
 import asyncio
-from types import GeneratorType
 
 import aiohttp
 
-from . import exceptions, general, oauth, requests, utils
+from . import exceptions, general, oauth, utils
 from .api import APIPath, StreamingAPIPath
 from .commands import EventStreams, task
 from .stream import StreamContext

@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import sys
-
 from . import utils, Commands
 from .tasks import Task
 from ..utils import print_error

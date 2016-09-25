@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from . import utils, Commands
-from .tasks import Task
+from .tasks import task
 from ..utils import print_error
 
 
@@ -18,7 +18,7 @@ def unpack(*args, **values):
     return keys, values
 
 
-class EventHandler(Task):
+class EventHandler(task):
 
     def __init__(self, *args, func, prefix=None, **values):
         super().__init__(func)

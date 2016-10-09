@@ -39,3 +39,16 @@ def permission_check(data, _permissions, command=None, permissions=None):
     return any(data.sender.id in _permissions[permission]
                for permission in permissions
                if permission in _permissions)
+
+def restart_on(exc):
+    def decorator(func):
+        while True:
+            try:
+                return func
+            except exc:
+                pass
+            except:
+                raise
+
+    return decorator
+

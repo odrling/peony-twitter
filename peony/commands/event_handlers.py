@@ -94,6 +94,7 @@ class EventStream:
         msg = "You must overload stream_request property in " + clsname
         raise RuntimeError(msg)
 
+    @utils.restart_on(TimeoutError)
     async def _start(self):
         if callable(self.stream_request):
             stream_request = self.stream_request()

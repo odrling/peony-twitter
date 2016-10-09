@@ -202,11 +202,7 @@ class StreamContext:
             Close the response and the session on error
         """
 
-        utils.print_error()
-
         if hasattr(self.stream, "response"):
             self.stream.response.close()
         if hasattr(self.stream, "session"):
             self.stream.session.close()
-
-        return True

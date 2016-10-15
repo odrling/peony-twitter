@@ -69,7 +69,7 @@ class PeonyHeaders(dict):
 
         return kwargs
 
-    async def prepare_headers(self):
+    def prepare_headers(self):
         pass
 
     def sign(self, *args, **kwargs):
@@ -257,4 +257,9 @@ class Client:
 
         self.loop = loop or asyncio.get_event_loop()
 
-        self.loop.run_until_complete(self.headers.prepare_headers())
+        prepare_headers = self.headers.prepare_headers()
+        if prepare_headers is not None:
+            try:
+                self.loop.run_until_complete(prepare_headers)
+            except RuntimeError:
+                await prepare_headers

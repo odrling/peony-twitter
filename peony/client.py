@@ -80,11 +80,9 @@ class BasePeonyClient(oauth.Client):
             init_tasks = self.init_tasks
 
         if init_tasks is not None:
-            try:
+            with suppress(RuntimeError):
                 # loop attribute was created in oauth.Client.__init__
                 self.loop.run_until_complete(asyncio.wait(init_tasks))
-            except RuntimeError:
-                await asyncio.wait(init_tasks)
 
 
     def init_tasks(self):

@@ -8,6 +8,7 @@ the Twitter APIs, with a method to upload a media
 """
 
 import asyncio
+import io
 
 import aiohttp
 
@@ -362,6 +363,10 @@ class PeonyClient(BasePeonyClient):
                 max_size = large_sizes['w'], large_sizes['h']
 
             media = utils.optimize_media(file_, max_size, formats)
+        elif hasattr(file_, 'read'):
+            file_.seek(0)
+            media = io.BytesIO(file_.read())
+            file_.seek(0)
         else:
             media = open(file_, 'rb')
 

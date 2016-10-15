@@ -3,6 +3,7 @@
 import asyncio
 import base64
 from urllib.parse import quote
+from contextlib import suppress
 
 import oauthlib.oauth1
 from oauthlib.common import add_params_to_uri
@@ -259,7 +260,5 @@ class Client:
 
         prepare_headers = self.headers.prepare_headers()
         if prepare_headers is not None:
-            try:
+            with suppress(RuntimeError):
                 self.loop.run_until_complete(prepare_headers)
-            except RuntimeError:
-                await prepare_headers

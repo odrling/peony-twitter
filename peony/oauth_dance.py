@@ -5,7 +5,7 @@ import time
 import webbrowser
 
 from . import oauth
-from .client import PeonyClient
+from .client import BasePeonyClient, PeonyClient
 
 async def get_oauth_token(consumer_key, consumer_secret, callback_uri="oob"):
     """
@@ -26,12 +26,15 @@ async def get_oauth_token(consumer_key, consumer_secret, callback_uri="oob"):
         Temporary tokens
     """
 
-    client = PeonyClient(consumer_key=consumer_key,
-                         consumer_secret=consumer_secret,
-                         callback_uri=callback_uri,
-                         api_version="")
+    client = BasePeonyClient(consumer_key=consumer_key,
+                             consumer_secret=consumer_secret,
+                             api_version="",
+                             suffix="")
 
-    response = await client.api.oauth.request_token.post(_suffix="")
+    response = await client.api.oauth.request_token.post(
+        _suffix="",
+        oauth_callback=callback_uri
+    )
 
     return parse_token(response)
 
@@ -68,7 +71,8 @@ def get_oauth_verifier(oauth_token):
 
 async def get_access_token(consumer_key, consumer_secret,
                            oauth_token, oauth_token_secret,
-                           oauth_verifier):
+                           oauth_verifier,
+                           **kwargs):
     """
         get the access token of the user
 
@@ -91,11 +95,12 @@ async def get_access_token(consumer_key, consumer_secret,
         Access tokens
     """
 
-    client = PeonyClient(consumer_key=consumer_key,
-                         consumer_secret=consumer_secret,
-                         access_token=oauth_token,
-                         access_token_secret=oauth_token_secret,
-                         api_version="")
+    client = BasePeonyClient(consumer_key=consumer_key,
+                             consumer_secret=consumer_secret,
+                             access_token=oauth_token,
+                             access_token_secret=oauth_token_secret,
+                             api_version="",
+                             suffix="")
 
     response = await client.api.oauth.access_token.get(
         _suffix="",

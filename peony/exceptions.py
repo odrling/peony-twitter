@@ -49,19 +49,21 @@ class PeonyException(Exception):
 
         Extract message from the error if not explicitly given
         """
-        if not message:
-            err = _get_error(data)
-            if err is not None:
-                if 'message' in err:
-                    message = err['message']
-
-            message = message or str(response)
-
         self.response = response
         self.data = data
 
+        if not message:
+            message = self.get_message()
+
         super().__init__(message)
 
+    def get_message(self):
+        err = _get_error(self.data)
+        if err is not None:
+            if 'message' in err:
+                message = err['message']
+
+        return message or str(self.response)
 
 class MediaProcessingError(PeonyException):
     pass
@@ -114,7 +116,13 @@ class NotAuthenticated(PeonyException):
 
 @errors.code(34)
 class DoesNotExist(PeonyException):
-    pass
+
+    @property
+    def url(self):
+        return self.response.url
+
+    def get_message(self):
+        return super().get_message() + "\n(%s)" % self.url
 
 
 @errors.code(64)

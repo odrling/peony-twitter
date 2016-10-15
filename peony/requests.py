@@ -19,7 +19,10 @@ class BaseRequest:
         self.api = api
         self.method = method
 
-    def __call__(self, _suffix=".json", **kwargs):
+    def __call__(self, _suffix=None, **kwargs):
+        if _suffix is None:
+            _suffix = self.api._suffix
+
         return (*self.api.sanitize_params(self.method, **kwargs),
                 self.api.url(_suffix))
 

@@ -59,6 +59,7 @@ class PeonyException(Exception):
 
     def get_message(self):
         err = _get_error(self.data)
+        message = None
         if err is not None:
             if 'message' in err:
                 message = err['message']

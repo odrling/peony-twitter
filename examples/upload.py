@@ -15,11 +15,16 @@ client = peony.PeonyClient(**api.keys)
 async def send_tweet_with_media():
     status = input("status: ")
     path = input('file to upload:\n')
+
     if not path:
         dirname = os.path.dirname(os.path.abspath(__file__))
         path = os.path.join(dirname, "test.gif")
 
-    media = await client.upload_media(path, auto_convert=True)
+    media = await client.upload_media(path,
+                                      auto_convert=True,
+                                      chunk_size=2**18,
+                                      chunked=True,
+                                      max_size=(2048, 2048))
     await client.api.statuses.update.post(status=status,
                                           media_ids=media.media_id)
 

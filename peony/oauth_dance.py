@@ -142,7 +142,7 @@ async def async_oauth_dance(consumer_key, consumer_secret, callback_uri="oob"):
     )
 
     token = dict(
-        consumer_key=consumer_secret,
+        consumer_key=consumer_key,
         consumer_secret=consumer_secret,
         access_token=token['oauth_token'],
         access_token_secret=token['oauth_token_secret']

@@ -6,7 +6,7 @@ import json
 import aiohttp
 
 from . import exceptions, utils
-from .exceptions import PeonyException, StreamLimit
+from .exceptions import PeonyException
 from .general import rate_limit_notices
 
 
@@ -87,12 +87,7 @@ class StreamResponse:
         if self.response.status == 200:
             return self
         else:
-            try:
-                await exceptions.throw(self.response)
-            except PeonyException as e:
-                utils.print_error()
-                if self.reconnect:
-                    await self.restart_stream(error=e)
+            await exceptions.throw(self.response)
 
     async def __anext__(self):
         """
@@ -115,22 +110,16 @@ class StreamResponse:
 
             return self.loads(line)
 
-        except StreamLimit:
-            return await self.restart_stream(error=True)
-
-        except StopAsyncIteration:
-            return await self.restart_stream(error=True)
-
-        except json.decoder.JSONDecodeError:
-            return await self.restart_stream(error=True)
-
         except asyncio.TimeoutError:
             return await self.restart_stream(reconnect=0, error=True)
 
         except aiohttp.errors.ContentEncodingError:
             return await self.restart_stream(reconnect=0, error=True)
 
-    async def restart_stream(self, reconnect=None, error=None):
+        except:
+            return await self.restart_stream(error=True)
+
+    async def restart_stream(self, reconnect=None, error=False):
         """
             Restart the stream on error
 
@@ -142,14 +131,14 @@ class StreamResponse:
             Whether to print the error or not
         """
 
-        if error is not None:
-            utils.print_error()
-
-        reconnect = reconnect is None and self.reconnect or reconnect
+        reconnect = self.reconnect if (reconnect is None) else reconnect
 
         self.response.close()
 
         if reconnect is not None:
+            if error:
+                utils.print_error()
+
             if reconnect > 0:
                 print("restarting stream in %ss" % reconnect)
                 await asyncio.sleep(reconnect)
@@ -158,7 +147,7 @@ class StreamResponse:
             await self.__aiter__()
             return await self.__anext__()
         else:
-            raise error
+            raise
 
 
 class StreamContext:

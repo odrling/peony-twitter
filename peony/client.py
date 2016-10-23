@@ -278,6 +278,7 @@ class PeonyClient(BasePeonyClient):
                               path=None,
                               media_type=None,
                               media_category=None,
+                              chunk_size=2**20,
                               **params):
         media_size = utils.get_size(media)
 
@@ -294,8 +295,7 @@ class PeonyClient(BasePeonyClient):
 
         media_id = response['media_id']
 
-        size_limit = 2**20
-        chunks = utils.media_chunks(media, size_limit, media_size)
+        chunks = utils.media_chunks(media, chunk_size, media_size)
 
         for i, chunk in enumerate(chunks):
             await self.upload.media.upload.post(command="APPEND",
@@ -336,6 +336,7 @@ class PeonyClient(BasePeonyClient):
                            formats=None,
                            max_size=None,
                            chunked=False,
+                           size_limit=None,
                            **params):
         """
             upload a media on twitter
@@ -373,9 +374,14 @@ class PeonyClient(BasePeonyClient):
         else:
             media = open(file_, 'rb')
 
-        size_limit = self.twitter_configuration['photo_size_limit']
+        if not isinstance(self.twitter_configuration, APIPath) or size_limit:
+            if size_limit is None:
+                size_limit = self.twitter_configuration['photo_size_limit']
+            size_test = utils.get_size(media) > size_limit
+        else:
+            size_test = False
 
-        if utils.get_size(media) > size_limit or chunked:
+        if size_test or chunked:
             args = media, file_, media_type, media_category
             response = await self._chunked_upload(*args, **params)
         else:

@@ -22,4 +22,4 @@ testdir = os.path.dirname(file_)
 sys.path.insert(0, os.path.dirname(testdir))
 
 import peony
-import peony.iterators
+print("peony v" + peony.__version__)

@@ -417,23 +417,3 @@ class PeonyClient(BasePeonyClient):
             tasks.extend(self._streams.get_tasks(self))
 
         return tasks
-
-    def get_task(self):
-        """
-        Returns
-        -------
-        asyncio.Task
-            The only task of the instance
-        """
-        tasks = self.get_tasks()
-
-        if len(tasks) == 1:
-            return tasks[0]
-
-        # raise an exception if there are more than one task
-        elif self.tasks:
-            raise RuntimeError("more than one task in %s" % self)
-
-        # raise an exception if there are no tasks
-        else:
-            raise RuntimeError("no tasks in %s" % self)

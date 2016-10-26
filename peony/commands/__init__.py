@@ -56,7 +56,6 @@ class Functions(dict):
 
         return decorated
 
-
     @process_keys
     def __getitem__(self, k):
         """ get the function you want """

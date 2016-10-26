@@ -84,7 +84,6 @@ class BasePeonyClient(oauth.Client):
                 # loop attribute was created in oauth.Client.__init__
                 self.loop.run_until_complete(asyncio.wait(init_tasks))
 
-
     def init_tasks(self):
         """ tasks executed on initialization """
         pass

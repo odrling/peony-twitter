@@ -39,7 +39,7 @@ class BDClient(peony.PeonyClient):
         birthday = time.mktime((year, *self.birthday))
 
         if birthday < time.time():
-            birthday = time.mktime((year+1, *self.birthday))
+            birthday = time.mktime((year + 1, *self.birthday))
 
         return birthday - time.time()
 
@@ -50,13 +50,12 @@ class BDClient(peony.PeonyClient):
         end = time.mktime((year, *self.birthday)) + 3600 * 24
 
         if end < time.time():
-            end = time.mktime((year+1, *self.birthday)) + 3600 * 24
+            end = time.mktime((year + 1, *self.birthday)) + 3600 * 24
 
         return end - time.time()
 
     async def setBDName(self, name):
         await self.api.account.update_profile.post(name=name)
-
 
     async def main(self):
         try:

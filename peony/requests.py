@@ -71,8 +71,8 @@ class Request(BaseRequest):
         self.iterator = Iterators(api, method)
 
     def __call__(self, _skip_params=None,
-                       _error_handling=True,
-                       **kwargs):
+                 _error_handling=True,
+                 **kwargs):
         kwargs, skip_params, url = super().__call__(**kwargs)
 
         skip_params = skip_params if _skip_params is None else _skip_params

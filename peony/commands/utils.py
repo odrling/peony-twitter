@@ -51,4 +51,3 @@ def restart_on(exc):
                 raise
 
     return decorator
-

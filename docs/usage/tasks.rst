@@ -114,7 +114,7 @@ decorator to the methods that you want to run.
             access_token_secret=your_access_token_secret
         )
 
-        asyncio.ensure_future(asyncio.wait(awesome_client.tasks))
+        asyncio.ensure_future(asyncio.wait(awesome_client.get_tasks()))
         loop.run_forever()
 
         # if there was no stream:
@@ -140,7 +140,7 @@ use the `task` decorator but there is a better way to do it.
     # adding permissions dirtily, you should probably try to load them in
     # AwesomePeonyClient.__init__ instead
     AwesomePeonyClient.permissions = {
-        "admin": [42]
+        "admin": [42]  # list of user id
     }
 
     @AwesomePeonyClient.event_stream

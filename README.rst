@@ -8,8 +8,14 @@ Installation
 
 To install this module simply run::
 
-    pip install peony-twitter
+    pip install peony-twitter[all]
 
+This will install all the modules required to make peony run out of the box.
+You might feel like some of them are not fit for your needs.
+Check `Advanced installation`_ for more information about how to install only
+the modules you will need.
+
+.. _Advanced installation: https://peony-twitter.readthedocs.io/en/latest/adv_usage/install.html#adv-install
 
 Authorize your client
 ---------------------
@@ -63,4 +69,6 @@ Make sure to get your api keys and access tokens from
 Documentation
 -------------
 
-Read Peony's documentation at https://peony-twitter.readthedocs.io.
+Read Peony's documentation on `Read The Docs`_.
+
+.. _Read The Docs: https://peony-twitter.readthedocs.io

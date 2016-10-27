@@ -29,15 +29,14 @@ def get_metadata(metadatafile):
     return metadata
 
 
-def get_requirements(requirementsfile):
-    with open(requirementsfile) as stream:
-        prog = re.compile(r"# (\S+)\n([^#]*)")
+ex = r"# ([^\s:]+).*\n([^#]+)"
+requirements_prog = re.compile(ex)
 
-        lines = (line.strip(" \n\t") for line in stream)
-        text = '\n'.join(line for line in lines if line)
 
-        matches = prog.findall(text)
-        requires = {key: value.splitlines()
+def get_requirements(requirements):
+    with open(requirements) as stream:
+        matches = requirements_prog.findall(stream.read())
+        requires = {key: value.strip().splitlines()
                     for key, value in matches}
 
     return requires
@@ -55,6 +54,10 @@ def main():
     # get requirements from requirements.txt
     requires = get_requirements(os.path.join(dirname, 'requirements.txt'))
 
+    # get extras requirements from extras_require.txt
+    extras = os.path.join(dirname, 'extras_require.txt')
+    extras_require = get_requirements(extras)
+
     # get long description from README.md
     with open('README.rst') as stream:
         long_description = stream.read()
@@ -63,7 +66,8 @@ def main():
         long_description=long_description,
         packages=find_packages(include=["peony*"]),
         **metadata,
-        **requires
+        **requires,
+        extras_require=extras_require
     )
 
 

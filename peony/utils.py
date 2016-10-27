@@ -10,20 +10,20 @@ import traceback
 from urllib.parse import urlparse
 
 import aiohttp
-from PIL import Image
+try:
+    import PIL.Image
+except ImportError:
+    PIL = None
 
 from . import exceptions
 
 try:
-    from magic import Magic
-    mime = Magic(mime=True)
-    magic = True
+    import magic
+    mime = magic.Magic(mime=True)
 except:
-    print('Could not load python-magic, fallback to mimetypes',
-          file=sys.stderr)
     import mimetypes
     mime = mimetypes.MimeTypes()
-    magic = False
+    magic = None
 
 
 class JSONObject(dict):
@@ -296,14 +296,19 @@ def optimize_media(file_, max_size, formats):
     file
         The smallest file created in this function
     """
-    img = Image.open(file_)
+    if not PIL:
+        msg = ("Pillow must be installed to optimize a media\n"
+               "(pip3 install peony[Pillow])")
+        raise RuntimeError(msg)
+
+    img = PIL.Image.open(file_)
     ratio = max(hw / max_hw for hw, max_hw in zip(img.size, max_size))
 
     # resize the picture (defaults to the 'large' photo size of Twitter
     # in peony.PeonyClient.upload_media)
     if ratio > 1:
         size = tuple(int(hw // ratio) for hw in img.size)
-        img = img.resize(size, Image.ANTIALIAS)
+        img = img.resize(size, PIL.Image.ANTIALIAS)
 
     files = list(convert(img, formats))
 
@@ -436,10 +441,16 @@ def get_type(media, path=None):
     """
     if magic:
         media_type = mime.from_buffer(media.read(1024))
-    elif path:
-        media_type = mime.guess_type(path)
     else:
-        raise RuntimeError("Cannot guess mimetype of media")
+        media_type = None
+        if path:
+            media_type = mime.guess_type(path)[0]
+
+        if media_type is None:
+            msg = ("Could not guess the mimetype of the media.\n"
+                   "Please consider installing python-magic\n"
+                   "(pip3 install peony-twitter[magic])")
+            raise RuntimeError(msg)
 
     if media_type.startswith('video'):
         media_category = "tweet_video"

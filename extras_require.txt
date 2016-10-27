@@ -1,0 +1,9 @@
+# magic: upload medias from file objects or filenames without a known extension
+python-magic
+
+# pillow: upload optimized medias using the auto_convert option
+Pillow
+
+# all: required modules for all the features of peony
+python-magic
+Pillow

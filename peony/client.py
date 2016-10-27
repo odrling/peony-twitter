@@ -212,6 +212,7 @@ class BasePeonyClient(oauth.Client):
             Make requests to the Streaming API
 
         Parameters
+        ----------
         method : str
             Method to be used by the request
         url : str

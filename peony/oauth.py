@@ -37,7 +37,7 @@ class PeonyHeaders(dict):
         ----------
         method : str
             HTTP method used by the request
-        url str
+        url : str
             The url to request
         headers : :obj:`dict`, optional
             Additionnal headers

@@ -39,13 +39,11 @@ You can easily create a client using the class `PeonyClient`.
 Make sure to get your api keys and access tokens from
 `Twitter's application management page`_ and/or to `Authorize your client`_
 
-.. note:: the package name is peony and not peony-twitter
-
 .. code-block:: python
 
     import asyncio
 
-    # Note: the package name is peony and not peony-twitter
+    # NOTE: the package name is peony and not peony-twitter
     from peony import PeonyClient
 
     loop = asyncio.get_event_loop()

@@ -36,7 +36,7 @@ Pillow
 
 You can install it by running::
 
-    $ pip3 install peony-twitter[Pillow]
+    $ pip3 install peony-twitter[pil]
 
 or (if peony is already installed)::
 

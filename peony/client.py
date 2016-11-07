@@ -50,6 +50,7 @@ class BasePeonyClient(oauth.Client):
                  suffix='.json',
                  loads=utils.loads,
                  error_handler=utils.error_handler,
+                 session=None,
                  **kwargs):
 
         if streaming_apis is None:
@@ -71,6 +72,8 @@ class BasePeonyClient(oauth.Client):
 
         self._loads = loads
         self.error_handler = error_handler
+
+        self.session = aiohttp.ClientSession() if session is None else session
 
         super().__init__(*args, **kwargs)
 
@@ -186,28 +189,27 @@ class BasePeonyClient(oauth.Client):
             **kwargs
         )
 
-        async with aiohttp.ClientSession() as session:
+        # make the request
+        async with self.session.request(**req_kwargs) as response:
+            if response.status // 100 == 2:
+                if json or url.endswith(".json") and json is not None:
+                    # decode as json
+                    content = await response.json(loads=self._loads)
+                else:
+                    # decode as text
+                    content = await response.text()
 
-            # make the request
-            async with session.request(**req_kwargs) as response:
-                if response.status // 100 == 2:
-                    if json or url.endswith(".json") and json is not None:
-                        # decode as json
-                        content = await response.json(loads=self._loads)
-                    else:
-                        # decode as text
-                        content = await response.text()
+                return utils.PeonyResponse(
+                    response=content,
+                    headers=response.headers,
+                    url=response.url,
+                    request=req_kwargs
+                )
+            else:  # throw exception if status is not 2xx
+                await exceptions.throw(response)
 
-                    return utils.PeonyResponse(
-                        response=content,
-                        headers=response.headers,
-                        url=response.url,
-                        request=req_kwargs
-                    )
-                else:  # throw exceptions if status is not 2xx
-                    await exceptions.throw(response)
-
-    def stream_request(self, method, url, headers=None, *args, **kwargs):
+    def stream_request(self, method, url, headers=None, _session=None,
+                       *args, **kwargs):
         """
             Make requests to the Streaming API
 
@@ -231,6 +233,7 @@ class BasePeonyClient(oauth.Client):
             headers=headers,
             _headers=self.headers,
             _error_handler=self.error_handler,
+            session=self.session if _session is None else _session,
             **kwargs
         )
 

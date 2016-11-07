@@ -193,5 +193,3 @@ class StreamContext:
 
         if hasattr(self.stream, "response"):
             self.stream.response.close()
-        if hasattr(self.stream, "session"):
-            self.stream.session.close()

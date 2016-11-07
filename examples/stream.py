@@ -13,27 +13,29 @@ except SystemError:
 
 class Home(peony.PeonyClient):
 
+    @staticmethod
+    def print_tweet(tweet):
+        text = html.unescape(tweet.text)
+        print("@{user.screen_name}: {text}".format(user=tweet.user,
+                                                   text=text))
+        print("-" * 10)
+
     @peony.task
     async def get_timeline(self):
         home = await self.api.statuses.home_timeline.get()
 
-        for t in home:
-            print(html.unescape(t.text))
-
+        for data in reversed(home):
+            self.print_tweet(data)
 
 @Home.event_stream
-class HomeStream(peony.EventStream):
+class UserStream(peony.EventStream):
 
     def stream_request(self):
         return self.userstream.user.get()
 
-    @peony.event_handler(*peony.events.connect)
-    def on_connect(self, data):
-        print(len(data))
-
     @peony.event_handler(*peony.events.on_tweet)
     def woohoo(self, data):
-        print(html.unescape(data.text))
+        self.print_tweet(data)
 
 if __name__ == '__main__':
     with aiohttp.ClientSession() as session:

@@ -73,7 +73,7 @@ class BasePeonyClient(oauth.Client):
         self._loads = loads
         self.error_handler = error_handler
 
-        self.session = aiohttp.ClientSession() if session is None else session
+        self._session = aiohttp.ClientSession() if session is None else session
 
         super().__init__(*args, **kwargs)
 
@@ -163,6 +163,7 @@ class BasePeonyClient(oauth.Client):
     async def request(self, method, url,
                       headers=None,
                       json=False,
+                      session=None,
                       **kwargs):
         """
             Make requests to the REST API
@@ -175,6 +176,8 @@ class BasePeonyClient(oauth.Client):
             URL of the ressource
         headers : dict
             Custom headers (doesn't overwrite `Authorization` headers)
+        session : :obj:`aiohttp.ClientSession`, optional
+            Client session used to make the request
         json : bool
             Force json decoding
 
@@ -192,8 +195,10 @@ class BasePeonyClient(oauth.Client):
             **kwargs
         )
 
+        session = session if (session is not None) else self._session
+
         # make the request
-        async with self.session.request(**req_kwargs) as response:
+        async with session.request(**req_kwargs) as response:
             if response.status // 100 == 2:
                 if json or url.endswith(".json") and json is not None:
                     # decode as json
@@ -236,7 +241,7 @@ class BasePeonyClient(oauth.Client):
             headers=headers,
             _headers=self.headers,
             _error_handler=self.error_handler,
-            session=self.session if _session is None else _session,
+            session=self._session if _session is None else _session,
             **kwargs
         )
 

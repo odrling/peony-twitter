@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import json
 
 import aiohttp
 
 from . import exceptions, utils
-from .exceptions import PeonyException
+from .exceptions import StreamLimit
 from .general import rate_limit_notices
 
 

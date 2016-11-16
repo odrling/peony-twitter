@@ -158,7 +158,7 @@ class BasePeonyClient(oauth.Client):
         return self[api]
 
     def __del__(self):
-        self.session.close()
+        self._session.close()
 
     async def request(self, method, url,
                       headers=None,

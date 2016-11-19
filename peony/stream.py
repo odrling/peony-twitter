@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+from pprint import pprint
 
 import aiohttp
 
 from . import exceptions, utils
-from .exceptions import StreamLimit
+from .exceptions import StreamLimit, EnhanceYourCalm
 from .general import rate_limit_notices
 
 
@@ -54,6 +55,7 @@ class StreamResponse:
         self.error_handler = _error_handler
         self.args = args
         self.kwargs = kwargs
+        self.reconnecting = False
 
     async def connect(self):
         """
@@ -86,7 +88,11 @@ class StreamResponse:
         if self.response.status == 200:
             return self
         else:
-            await exceptions.throw(self.response)
+            try:
+                raise await exceptions.throw(self.response)
+            except EnhanceYourCalm as e:
+                return self
+
 
     async def __anext__(self):
         """
@@ -99,6 +105,12 @@ class StreamResponse:
         """
         line = b''
         try:
+            if self.response.status != 200:
+                raise await exceptions.throw(self.response)
+
+            if self.reconnecting:
+                return await self.restart_stream()
+
             while not line:
                 with aiohttp.Timeout(self._timeout):
                     line = await self.response.content.readline()
@@ -115,10 +127,10 @@ class StreamResponse:
         except aiohttp.errors.ContentEncodingError:
             return await self.restart_stream(reconnect=0)
 
-        except:
-            return await self.restart_stream(error=True)
+        except Exception as e:
+            return await self.restart_stream(error=e)
 
-    async def restart_stream(self, reconnect=None, error=False):
+    async def restart_stream(self, reconnect=None, error=None):
         """
             Restart the stream on error
 
@@ -126,7 +138,7 @@ class StreamResponse:
         ----------
         reconnect : :obj:`int`, optional
             Time to wait for before reconnecting
-        error : bool
+        error : :class:`Exception`, optional
             Whether to print the error or not
         """
 
@@ -135,16 +147,20 @@ class StreamResponse:
         self.response.close()
 
         if reconnect is not None:
-            if error:
-                utils.print_error()
+            if reconnect > 0 and self.reconnecting is False:
+                if error:
+                    utils.print_error()
 
-            if reconnect > 0:
-                print("restarting stream in %ss" % reconnect)
-                await asyncio.sleep(reconnect)
-
-            print("restarting stream")
-            await self.__aiter__()
-            return await self.__anext__()
+                self.reconnecting = reconnect
+                return {
+                    'reconnecting_in': reconnect,
+                    'error': error
+                }
+            else:
+                await asyncio.sleep(self.reconnecting)
+                await self.__aiter__()
+                self.reconnecting = False
+                return {'stream_restart': True}
         else:
             raise
 

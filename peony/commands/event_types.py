@@ -213,6 +213,18 @@ def control():
     pass
 
 
+@events.alias(on, 'on_restart', 'restart')
+@events
+def stream_restart():
+    pass
+
+
+@events.alias(on, 'reconnect', 'on_reconnect')
+@events
+def reconnecting_in():
+    pass
+
+
 @events.alias('sitestream_event')
 @events
 def envelope():

@@ -104,33 +104,6 @@ class PeonyResponse:
         """ get the lenght of the response """
         return len(self.response)
 
-
-class handler_decorator:
-    """
-        A decorator for requests handlers
-
-    implements the ``_error_handling`` argument
-
-    Parameters
-    ----------
-    handler : function
-        The error handler to decorate
-    """
-
-    def __init__(self, handler):
-        functools.update_wrapper(self, handler)
-
-    def __call__(self, request, error_handling=True):
-        if error_handling:
-            return self.__wrapped__(request)
-        else:
-            return request
-
-    def __repr__(self):
-        return repr(self.__wrapped__)
-
-
-@handler_decorator
 def error_handler(request):
     """
         The default error_handler
@@ -148,13 +121,14 @@ def error_handler(request):
                     return await request(**kwargs)
 
             except exceptions.RateLimitExceeded as e:
-                traceback.print_exc(file=sys.stderr)
                 delay = int(e.reset_in) + 1
-                print("sleeping for %ds" % delay, file=sys.stderr)
+                fmt = "Sleeping for {}s (rate limit exceeded on endpoint {})"
+                print(fmt.format(delay, kwargs['url']), file=sys.stderr)
                 await asyncio.sleep(delay)
 
             except asyncio.TimeoutError:
-                print("Request timed out, retrying", file=sys.stderr)
+                fmt = "Request to {url} timed out, retrying"
+                print(fmt.format(url=kwargs['url']), file=sys.stderr)
 
             except:
                 raise

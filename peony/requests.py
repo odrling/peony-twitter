@@ -83,9 +83,8 @@ class Request(BaseRequest):
 
         client_request = self.api._client.request
 
-        if self.api._client.error_handler:
-            client_request = self.api._client.error_handler(client_request,
-                                                            _error_handling)
+        if self.api._client.error_handler and _error_handling:
+            client_request = self.api._client.error_handler(client_request)
 
         return client_request(**kwargs)
 

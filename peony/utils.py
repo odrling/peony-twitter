@@ -104,6 +104,7 @@ class PeonyResponse:
         """ get the lenght of the response """
         return len(self.response)
 
+
 def error_handler(request):
     """
         The default error_handler

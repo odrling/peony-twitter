@@ -93,7 +93,6 @@ class StreamResponse:
             except EnhanceYourCalm as e:
                 return self
 
-
     async def __anext__(self):
         """
             Decode each line using json

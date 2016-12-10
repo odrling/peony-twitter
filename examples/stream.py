@@ -11,6 +11,7 @@ except SystemError:
     from __init__ import peony, testdir
     import api
 
+
 class Home(peony.PeonyClient):
 
     def print_tweet(self, tweet):
@@ -31,6 +32,7 @@ class Home(peony.PeonyClient):
     async def init_timeline(self):
         await self.get_timeline()
 
+
 @Home.event_stream
 class UserStream(peony.EventStream):
 
@@ -43,7 +45,7 @@ class UserStream(peony.EventStream):
 
     @peony.event_handler(*peony.events.on_restart)
     async def fill_gap(self, data):
-        await self.get_timeline(since_id=self.last_tweet.id+1)
+        await self.get_timeline(since_id=self.last_tweet.id + 1)
 
 
 if __name__ == '__main__':

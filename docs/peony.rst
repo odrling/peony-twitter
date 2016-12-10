@@ -8,9 +8,6 @@ Subpackages
 
     peony.commands
 
-Submodules
-----------
-
 peony.api module
 ----------------
 
@@ -87,15 +84,6 @@ peony.utils module
 ------------------
 
 .. automodule:: peony.utils
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
-Module contents
----------------
-
-.. automodule:: peony
     :members:
     :undoc-members:
     :show-inheritance:

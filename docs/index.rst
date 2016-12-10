@@ -22,6 +22,7 @@ Peony is an asynchronous Twitter API client for Python 3.5+.
     adv_usage/oauth2
     adv_usage/loads
     adv_usage/error_handler
+    adv_usage/session
 
 .. toctree::
     :caption: Module

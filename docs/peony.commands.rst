@@ -1,9 +1,6 @@
 peony.commands package
 ======================
 
-Submodules
-----------
-
 peony.commands.event_handlers module
 ------------------------------------
 

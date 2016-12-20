@@ -41,6 +41,11 @@ class BasePeonyClient(oauth.Client):
         Function used to load JSON data
     error_handler : :obj:`function`, optional
         Requests decorator
+    session : :obj:`asyncio.ClientSession`, optional
+        session to use to make requests
+    loop : event loop, optional
+        An event loop, if not specified :func:`asyncio.get_event_loop`
+        is called
     """
 
     def __init__(self, *args,
@@ -51,6 +56,7 @@ class BasePeonyClient(oauth.Client):
                  loads=utils.loads,
                  error_handler=utils.error_handler,
                  session=None,
+                 loop=None,
                  **kwargs):
 
         if streaming_apis is None:
@@ -73,7 +79,12 @@ class BasePeonyClient(oauth.Client):
         self._loads = loads
         self.error_handler = error_handler
 
-        self._session = aiohttp.ClientSession() if session is None else session
+        self.loop = asyncio.get_event_loop() if loop is None else loop
+
+        if session:
+            self._session = session
+        else:
+            self._session = self.loop.run_until_complete(self.get_session())
 
         super().__init__(*args, **kwargs)
 
@@ -84,8 +95,10 @@ class BasePeonyClient(oauth.Client):
 
         if init_tasks is not None:
             with suppress(RuntimeError):
-                # loop attribute was created in oauth.Client.__init__
                 self.loop.run_until_complete(asyncio.wait(init_tasks))
+
+    async def get_session(self):
+        return aiohttp.ClientSession()
 
     def init_tasks(self):
         """ tasks executed on initialization """
@@ -174,7 +187,7 @@ class BasePeonyClient(oauth.Client):
             Method to be used by the request
         url : str
             URL of the ressource
-        headers : dict
+        headers : peony.oauth.PeonyHeaders
             Custom headers (doesn't overwrite `Authorization` headers)
         session : :obj:`aiohttp.ClientSession`, optional
             Client session used to make the request
@@ -291,6 +304,29 @@ class PeonyClient(BasePeonyClient):
                               media_category=None,
                               chunk_size=2**20,
                               **params):
+        """
+            upload media in chunks
+
+        Parameters
+        ----------
+        media : file object
+            a file object of the media
+        path : :obj:`str`, optional
+            filename of the media
+        media_type : :obj:`str`, optional
+            mime type of the media
+        media_category : :obj:`str`, optional
+            twitter media category
+        chunk_size : :obj:`int`, optional
+            size of a chunk in bytes
+        params : :obj:`dict`, optional
+            additional parameters of the request
+
+        Returns
+        -------
+        utils.PeonyResponse
+            Response of the request
+        """
         media_size = utils.get_size(media)
 
         if media_type is None or media_category is None:
@@ -365,6 +401,11 @@ class PeonyClient(BasePeonyClient):
             Max size of the picture in the (width, height) format
         chunked : :obj:`bool`, optional
             If True, force the use of the chunked upload for the media
+
+        Returns
+        -------
+        utils.PeonyResponse
+            response of the request
         """
         formats = formats or general.formats
 
@@ -407,7 +448,8 @@ class PeonyClient(BasePeonyClient):
     @classmethod
     def event_stream(cls, event_stream):
         """ Decorator to attach an event stream to the class """
-        cls._streams = getattr(cls, '_streams', EventStreams())
+        if getattr(cls, '_streams', None) is None:
+            cls._streams = EventStreams()
 
         cls._streams.append(event_stream)
         return event_stream

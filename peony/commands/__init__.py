@@ -95,13 +95,13 @@ class Functions(dict):
                 if word in self:
                     return word
 
-    async def run(self, *args, data, **kwargs):
+    async def run(self, *args, data):
         """ run the function you want """
         cmd = self._get(data.text)
 
         try:
             if cmd is not None:
-                command = self[cmd](*args, data=data, **kwargs)
+                command = self[cmd](*args, data=data)
                 return await utils.execute(command)
 
         except:
@@ -148,7 +148,7 @@ class Commands(Functions):
     def restricted(self, *permissions):
         def decorator(func):
             @wraps(func)
-            async def decorated(_self, data, *args, **kwargs):
+            async def decorated(_self, *args, data):
                 permission = utils.permission_check(
                     data,
                     _permissions=_self.permissions,
@@ -156,7 +156,9 @@ class Commands(Functions):
                 )
 
                 if permission:
-                    cmd = func(_self, data, *args, **kwargs)
+                    argcount = func.__code__.co_argcount - 1
+                    args = (*args, data)[:argcount]
+                    cmd = func(_self, *args)
 
                     return await utils.execute(cmd)
 

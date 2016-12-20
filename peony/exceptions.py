@@ -6,11 +6,12 @@ from . import utils
 
 
 def _get_error(data):
-    """ Get the error, this is quite a vertical code """
+    """ Get the error from the data """
     if data is not None:
         if 'errors' in data:
-            if data['errors']:
-                return data['errors'][0]
+            return data['errors'][0]
+        elif 'error' in data:
+            return data['error']
 
 
 async def throw(response, **kwargs):
@@ -24,14 +25,15 @@ async def throw(response, **kwargs):
             data = await response.json(loads=utils.loads)
         except:
             pass
+    else:
+        data = await response.read()
 
     err = _get_error(data)
-    if err is not None:
-        if 'code' in err:
-            code = str(err['code'])
-            if code in errors:
-                exception = errors[code]
-                raise exception(response=response, data=data, **kwargs)
+    if isinstance(err, dict):
+        code = err.get('code')
+        if str(code) in errors:
+            exception = errors[code]
+            raise exception(response=response, data=data, **kwargs)
 
     if str(response.status) in statuses:
         exception = statuses[response.status]
@@ -60,11 +62,13 @@ class PeonyException(Exception):
 
     def get_message(self):
         err = _get_error(self.data)
-        if err is not None:
+        if isinstance(err, dict):
             if 'message' in err:
                 return err['message']
+        elif isinstance(err, str):
+            return err
 
-        return str(self.response)
+        return str(self.data)
 
 
 class MediaProcessingError(PeonyException):

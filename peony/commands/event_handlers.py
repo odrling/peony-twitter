@@ -2,7 +2,7 @@
 
 from . import utils, Commands
 from .tasks import task
-from ..utils import print_error
+from ..utils import print_error, get_args
 
 
 def unpack(*args, **values):
@@ -29,11 +29,14 @@ class EventHandler(task):
         if prefix is not None:
             self.command = Commands(prefix=prefix)
 
-    def __call__(self, *args, **kwargs):
-        if hasattr(self, "command"):
-            return super().__call__(*args, self.command, **kwargs)
-        else:
-            return super().__call__(*args, **kwargs)
+    def __call__(self, *args):
+        argcount = self.__wrapped__.__code__.co_argcount
+
+        if getattr(self, 'command', None):
+            args = (*args, self.command,)
+
+        args = args[:argcount]
+        return super().__call__(*args)
 
     def __repr__(self):
         return "<{clsname}: keys:{keys} prefix:{prefix}>".format(

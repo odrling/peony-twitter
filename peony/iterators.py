@@ -32,7 +32,7 @@ class IdIterator(BaseIterator):
 
     Parameters
     ----------
-    _request
+    _request :
         Main request
     _parameter : str
         Parameter to change for each request
@@ -40,7 +40,7 @@ class IdIterator(BaseIterator):
         Index of the value for the next request
     _force : bool
         Keep the iterator after empty responses
-    **kwargs
+    kwargs:
         Request parameters
     """
 
@@ -76,9 +76,9 @@ class MaxIdIterator(IdIterator):
 
     Parameters
     ----------
-    _request
+    _request:
         Main request
-    **kwargs
+    kwargs:
         Parameters of the request
     """
 

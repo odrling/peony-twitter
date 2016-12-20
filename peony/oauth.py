@@ -201,7 +201,7 @@ class OAuth2Headers(PeonyHeaders):
 
 class Client:
     """
-        A authenticated client
+        An authenticated client
 
     This class should not be used directly as it has no way to make a
     request
@@ -222,9 +222,6 @@ class Client:
         The authentication headers to use
     headers : dict
         Additional headers
-    loop : event loop, optional
-        An event loop, if not specified :func:`asyncio.get_event_loop`
-        is called
     """
 
     def __init__(self, consumer_key, consumer_secret,
@@ -232,8 +229,7 @@ class Client:
                  access_token_secret=None,
                  bearer_token=None,
                  auth=OAuth1Headers,
-                 headers=None,
-                 loop=None):
+                 headers=None):
         if headers is None:
             headers = {}
 
@@ -255,8 +251,6 @@ class Client:
                   if key in args}
 
         self.headers = auth(**kwargs, **headers)
-
-        self.loop = loop or asyncio.get_event_loop()
 
         prepare_headers = self.headers.prepare_headers()
         if prepare_headers is not None:

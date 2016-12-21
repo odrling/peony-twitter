@@ -9,7 +9,6 @@ the Twitter APIs, with a method to upload a media
 
 import asyncio
 import io
-from functools import wraps
 
 import aiohttp
 
@@ -87,6 +86,10 @@ class BasePeonyClient(oauth.Client):
 
         self.__setup = {'event': asyncio.Event(),
                         'state': False}
+
+        if not self.loop.is_running():
+            self.loop.run_until_complete(self.setup())
+
 
     async def setup(self):
         """
@@ -274,6 +277,13 @@ class BasePeonyClient(oauth.Client):
             session=self._session if _session is None else _session,
             **kwargs
         )
+
+    @classmethod
+    async def create(cls, *args, **kwargs):
+        instance = cls(*args, **kwargs)
+        await instance.setup()
+
+        return instance
 
 
 class PeonyClient(BasePeonyClient):

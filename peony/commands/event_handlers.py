@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from . import utils, Commands
+from . import utils
+from .commands import Commands
 from .tasks import task
-from ..utils import print_error, get_args
+from ..utils import print_error
 
 
 def unpack(*args, **values):
@@ -47,6 +48,7 @@ class EventHandler(task):
 
 
 def event_handler(*args, prefix=None, **values):
+
     def decorator(func):
         event_handler = EventHandler(
             *args,

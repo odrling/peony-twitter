@@ -194,7 +194,8 @@ class OAuth2Headers(PeonyHeaders):
         request = self.client['api', "", ""].oauth2.token.post
         token = await request(grant_type="client_credentials",
                               _headers=self.basic_authorization,
-                              _json=True)
+                              _json=True,
+                              _is_init_task=True)
 
         self.set_token(token['access_token'])
 
@@ -251,8 +252,3 @@ class Client:
                   if key in args}
 
         self.headers = auth(**kwargs, **headers)
-
-        prepare_headers = self.headers.prepare_headers()
-        if prepare_headers is not None:
-            with suppress(RuntimeError):
-                self.loop.run_until_complete(prepare_headers)

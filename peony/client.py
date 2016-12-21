@@ -9,7 +9,7 @@ the Twitter APIs, with a method to upload a media
 
 import asyncio
 import io
-from contextlib import suppress
+from functools import wraps
 
 import aiohttp
 
@@ -81,25 +81,41 @@ class BasePeonyClient(oauth.Client):
 
         self.loop = asyncio.get_event_loop() if loop is None else loop
 
-        if session:
-            self._session = session
-        else:
-            self._session = self.loop.run_until_complete(self.get_session())
+        self._session = session
 
         super().__init__(*args, **kwargs)
 
-        if callable(self.init_tasks):
-            init_tasks = self.init_tasks()
-        else:
-            init_tasks = self.init_tasks
+        self.__setup = {'event': asyncio.Event(),
+                        'state': False}
 
-        if init_tasks is not None:
-            with suppress(RuntimeError):
-                self.loop.run_until_complete(asyncio.wait(init_tasks))
+    async def setup(self):
+        """
+            set up the client on the first request
+        """
+        if not self.__setup['state']:
+            self.__setup['state'] = True
 
-    async def get_session(self):
-        return aiohttp.ClientSession()
+            if self._session is None:
+                self._session = aiohttp.ClientSession()
 
+            prepare_headers = self.headers.prepare_headers()
+            if prepare_headers is not None:
+                await prepare_headers
+
+            if callable(self.init_tasks):
+                init_tasks = self.init_tasks()
+            else:
+                init_tasks = self.init_tasks
+
+            if init_tasks is not None:
+                await asyncio.wait(init_tasks)
+
+            self.__setup['event'].set()
+
+        await self.__setup['event'].wait()
+
+
+    @property
     def init_tasks(self):
         """ tasks executed on initialization """
         pass
@@ -177,6 +193,7 @@ class BasePeonyClient(oauth.Client):
                       headers=None,
                       json=False,
                       session=None,
+                      is_init_task=False,
                       **kwargs):
         """
             Make requests to the REST API
@@ -199,6 +216,8 @@ class BasePeonyClient(oauth.Client):
         utils.PeonyResponse
             Response to the request
         """
+        if not is_init_task:
+            await self.setup()
 
         # prepare request arguments, particularly the headers
         req_kwargs = self.headers.prepare_request(
@@ -249,11 +268,9 @@ class BasePeonyClient(oauth.Client):
             Stream context for the request
         """
         return StreamContext(
-            method, url,
+            method, url, self,
             *args,
             headers=headers,
-            _headers=self.headers,
-            _error_handler=self.error_handler,
             session=self._session if _session is None else _session,
             **kwargs
         )
@@ -287,7 +304,9 @@ class PeonyClient(BasePeonyClient):
         """
         api = self['api', general.twitter_api_version,
                    ".json", general.twitter_base_api_url]
-        self.twitter_configuration = await api.help.configuration.get()
+
+        req = api.help.configuration.get(_is_init_task=True)
+        self.twitter_configuration = await req
 
     async def __get_user(self):
         """
@@ -296,7 +315,9 @@ class PeonyClient(BasePeonyClient):
         """
         api = self['api', general.twitter_api_version,
                    ".json", general.twitter_base_api_url]
-        self.user = await api.account.verify_credentials.get()
+
+        req = api.account.verify_credentials.get(_is_init_task=True)
+        self.user = await req
 
     async def _chunked_upload(self, media,
                               path=None,
@@ -456,7 +477,7 @@ class PeonyClient(BasePeonyClient):
 
     def get_tasks(self):
         """
-            Get tasks attached to the instance
+            Get the tasks attached to the instance
 
         Returns
         -------

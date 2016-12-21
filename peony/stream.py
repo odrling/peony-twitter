@@ -37,22 +37,21 @@ class StreamResponse:
         Keyword parameters of the request
     """
 
-    def __init__(self, *args, _headers,
-                 session=None,
+    def __init__(self, *args,
+                 client,
+                 session,
                  reconnect=150,
                  loads=utils.loads,
                  timeout=10,
                  _timeout=90,
-                 _error_handler=None,
                  **kwargs):
 
-        self.session = session or aiohttp.ClientSession()
+        self.client = client
+        self.session = session
         self.reconnect = reconnect
-        self.headers = _headers
         self.loads = loads
         self.timeout = timeout
         self._timeout = _timeout
-        self.error_handler = _error_handler
         self.args = args
         self.kwargs = kwargs
         self.reconnecting = False
@@ -66,8 +65,8 @@ class StreamResponse:
         aiohttp.StreamReader
             The streaming response
         """
-        kwargs = self.headers.prepare_request(**self.kwargs)
-        request = self.error_handler(self.session.request)
+        kwargs = self.client.headers.prepare_request(**self.kwargs)
+        request = self.client.error_handler(self.session.request)
 
         return await request(*self.args, timeout=self.timeout, **kwargs)
 
@@ -180,9 +179,10 @@ class StreamContext:
         Keyword parameters of the request and of :class:`StreamResponse`
     """
 
-    def __init__(self, method, url, *args, **kwargs):
+    def __init__(self, method, url, client, *args, **kwargs):
         self.method = method
         self.url = url
+        self.client = client
         self.args = args
         self.kwargs = kwargs
 
@@ -195,8 +195,10 @@ class StreamContext:
         StreamResponse
             The stream iterator
         """
+        await self.client.setup()
         self.stream = StreamResponse(method=self.method, url=self.url,
-                                     *self.args, **self.kwargs)
+                                     *self.args, client=self.client,
+                                     **self.kwargs)
 
         return self.stream
 

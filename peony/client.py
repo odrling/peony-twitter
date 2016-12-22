@@ -387,13 +387,10 @@ class PeonyClient(BasePeonyClient):
 
         if 'processing_info' in status:
             while status['processing_info']['state'] != "succeeded":
-                if 'status' not in status['processing_info']:
-                    pass
-                elif status['processing_info']['status'] == "failed":
+                if status['processing_info'].get('state', "") == "failed":
                     error = status['processing_info'].get('error', {})
 
-                    message = error.get('message',
-                                        "No error message in the response")
+                    message = error.get('message', str(status))
 
                     raise exceptions.MediaProcessingError(data=status,
                                                           message=message,

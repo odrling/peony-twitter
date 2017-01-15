@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-from pprint import pprint
 
 import aiohttp
 
@@ -62,7 +61,7 @@ class StreamResponse:
 
         Returns
         -------
-        aiohttp.StreamReader
+        aiohttp.ClientResponse
             The streaming response
         """
         kwargs = self.client.headers.prepare_request(**self.kwargs)
@@ -89,7 +88,7 @@ class StreamResponse:
         else:
             try:
                 raise await exceptions.throw(self.response)
-            except EnhanceYourCalm as e:
+            except EnhanceYourCalm:
                 return self
 
     async def __anext__(self):

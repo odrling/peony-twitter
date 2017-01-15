@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from functools import wraps, update_wrapper
+from functools import wraps
 
 from .event_handlers import EventHandler
 
@@ -68,7 +68,8 @@ class Events(dict):
 
         return decorator
 
-    def event(self, func):
+    @staticmethod
+    def event(func):
         value = get_value(func)
 
         @wraps(func)

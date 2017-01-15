@@ -7,12 +7,12 @@ def doc(value):
     stripped_chars = " \t"
 
     if hasattr(value, '__doc__'):
-        doc = value.__doc__.lstrip(" \n\t")
-        if "\n" in doc:
-            i = doc.index("\n")
-            return doc[:i].rstrip(stripped_chars)
-        elif doc:
-            return doc.rstrip(stripped_chars)
+        docstring = value.__doc__.lstrip(" \n\t")
+        if "\n" in docstring:
+            i = docstring.index("\n")
+            return docstring[:i].rstrip(stripped_chars)
+        elif docstring:
+            return docstring.rstrip(stripped_chars)
 
     return ""
 

@@ -100,7 +100,7 @@ class EventStream:
         raise RuntimeError(msg)
 
     @utils.restart_on(Exception)
-    async def _start(self):
+    async def start(self):
         if callable(self.stream_request):
             stream_request = self.stream_request()
         else:
@@ -150,29 +150,30 @@ class EventStream:
             print_error(msg)
 
 
+def check_setup(func):
+    def decorated(self, client):
+        if not self.is_setup:
+            self.setup(client)
+
+        return func(self, client)
+
+    return decorated
+
+
 class EventStreams(list):
 
     def __init__(self):
         super().__init__()
         self.is_setup = False
 
-    def check_setup(func):
-        def decorated(self, client):
-            if not self.is_setup:
-                self.setup(client)
-
-            return func(self)
-
-        return decorated
+    @check_setup
+    def get_tasks(self, client):
+        return [client.loop.create_task(stream.start()) for stream in self]
 
     @check_setup
-    def get_tasks(self):
-        return [stream._start() for stream in self]
-
-    @check_setup
-    def get_task(self):
+    def get_task(self, client):
         if len(self) == 1:
-            return self[0]._start()
+            return client.loop.create_task(self[0].start())
         elif self:
             raise RuntimeError("more than 1 event stream")
         else:

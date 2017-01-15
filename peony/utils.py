@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import io
 import functools
+import io
 import json
 import os
 import sys
@@ -10,12 +10,13 @@ import traceback
 from urllib.parse import urlparse
 
 import aiohttp
+
+from . import exceptions
+
 try:
     import PIL.Image
 except ImportError:
     PIL = None
-
-from . import exceptions
 
 try:
     import magic
@@ -56,15 +57,23 @@ class PeonyResponse:
     getting an attribute/item of this object will get the corresponding
     attribute/item of the response
 
+    >>> peonyresponse = PeonyResponse(
+    ...     response=JSONObject(key="test"), headers={},
+    ...     url="http://google.com", request={}
+    ... )
     >>> peonyresponse.key is peonyresponse.response.key  # returns True
     >>>
+    >>> peonyresponse = PeonyResponse(
+    ...     response=[JSONObject(key="test"), JSONObject(key=1)], headers={},
+    ...     url="http://google.com", request={}
+    ... )
     >>> # iterate over peonyresponse.response
     >>> for key in peonyresponse:
     ...     pass  # do whatever you want
 
     Parameters
     ----------
-    response : dict or list
+    response : JSONObject or list
         Response object
     headers : dict
         Headers of the response

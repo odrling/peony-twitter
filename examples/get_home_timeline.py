@@ -12,7 +12,7 @@ except SystemError:
 
 client = peony.PeonyClient(**api.keys)
 
-async def get_home(since_id=None, **params):
+async def get_home(**params):
     responses = client.api.statuses.home_timeline.get.iterator.with_since_id(
         count=200,
         **params
@@ -28,7 +28,7 @@ async def get_home(since_id=None, **params):
 
         await asyncio.sleep(180)
 
-    return sorted(home, key=lambda tweet: tweet.id)
+    return home
 
 
 def main():

@@ -7,6 +7,26 @@ from . import utils
 from ..utils import print_error
 
 
+def process_keys(func):
+    """
+    Raise error for keys that are not strings
+    and add the prefix if it is missing
+    """
+
+    @wraps(func)
+    def decorated(self, k, *args):
+        if not isinstance(k, str):
+            msg = "%s: key must be a string" % self.__class__.__name__
+            raise ValueError(msg)
+
+        if not k.startswith(self.prefix):
+            k = self.prefix + k
+
+        return func(self, k, *args)
+
+    return decorated
+
+
 class Functions(dict):
     """
         Functions of an event handler
@@ -34,24 +54,6 @@ class Functions(dict):
         ex = re.escape(prefix) + r"[^\s]+"
         self.prog = re.compile(ex)
         self.strict = strict
-
-    def process_keys(func):
-        """
-        Raise error for keys that are not strings
-        and add the prefix if it is missing
-        """
-        @wraps(func)
-        def decorated(self, k, *args):
-            if not isinstance(k, str):
-                msg = "%s: key must be a string" % self.__class__.__name__
-                raise ValueError(msg)
-
-            if not k.startswith(self.prefix):
-                k = self.prefix + k
-
-            return func(self, k, *args)
-
-        return decorated
 
     @process_keys
     def __getitem__(self, k):

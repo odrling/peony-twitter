@@ -14,19 +14,39 @@ except SystemError:
 
 class Home(peony.PeonyClient):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.last_tweet_id = 0
+
     def print_tweet(self, tweet):
-        text = html.unescape(tweet.text)
-        print("@{user.screen_name}: {text}".format(user=tweet.user,
-                                                   text=text))
-        print("-" * 10)
+        if self.last_tweet_id < tweet.id:
+            if 'retweeted_status' in tweet:
+                text = html.unescape(tweet.retweeted_status.text)
+                fmt = "@{user.screen_name} RT @{rt.user.screen_name}: {text}"
+                print(fmt.format(user=tweet.user,
+                                 rt=tweet.retweeted_status,
+                                 text=text))
+            else:
+                text = html.unescape(tweet.text)
+                print("@{user.screen_name}: {text}".format(user=tweet.user,
+                                                           text=text))
 
-        self.last_tweet_id = tweet.id
+            print("-" * 10)
 
-    async def get_timeline(self, **kwargs):
-        home = await self.api.statuses.home_timeline.get(**kwargs)
+            self.last_tweet_id = tweet.id
 
-        for data in reversed(home):
-            self.print_tweet(data)
+    async def get_timeline(self):
+        responses = self.api.statuses.home_timeline.get.iterator.with_since_id(
+            count=200,
+            since_id=self.last_tweet_id
+        )
+
+        async for tweets in responses:
+            for tweet in reversed(tweets):
+                self.print_tweet(tweet)
+
+            break
 
 
 @Home.event_stream
@@ -44,18 +64,10 @@ class UserStream(peony.EventStream):
         self.print_tweet(data)
 
     @peony.events.on_restart.handler
-    async def fill_gap(self):
-        await self.get_timeline(since_id=self.last_tweet_id + 1)
-
-
-async def main(loop):
-    async with aiohttp.ClientSession() as session:
-        client = Home(**api.keys, session=session, loop=loop)
-
-        await asyncio.wait(client.get_tasks())
+    def restart_notice(self):
+        print("*Stream restarted*\n" + "-" * 10)
 
 
 if __name__ == '__main__':
-    loop = asyncio.get_event_loop()
-    loop.create_task(main(loop))
-    loop.run_forever()
+    client = Home(**api.keys)
+    client.run()

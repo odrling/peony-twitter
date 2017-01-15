@@ -16,9 +16,10 @@ from . import exceptions, general, oauth, utils
 from .api import APIPath, StreamingAPIPath
 from .commands import EventStreams, task
 from .stream import StreamContext
+from .oauth import OAuth1Headers
 
 
-class BasePeonyClient(oauth.Client):
+class BasePeonyClient:
     """
         Attributes/items become a :class:`api.APIPath` or
         :class:`api.StreamingAPIPath` automatically
@@ -47,7 +48,12 @@ class BasePeonyClient(oauth.Client):
         is called
     """
 
-    def __init__(self, *args,
+    def __init__(self, consumer_key, consumer_secret,
+                 access_token=None,
+                 access_token_secret=None,
+                 bearer_token=None,
+                 auth=None,
+                 headers=None,
                  streaming_apis=None,
                  base_url=None,
                  api_version=None,
@@ -73,6 +79,12 @@ class BasePeonyClient(oauth.Client):
         else:
             self.api_version = api_version
 
+        if auth is None:
+            auth = OAuth1Headers
+
+        if headers is None:
+            headers = {}
+
         self._suffix = suffix
 
         self._loads = loads
@@ -82,14 +94,30 @@ class BasePeonyClient(oauth.Client):
 
         self._session = session
 
-        super().__init__(*args, **kwargs)
+        # all the possible args required by headers in :mod:`peony.oauth`
+        kwargs = {
+            'consumer_key': consumer_key,
+            'consumer_secret': consumer_secret,
+            'access_token': access_token,
+            'access_token_secret': access_token_secret,
+            'bearer_token': bearer_token,
+            'client': self
+        }
+
+        # get the args needed by the auth parameter on initialization
+        args = utils.get_args(auth.__init__, skip=1)
+
+        # keep only the arguments required by auth on init
+        kwargs = {key: value for key, value in kwargs.items()
+                  if key in args}
+
+        self.headers = auth(**kwargs, **headers)
 
         self.__setup = {'event': asyncio.Event(),
                         'state': False}
 
         if not self.loop.is_running():
             self.loop.run_until_complete(self.setup())
-
 
     async def setup(self):
         """
@@ -105,6 +133,8 @@ class BasePeonyClient(oauth.Client):
             if prepare_headers is not None:
                 await prepare_headers
 
+            self.__setup['event'].set()
+
             if callable(self.init_tasks):
                 init_tasks = self.init_tasks()
             else:
@@ -113,12 +143,8 @@ class BasePeonyClient(oauth.Client):
             if init_tasks is not None:
                 await asyncio.wait(init_tasks)
 
-            self.__setup['event'].set()
-
         await self.__setup['event'].wait()
 
-
-    @property
     def init_tasks(self):
         """ tasks executed on initialization """
         pass
@@ -131,15 +157,15 @@ class BasePeonyClient(oauth.Client):
 
         For most api you only need to type
 
-        >>> client[api]  # api is the api you want to access
+        >>> self[api]  # api is the api you want to access
 
         You can specify a custom api version using the syntax
 
-        >>> client[api, version]  # version is the api version as a str
+        >>> self[api, version]  # version is the api version as a str
 
         For more complex requests
 
-        >>> client[api, version, suffix, base_url]
+        >>> self[api, version, suffix, base_url]
 
         Returns
         -------
@@ -196,7 +222,6 @@ class BasePeonyClient(oauth.Client):
                       headers=None,
                       json=False,
                       session=None,
-                      is_init_task=False,
                       **kwargs):
         """
             Make requests to the REST API
@@ -219,8 +244,7 @@ class BasePeonyClient(oauth.Client):
         utils.PeonyResponse
             Response to the request
         """
-        if not is_init_task:
-            await self.setup()
+        await self.setup()
 
         # prepare request arguments, particularly the headers
         req_kwargs = self.headers.prepare_request(
@@ -264,6 +288,9 @@ class BasePeonyClient(oauth.Client):
             URL of the ressource
         headers : dict
             Custom headers (doesn't overwrite `Authorization` headers)
+        _session : :obj:`aiohttp.ClientSession`, optional
+            The session to use for this specific request, the session
+            given as argument of :meth:`__init__` is used by default
 
         Returns
         -------
@@ -277,13 +304,6 @@ class BasePeonyClient(oauth.Client):
             session=self._session if _session is None else _session,
             **kwargs
         )
-
-    @classmethod
-    async def create(cls, *args, **kwargs):
-        instance = cls(*args, **kwargs)
-        await instance.setup()
-
-        return instance
 
 
 class PeonyClient(BasePeonyClient):
@@ -315,7 +335,7 @@ class PeonyClient(BasePeonyClient):
         api = self['api', general.twitter_api_version,
                    ".json", general.twitter_base_api_url]
 
-        req = api.help.configuration.get(_is_init_task=True)
+        req = api.help.configuration.get()
         self.twitter_configuration = await req
 
     async def __get_user(self):
@@ -326,7 +346,7 @@ class PeonyClient(BasePeonyClient):
         api = self['api', general.twitter_api_version,
                    ".json", general.twitter_base_api_url]
 
-        req = api.account.verify_credentials.get(_is_init_task=True)
+        req = api.account.verify_credentials.get()
         self.user = await req
 
     async def _chunked_upload(self, media,
@@ -429,6 +449,9 @@ class PeonyClient(BasePeonyClient):
             Max size of the picture in the (width, height) format
         chunked : :obj:`bool`, optional
             If True, force the use of the chunked upload for the media
+        size_limit : :obj:`int`, optional
+            If set, the media will be sent using a multipart upload if
+            its size is over ``sizelimit`` bytes
 
         Returns
         -------
@@ -492,9 +515,20 @@ class PeonyClient(BasePeonyClient):
             List of tasks (:class:`asyncio.Task`)
         """
         funcs = [getattr(self, key) for key in dir(self)]
-        tasks = [func(self) for func in funcs if isinstance(func, task)]
+        tasks = [self.loop.create_task(func(self))
+                 for func in funcs if isinstance(func, task)]
 
         if isinstance(self._streams, EventStreams):
             tasks.extend(self._streams.get_tasks(self))
 
         return tasks
+
+    async def run_tasks(self):
+        """ Run the tasks attached to the instance """
+        await self.setup()
+        await asyncio.wait(self.get_tasks())
+
+    def run(self):
+        """ Run the tasks attached to the instance """
+        self.loop.create_task(self.run_tasks())
+        self.loop.run_forever()

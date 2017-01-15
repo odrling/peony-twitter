@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import asyncio
 import base64
 from urllib.parse import quote
-from contextlib import suppress
 
 import oauthlib.oauth1
 from oauthlib.common import add_params_to_uri
@@ -44,7 +42,8 @@ class PeonyHeaders(dict):
         skip_params : bool
             Don't use the parameters to sign the request
 
-        Returns:
+        Returns
+        -------
         dict
             Parameters of the request correctly formatted
         """
@@ -149,7 +148,7 @@ class OAuth2Headers(PeonyHeaders):
         Your consumer key
     consumer_secret : str
         Your consumer secret
-    client : Client
+    client : peony.BasePeonyClient
         The client to authenticate
     bearer_token : :obj:`str`, optional
         Your bearer_token
@@ -198,57 +197,3 @@ class OAuth2Headers(PeonyHeaders):
                               _is_init_task=True)
 
         self.set_token(token['access_token'])
-
-
-class Client:
-    """
-        An authenticated client
-
-    This class should not be used directly as it has no way to make a
-    request
-
-    Parameters
-    ----------
-    consumer_key : str
-        Your consumer key
-    consumer_secret : str
-        Your consumer secret
-    access_token : :obj:`str`, optional
-        Your access token
-    access_token_secret : :obj:`str`, optional
-        Your access token secret
-    bearer_token : :obj:`str`, optional
-        Your bearer_token
-    auth : PeonyHeaders
-        The authentication headers to use
-    headers : dict
-        Additional headers
-    """
-
-    def __init__(self, consumer_key, consumer_secret,
-                 access_token=None,
-                 access_token_secret=None,
-                 bearer_token=None,
-                 auth=OAuth1Headers,
-                 headers=None):
-        if headers is None:
-            headers = {}
-
-        # all the possible args required by headers in :mod:`peony.oauth`
-        kwargs = {
-            'consumer_key': consumer_key,
-            'consumer_secret': consumer_secret,
-            'access_token': access_token,
-            'access_token_secret': access_token_secret,
-            'bearer_token': bearer_token,
-            'client': self
-        }
-
-        # get the args needed by the auth parameter on initialization
-        args = utils.get_args(auth.__init__, skip=1)
-
-        # keep only the arguments required by auth on init
-        kwargs = {key: value for key, value in kwargs.items()
-                  if key in args}
-
-        self.headers = auth(**kwargs, **headers)

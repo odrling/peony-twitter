@@ -13,9 +13,15 @@ as the `session` argument.
     import aiohttp
     from peony import PeonyClient
 
-    with aiohttp.ClientSession() as session:
-        # The client will use the session to make requests
-        client = PeonyClient(**creds, session=session)
+    async def client_with_session():
+        async with aiohttp.ClientSession() as session:
+            # The client will use the session to make requests
+            client = PeonyClient(**creds, session=session)
+            await client.run_tasks()
+
+    if __name__ == '__main__':
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(client_with_session())
 
 
 .. warning::

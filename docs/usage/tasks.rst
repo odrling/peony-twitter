@@ -103,7 +103,7 @@ decorator to the methods that you want to run.
 
 
     def main():
-        """ run all the tasks simultaneously """
+        """ start all the tasks """
         loop = asyncio.get_event_loop()
 
         # set your api keys here
@@ -111,14 +111,11 @@ decorator to the methods that you want to run.
             consumer_key=your_consumer_key,
             consumer_secret=your_consumer_secret,
             access_token=your_access_token,
-            access_token_secret=your_access_token_secret
+            access_token_secret=your_access_token_secret,
+            loop=loop
         )
 
-        asyncio.ensure_future(asyncio.wait(awesome_client.get_tasks()))
-        loop.run_forever()
-
-        # if there was no stream:
-        # loop.run_until_complete(asyncio.wait(awesome_client.tasks))
+        awesome_client.run()
 
 
     if __name__ == '__main__':
@@ -151,11 +148,11 @@ use the `task` decorator but there is a better way to do it.
             # stream_request must return the request used to access the stream
             return self.userstream.user.get()
 
-        @event_handler(*events.on_connect)
+        @events.on_connect.handler
         def awesome_connection(self, data):
             print("Connected to stream!")
 
-        @event_handler(*events.on_follow)
+        @events.on_follow.handler
         def awesome_follow(self, data, *args):
             print("You have a new awesome follower @%s" % data.source.screen_name)
 
@@ -163,7 +160,7 @@ use the `task` decorator but there is a better way to do it.
         # command attribute to the function that you can use as a decorator
         # to create commands
         # it also adds a command argument to the event_handler
-        @event_handler(*events.on_dm, prefix='/')
+        @events.on_dm.handler.with_prefix('/')
         async def awesome_dm_received(self, data, command):
             # Important: command.run is a coroutine
             msg = await command.run(self, data=data.direct_message)

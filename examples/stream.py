@@ -7,7 +7,7 @@ import aiohttp
 
 try:
     from . import peony, api, testdir
-except SystemError:
+except (SystemError, ImportError):
     from __init__ import peony, testdir
     import api
 
@@ -17,7 +17,7 @@ class Home(peony.PeonyClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.last_tweet_id = 0
+        self.last_tweet_id = 1
 
     def print_tweet(self, tweet):
         if self.last_tweet_id < tweet.id:

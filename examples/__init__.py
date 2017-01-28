@@ -6,7 +6,7 @@ import sys
 try:
     try:
         from . import api
-    except SystemError:
+    except (SystemError, ImportError):
         import api
 except ImportError:
     print("You must set your keys in the file example/api.py."

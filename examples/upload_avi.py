@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 try:
     from . import peony, api, testdir
-except SystemError:
+except (SystemError, ImportError):
     from __init__ import peony, testdir
     import api
 

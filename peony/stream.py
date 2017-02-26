@@ -67,6 +67,9 @@ class StreamResponse:
         kwargs = self.client.headers.prepare_request(**self.kwargs)
         request = self.client.error_handler(self.session.request)
 
+        if 'proxy' not in kwargs:
+            kwargs['proxy'] = self.client.proxy
+
         return await request(*self.args, timeout=self.timeout, **kwargs)
 
     async def __aiter__(self):

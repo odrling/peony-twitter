@@ -43,6 +43,8 @@ class BasePeonyClient:
         Requests decorator
     session : :obj:`asyncio.ClientSession`, optional
         session to use to make requests
+    proxy : str
+        proxy used with every request
     loop : event loop, optional
         An event loop, if not specified :func:`asyncio.get_event_loop`
         is called
@@ -61,6 +63,7 @@ class BasePeonyClient:
                  loads=utils.loads,
                  error_handler=utils.error_handler,
                  session=None,
+                 proxy=None,
                  loop=None,
                  **kwargs):
 
@@ -84,6 +87,8 @@ class BasePeonyClient:
 
         if headers is None:
             headers = {}
+
+        self.proxy = proxy
 
         self._suffix = suffix
 
@@ -253,6 +258,9 @@ class BasePeonyClient:
             headers=headers,
             **kwargs
         )
+
+        if 'proxy' not in req_kwargs:
+            req_kwargs['proxy'] = self.proxy
 
         session = session if (session is not None) else self._session
 
@@ -531,4 +539,19 @@ class PeonyClient(BasePeonyClient):
     def run(self):
         """ Run the tasks attached to the instance """
         self.loop.create_task(self.run_tasks())
-        self.loop.run_forever()
+        try:
+            self.loop.run_forever()
+        except KeyboardInterrupt:
+            pending = asyncio.Task.all_tasks(loop=self.loop)
+            gathered = asyncio.gather(*pending, loop=self.loop)
+            try:
+                gathered.cancel()
+                self.loop.run_until_complete(gathered)
+
+                # we want to retrieve any exceptions to make sure that
+                # they don't nag us about it being un-retrieved.
+                gathered.exception()
+            except:
+                pass
+        finally:
+            self.loop.close()

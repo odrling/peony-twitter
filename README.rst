@@ -67,6 +67,6 @@ Make sure to get your api keys and access tokens from
 Documentation
 -------------
 
-Read Peony's documentation on `Read The Docs`_.
+Read `Peony's documentation`_.
 
-.. _Read The Docs: https://peony-twitter.readthedocs.io
+.. _Peony's documentation: http://docs.odrling.xyz/peony-twitter

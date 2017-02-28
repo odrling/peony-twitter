@@ -8,13 +8,10 @@ from . import utils
 def _get_error(data):
     """ Get the error from the data """
     if data is not None:
-        try:
-            if 'errors' in data:
-                return data['errors'][0]
-            elif 'error' in data:
-                return data['error']
-        except TypeError:
-            print(data)
+        if 'errors' in data:
+            return data['errors'][0]
+        elif 'error' in data:
+            return data['error']
 
 
 async def throw(response, **kwargs):
@@ -26,17 +23,16 @@ async def throw(response, **kwargs):
     if "json" in ctype:
         try:
             data = await response.json(loads=utils.loads)
+            err = _get_error(data)
+            if isinstance(err, dict):
+                code = err.get('code')
+                if str(code) in errors:
+                    exception = errors[code]
+                    raise exception(response=response, data=data, **kwargs)
         except:
             pass
     else:
         data = await response.read()
-
-    err = _get_error(data)
-    if isinstance(err, dict):
-        code = err.get('code')
-        if str(code) in errors:
-            exception = errors[code]
-            raise exception(response=response, data=data, **kwargs)
 
     if str(response.status) in statuses:
         exception = statuses[response.status]

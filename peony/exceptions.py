@@ -8,10 +8,13 @@ from . import utils
 def _get_error(data):
     """ Get the error from the data """
     if data is not None:
-        if 'errors' in data:
-            return data['errors'][0]
-        elif 'error' in data:
-            return data['error']
+        try:
+            if 'errors' in data:
+                return data['errors'][0]
+            elif 'error' in data:
+                return data['error']
+        except TypeError:
+            print(data)
 
 
 async def throw(response, **kwargs):

@@ -309,7 +309,7 @@ class BasePeonyClient:
             method, url, self,
             *args,
             headers=headers,
-            session=self._session if _session is None else _session,
+            session=_session,
             **kwargs
         )
 

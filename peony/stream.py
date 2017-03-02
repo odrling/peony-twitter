@@ -38,7 +38,7 @@ class StreamResponse:
 
     def __init__(self, *args,
                  client,
-                 session,
+                 session=None,
                  reconnect=150,
                  loads=utils.loads,
                  timeout=10,
@@ -46,7 +46,7 @@ class StreamResponse:
                  **kwargs):
 
         self.client = client
-        self.session = session
+        self.session = self.client._session if session is None else session
         self.reconnect = reconnect
         self.loads = loads
         self.timeout = timeout

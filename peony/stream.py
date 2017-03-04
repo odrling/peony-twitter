@@ -96,14 +96,14 @@ class StreamResponse:
             try:
                 raise await exceptions.throw(self.response)
             except EnhanceYourCalm:
-                print(f"Enhance Your Calm response received from Twitter. "
-                      f"If you didn't restart your program frenetically "
-                      f"then there is probably something wrong with it. "
-                      f"Make sure you are not opening too many connections to "
-                      f"the endpoint you are currently using by checking "
-                      f"Twitter's Streaming API documentation out: "
-                      f"https://dev.twitter.com/streaming/overview\n"
-                      f"The stream will restart in {self.reconnect}s.",
+                print("Enhance Your Calm response received from Twitter. "
+                      "If you didn't restart your program frenetically "
+                      "then there is probably something wrong with it. "
+                      "Make sure you are not opening too many connections to "
+                      "the endpoint you are currently using by checking "
+                      "Twitter's Streaming API documentation out: "
+                      "https://dev.twitter.com/streaming/overview\n"
+                      "The stream will restart in %ss." % self.reconnect,
                       file=sys.stderr)
                 return self
 

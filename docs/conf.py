@@ -29,14 +29,15 @@
 
 import inspect
 import os
-import sys
 import re
+import sys
+import pathlib
 
-conf_py = os.path.abspath(inspect.getfile(inspect.currentframe()))
-docs = os.path.dirname(conf_py)
-maindir = os.path.dirname(docs)
+conf_py = pathlib.Path(inspect.getfile(inspect.currentframe())).absolute()
+docs = conf_py.parent
+maindir = docs.parent
 
-sys.path.insert(0, maindir)
+sys.path.insert(0, str(maindir))
 
 
 # Add any Sphinx extension module names here, as strings. They can be
@@ -82,7 +83,8 @@ author = 'odrling'
 #
 # The short X.Y version.
 
-with open(os.path.join(maindir, "peony", "__init__.py")) as stream:
+init = maindir / "peony" / "__init__.py"
+with init.open() as stream:
     ex = r'__version__\s*=\s*?[\"\']([^\"\']*)'
     match = re.search(ex, stream.read())
     version = match.group(1)

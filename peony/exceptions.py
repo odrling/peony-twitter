@@ -8,10 +8,13 @@ from . import utils
 def _get_error(data):
     """ Get the error from the data """
     if data is not None:
-        if 'errors' in data:
-            return data['errors'][0]
-        elif 'error' in data:
-            return data['error']
+        try:
+            if 'errors' in data:
+                return data['errors'][0]
+            elif 'error' in data:
+                return data['error']
+        except TypeError:
+            print(data)
 
 
 async def throw(response, **kwargs):
@@ -60,12 +63,13 @@ class PeonyException(Exception):
         super().__init__(message)
 
     def get_message(self):
-        err = _get_error(self.data)
-        if isinstance(err, dict):
-            if 'message' in err:
-                return err['message']
-        elif isinstance(err, str):
-            return err
+        if not isinstance(self.data, bytes):
+            err = _get_error(self.data)
+            if isinstance(err, dict):
+                if 'message' in err:
+                    return err['message']
+            elif isinstance(err, str):
+                return err
 
         return str(self.data)
 

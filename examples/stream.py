@@ -57,7 +57,7 @@ class UserStream(peony.EventStream):
 
     @peony.events.on_connect.handler
     async def init_timeline(self):
-        await self.get_timeline()
+        print("starting")
 
     @peony.events.on_tweet.handler
     def woohoo(self, data):

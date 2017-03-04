@@ -57,7 +57,7 @@ class UserStream(peony.EventStream):
 
     @peony.events.on_connect.handler
     async def init_timeline(self):
-        print("starting")
+        await self.get_timeline()
 
     @peony.events.on_tweet.handler
     def woohoo(self, data):
@@ -66,7 +66,6 @@ class UserStream(peony.EventStream):
     @peony.events.on_restart.handler
     def restart_notice(self):
         print("*Stream restarted*\n" + "-" * 10)
-
 
 if __name__ == '__main__':
     client = Home(**api.keys)

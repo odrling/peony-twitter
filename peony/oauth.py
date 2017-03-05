@@ -1,13 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import base64
-from urllib.parse import quote
-
-import oauthlib.oauth1
-from oauthlib.common import add_params_to_uri
+import hmac
+import random
+import string
+import time
+from hashlib import sha1
+import urllib.parse
 
 from . import __version__
-from . import utils
+
+quote = lambda s: urllib.parse.quote(s, safe="")
 
 
 class PeonyHeaders(dict):
@@ -61,7 +64,9 @@ class PeonyHeaders(dict):
         request_params.update(dict(method=method.upper(), url=url))
 
         request_params['headers'] = self.sign(**request_params,
-                                              skip_params=skip_params)
+                                              skip_params=skip_params,
+                                              headers=headers)
+
         if headers is not None:
             request_params['headers'].update(headers)
 
@@ -72,8 +77,11 @@ class PeonyHeaders(dict):
     def prepare_headers(self):
         pass
 
-    def sign(self, *args, **kwargs):
-        return self.copy()
+    def sign(self, *args, headers=None, **kwargs):
+        if headers is None:
+            return self.copy()
+        else:
+            return self.copy().update(headers)
 
 
 class OAuth1Headers(PeonyHeaders):
@@ -101,21 +109,22 @@ class OAuth1Headers(PeonyHeaders):
         """ create the OAuth1 client """
         super().__init__(**kwargs)
 
-        self.oauthclient = oauthlib.oauth1.Client(
-            client_key=consumer_key,
-            client_secret=consumer_secret,
-            resource_owner_key=access_token,
-            resource_owner_secret=access_token_secret
-        )
+        self.consumer_key = consumer_key
+        self.consumer_secret = consumer_secret
+        self.access_token = access_token
+        self.access_token_secret = access_token_secret
 
-    def sign(self, method, url,
+        self.alphabet = string.ascii_letters + string.digits
+
+    def sign(self, method='GET', url=None,
              data=None,
              params=None,
              skip_params=False,
+             headers=None,
              **kwargs):
         """ sign, that is, generate the `Authorization` headers """
 
-        headers = super().sign()
+        headers = super().sign(headers=headers)
 
         if data:
             if skip_params:
@@ -123,19 +132,70 @@ class OAuth1Headers(PeonyHeaders):
             else:
                 default = "application/x-www-form-urlencoded"
 
-            headers['Content-Type'] = headers.get('Content-Type', default)
+            if not 'Content-Type' in headers:
+                headers['Content-Type'] = default
 
-            body = data
-        else:
-            if params:
-                url = add_params_to_uri(url, params.items())
+            params = data
 
-            body = None
+        oauth = {
+            'oauth_consumer_key': self.consumer_key,
+            'oauth_nonce': self.gen_nonce(),
+            'oauth_signature_method': 'HMAC-SHA1',
+            'oauth_timestamp': str(int(time.time())),
+            'oauth_version': '1.0'
+        }
 
-        ___, headers, ____ = self.oauthclient.sign(
-            uri=url, http_method=method, headers=headers, body=body, **kwargs)
+        if self.access_token is not None:
+            oauth['oauth_token'] = self.access_token
+
+        oauth['oauth_signature'] = self.gen_signature(method=method, url=url,
+                                                      params=params,
+                                                      skip_params=skip_params,
+                                                      oauth=oauth)
+
+        headers['Authorization'] = "OAuth "
+
+        for key, value in sorted(oauth.items(), key=lambda i: i[0]):
+            if len(headers['Authorization']) > len("OAuth "):
+                headers['Authorization'] += ", "
+
+            headers['Authorization'] += quote(key) + '="' + quote(value) + '"'
 
         return headers
+
+    def gen_nonce(self):
+        return ''.join(random.choice(self.alphabet) for i in range(32))
+
+    def gen_signature(self, method, url, params, skip_params, oauth):
+        signature = method.upper() + "&" + quote(url) + "&"
+
+        if skip_params:
+            params = oauth
+        else:
+            params.update(oauth)
+
+        param_string = ""
+
+        for key, value in sorted(params.items(), key=lambda i: i[0]):
+            if param_string:
+                param_string += "&"
+
+            if key == "q":
+                encoded_value = urllib.parse.quote(value, safe="$:!?")
+                param_string += quote(key) + "=" + encoded_value
+            else:
+                param_string += quote(key) + "=" + quote(value)
+
+        signature += quote(param_string)
+
+        key = quote(self.consumer_secret).encode() + b"&"
+        if self.access_token_secret is not None:
+            key += quote(self.access_token_secret).encode()
+
+        signature = hmac.new(key, signature.encode(), sha1)
+
+        signature = base64.b64encode(signature.digest()).decode().rstrip("\n")
+        return signature
 
 
 class OAuth2Headers(PeonyHeaders):

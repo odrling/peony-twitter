@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import asyncio
+from urllib.request import quote
 
 try:
     from . import peony, api, testdir
@@ -13,7 +14,7 @@ client = peony.PeonyClient(**api.keys, loop=loop)
 
 
 async def search_test():
-    print(await client.api.search.tweets.get(q="Watson AND IBM"))
+    print(await client.api.search.tweets.get(q="from:twitter", count=100))
 
 if __name__ == '__main__':
     loop.run_until_complete(search_test())

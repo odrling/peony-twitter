@@ -181,7 +181,7 @@ class OAuth1Headers(PeonyHeaders):
                 param_string += "&"
 
             if key == "q":
-                encoded_value = urllib.parse.quote(value, safe="$:!?")
+                encoded_value = urllib.parse.quote(value, safe="$:!?/()'*@")
                 param_string += quote(key) + "=" + encoded_value
             else:
                 param_string += quote(key) + "=" + quote(value)

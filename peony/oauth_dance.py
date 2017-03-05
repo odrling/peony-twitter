@@ -71,7 +71,7 @@ def get_oauth_verifier(oauth_token):
 
 async def get_access_token(consumer_key, consumer_secret,
                            oauth_token, oauth_token_secret,
-                           oauth_verifier):
+                           oauth_verifier, **kwargs):
     """
         get the access token of the user
 

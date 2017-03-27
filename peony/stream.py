@@ -140,7 +140,7 @@ class StreamResponse:
         except asyncio.TimeoutError:
             return await self.initialize_restart(reconnect=0)
 
-        except aiohttp.errors.ContentEncodingError:
+        except aiohttp.ClientPayloadError:
             return await self.initialize_restart(reconnect=0)
 
         except Exception as e:

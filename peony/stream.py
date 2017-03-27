@@ -143,6 +143,9 @@ class StreamResponse:
         except aiohttp.ClientPayloadError:
             return await self.initialize_restart(reconnect=0)
 
+        except aiohttp.ClientConnectionError:
+            return await self.initialize_restart(reconnect=0)
+
         except Exception as e:
             return await self.initialize_restart(error=e)
 

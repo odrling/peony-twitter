@@ -4,6 +4,12 @@ python-magic
 # pil: upload optimized medias using the auto_convert option
 Pillow
 
+# aiohttp: optional libraries for aiohttp
+cchardet
+aiodns
+
 # all: required modules for all the features of peony
 python-magic
 Pillow
+cchardet
+aiodns

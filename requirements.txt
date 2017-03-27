@@ -1,3 +1,2 @@
 # install_requires : bare minimum to make peony run correctly
-aiohttp
-oauthlib
+aiohttp<3.0

@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import asyncio
 import html
-
-import aiohttp
+from pprint import pprint
+from datetime import datetime
 
 try:
     from . import peony, api, testdir
@@ -29,8 +28,8 @@ class Home(peony.PeonyClient):
                                  text=text))
             else:
                 text = html.unescape(tweet.text)
-                print("@{user.screen_name}: {text}".format(user=tweet.user,
-                                                           text=text))
+                fmt = "@{user.screen_name}: {text}"
+                print(fmt.format(user=tweet.user, text=text))
 
             print("-" * 10)
 
@@ -65,7 +64,25 @@ class UserStream(peony.EventStream):
 
     @peony.events.on_restart.handler
     def restart_notice(self):
+        print(datetime.now())
         print("*Stream restarted*\n" + "-" * 10)
+
+    @peony.events.on_dm.handler
+    def direct_message(self, data):
+        data = data.direct_message
+        text = html.unescape(data.text)
+        fmt = "@{sender} → @{recipient}: {text}"
+        print(fmt.format(sender=data.sender.screen_name,
+                         recipient=data.recipient.screen_name,
+                         text=text))
+
+    @peony.events.warning.handler
+    def warnings(self, data):
+        pprint(data)
+
+    @peony.events.disconnect.handler
+    def disconnection(self, data):
+        pprint(data)
 
 if __name__ == '__main__':
     client = Home(**api.keys)

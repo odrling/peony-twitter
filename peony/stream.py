@@ -57,9 +57,7 @@ class StreamResponse:
         self.args = args
         self.kwargs = kwargs
         self.reconnecting = False
-        self.reconnection = 0
-        self.enhance_calm = 0
-        self.disconnection = 0
+        self.error_timeout = 0
 
     def connect(self):
         """
@@ -78,11 +76,6 @@ class StreamResponse:
 
         return request(*self.args, timeout=0, **kwargs)
 
-    def initialize_timeouts(self):
-        self.reconnection = 0
-        self.enhance_calm = 0
-        self.disconnection = 0
-
     async def __aiter__(self):
         """
             Create the connection
@@ -100,13 +93,13 @@ class StreamResponse:
             self.response = await self.connect()
 
         if self.response.status == 200:
-            self.initialize_timeouts()
+            self.error_timeout = 0
         elif self.response.status == 500:
-            self.increase_disconnetion_timeout()
+            self.set_disconnetion_timeout()
         elif self.response.status in range(501, 600):
-            self.increase_reconnection_timeout()
+            self.set_reconnection_timeout()
         elif self.response.status in (420, 429):
-            self.increase_enhance_calm_timeout()
+            self.set_enhance_calm_timeout()
 
             print("Enhance Your Calm response received from Twitter. "
                   "If you didn't restart your program frenetically "
@@ -115,7 +108,7 @@ class StreamResponse:
                   "the endpoint you are currently using by checking "
                   "Twitter's Streaming API documentation out: "
                   "https://dev.twitter.com/streaming/overview\n"
-                  "The stream will restart in %ss." % self.enhance_calm,
+                  "The stream will restart in %ss." % self.error_timeout,
                   file=sys.stderr)
         else:
             raise await exceptions.throw(self.response)
@@ -133,13 +126,10 @@ class StreamResponse:
         """
         line = b''
         try:
-            timeouts = self.disconnection, self.reconnection, self.enhance_calm
-            reconnect = max(timeouts)
-
             if self.reconnecting is not False:
                 return await self.restart_stream()
-            elif reconnect:
-                return await self.initialize_restart(reconnect=reconnect)
+            elif self.error_timeout:
+                return await self.init_restart(reconnect=self.error_timeout)
 
             while not line:
                 with aiohttp.Timeout(90):
@@ -152,35 +142,41 @@ class StreamResponse:
             return self.loads(line)
 
         except asyncio.TimeoutError:
-            return await self.initialize_restart()
+            return await self.init_restart()
 
         except ClientPayloadError:
-            return await self.initialize_restart()
+            return await self.init_restart()
 
         except ClientConnectionError:
-            self.increase_disconnetion_timeout()
-            return await self.initialize_restart(reconnect=self.disconnection)
+            self.set_disconnetion_timeout()
+            return await self.init_restart(reconnect=self.error_timeout)
 
         except Exception as e:
-            return await self.initialize_restart(error=e)
+            return await self.init_restart(error=e)
 
-    def increase_disconnetion_timeout(self):
-        if not self.disconnection >= MAX_DISCONNECTION_TIMEOUT:
-            self.disconnection += DISCONNECTION_TIMEOUT
-
-    def increase_reconnection_timeout(self):
-        if self.reconnection == 0:
-            self.reconnection = RECONNECTION_TIMEOUT
-        elif not self.reconnection >= MAX_RECONNECTION_TIMEOUT:
-            self.reconnection *= 2
-
-    def increase_enhance_calm_timeout(self):
-        if self.enhance_calm == 0:
-            self.enhance_calm = ENHANCE_YOUR_CALM_TIMEOUT
+    def set_disconnetion_timeout(self):
+        """ set timeout on disconnection """
+        if self.error_timeout >= MAX_RECONNECTION_TIMEOUT:
+            self.error_timeout = MAX_RECONNECTION_TIMEOUT
         else:
-            self.enhance_calm *= 2
+            self.error_timeout += DISCONNECTION_TIMEOUT
 
-    async def initialize_restart(self, reconnect=0, error=None):
+    def set_reconnection_timeout(self):
+        """ set timeout on """
+        if self.error_timeout < RECONNECTION_TIMEOUT:
+            self.error_timeout = RECONNECTION_TIMEOUT
+        elif self.error_timeout < MAX_RECONNECTION_TIMEOUT:
+            self.error_timeout *= 2
+        else:
+            self.error_timeout = MAX_RECONNECTION_TIMEOUT
+
+    def set_enhance_calm_timeout(self):
+        if self.error_timeout < ENHANCE_YOUR_CALM_TIMEOUT:
+            self.error_timeout = ENHANCE_YOUR_CALM_TIMEOUT
+        else:
+            self.error_timeout *= 2
+
+    async def init_restart(self, reconnect=0, error=None):
         """
             Restart the stream on error
 

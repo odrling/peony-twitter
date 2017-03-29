@@ -3,7 +3,7 @@
 from . import utils
 from .commands import Commands
 from .tasks import task
-from ..utils import print_error, get_args
+from ..utils import print_error
 
 
 class EventHandler(task):
@@ -56,6 +56,7 @@ class EventStream:
         self._client = client
         self.functions = [getattr(self, func)
                           for func in dir(self) if self._check(func)]
+        self.functions.sort(key=lambda i: getattr(i.is_event, 'priority', 0))
 
     def __getitem__(self, key):
         return self._client[key]

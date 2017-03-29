@@ -128,6 +128,15 @@ class Events(dict):
                 if key not in self.aliases}
 
 
+def priority(p):
+
+    def decorated(func):
+        func.priority = p
+        return func
+
+    return decorated
+
+
 events = Events()
 
 on = 'on_{name}'
@@ -141,6 +150,12 @@ def friends(data):
 @events.alias(on, 'on_dm')
 def direct_message():
     pass
+
+
+@events.alias(on)
+@priority(-1)
+def retweeted_status(data):
+    return tweet(data) and 'retweeted_status' in data
 
 
 @events.alias(on)

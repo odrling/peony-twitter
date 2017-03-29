@@ -21,9 +21,11 @@ class PeonyHeaders(dict):
     :class:`OAuth2Headers`.
     """
 
-    def __init__(self, **kwargs):
+    def __init__(self, compression=True, **kwargs):
         """ Add a nice User-Agent """
         self['User-Agent'] = "peony v%s" % __version__
+        if compression:
+            self['Accept-Encoding'] = "deflate, gzip"
 
         super().__init__(**kwargs)
 
@@ -217,8 +219,7 @@ class OAuth2Headers(PeonyHeaders):
     """
 
     def __init__(self, consumer_key, consumer_secret, client,
-                 bearer_token=None,
-                 **kwargs):
+                 bearer_token=None, **kwargs):
         super().__init__(**kwargs)
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret

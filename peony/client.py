@@ -65,6 +65,7 @@ class BasePeonyClient:
                  session=None,
                  proxy=None,
                  loop=None,
+                 compression=True,
                  **kwargs):
 
         if streaming_apis is None:
@@ -106,6 +107,7 @@ class BasePeonyClient:
             'access_token': access_token,
             'access_token_secret': access_token_secret,
             'bearer_token': bearer_token,
+            'compression': compression,
             'client': self
         }
 
@@ -264,7 +266,6 @@ class BasePeonyClient:
 
         session = session if (session is not None) else self._session
 
-        # make the request
         async with session.request(**req_kwargs) as response:
             if response.status // 100 == 2:
                 if json or url.endswith(".json") and json is not None:

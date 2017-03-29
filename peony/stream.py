@@ -4,17 +4,24 @@ import asyncio
 import sys
 
 import aiohttp
-import datetime
 
 from . import exceptions, utils
-from .exceptions import StreamLimit, EnhanceYourCalm
+from .exceptions import StreamLimit
 from .general import rate_limit_notices
+
+if int(aiohttp.__version__.split('.')[0]) < 2:
+    ClientPayloadError = aiohttp.errors.ContentEncodingError
+    ClientConnectionError = aiohttp.errors.ClientDisconnectedError
+else:
+    ClientPayloadError = aiohttp.ClientPayloadError
+    ClientConnectionError = aiohttp.ClientConnectionError
 
 RECONNECTION_TIMEOUT = 5
 MAX_RECONNECTION_TIMEOUT = 320
 DISCONNECTION_TIMEOUT = 0.25
 MAX_DISCONNECTION_TIMEOUT = 16
 ENHANCE_YOUR_CALM_TIMEOUT = 60
+
 
 class StreamResponse:
     """
@@ -67,7 +74,7 @@ class StreamResponse:
 
         Returns
         -------
-        aiohttp.ClientResponse
+        asyncio.coroutine
             The streaming response
         """
         kwargs = self.client.headers.prepare_request(**self.kwargs)
@@ -76,7 +83,7 @@ class StreamResponse:
         if 'proxy' not in kwargs:
             kwargs['proxy'] = self.client.proxy
 
-        return request(*self.args, timeout=self.timeout, **kwargs)
+        return request(*self.args, timeout=0, **kwargs)
 
     def initialize_timeouts(self):
         self.reconnection = 0
@@ -96,31 +103,29 @@ class StreamResponse:
         exception.PeonyException
             On a response status != 2xx
         """
-        self.response = await self.connect()
+        with aiohttp.Timeout(self.timeout):
+            self.response = await self.connect()
+
         if self.response.status == 200:
             self.initialize_timeouts()
         elif self.response.status == 500:
             self.increase_disconnetion_timeout()
         elif self.response.status in range(501, 600):
             self.increase_reconnection_timeout()
+        elif self.response.status in (420, 429):
+            self.increase_enhance_calm_timeout()
+
+            print("Enhance Your Calm response received from Twitter. "
+                  "If you didn't restart your program frenetically "
+                  "then there is probably something wrong with it. "
+                  "Make sure you are not opening too many connections to "
+                  "the endpoint you are currently using by checking "
+                  "Twitter's Streaming API documentation out: "
+                  "https://dev.twitter.com/streaming/overview\n"
+                  "The stream will restart in %ss." % self.enhance_calm,
+                  file=sys.stderr)
         else:
-            try:
-                raise await exceptions.throw(self.response)
-            except EnhanceYourCalm:
-                self.increase_enhance_calm_timeout()
-
-                print("Enhance Your Calm response received from Twitter. "
-                      "If you didn't restart your program frenetically "
-                      "then there is probably something wrong with it. "
-                      "Make sure you are not opening too many connections to "
-                      "the endpoint you are currently using by checking "
-                      "Twitter's Streaming API documentation out: "
-                      "https://dev.twitter.com/streaming/overview\n"
-                      "The stream will restart in %ss." % self.enhance_calm,
-                      file=sys.stderr)
-
-            except:
-                raise
+            raise await exceptions.throw(self.response)
 
         return self
 
@@ -135,27 +140,13 @@ class StreamResponse:
         """
         line = b''
         try:
-            if self.response.status != 200:
-                if not self.reconnecting:
-                    if self.disconnection:
-                        return await self.initialize_restart(
-                            reconnect=self.disconnection
-                        )
-                    elif self.reconnection:
-                        return await self.initialize_restart(
-                            reconnect=self.reconnection
-                        )
-                    elif self.enhance_calm:
-                        return await self.initialize_restart(
-                            reconnect=self.enhance_calm
-                        )
-                    else:
-                        return await self.initialize_restart()
-                else:
-                    return await self.restart_stream()
+            timeouts = self.disconnection, self.reconnection, self.enhance_calm
+            reconnect = max(timeouts)
 
-            if self.reconnecting:
+            if self.reconnecting is not False:
                 return await self.restart_stream()
+            elif reconnect:
+                return await self.initialize_restart(reconnect=reconnect)
 
             while not line:
                 with aiohttp.Timeout(90):
@@ -168,12 +159,12 @@ class StreamResponse:
             return self.loads(line)
 
         except asyncio.TimeoutError:
-            return await self.initialize_restart(reconnect=0)
+            return await self.initialize_restart()
 
-        except aiohttp.ClientPayloadError:
-            return await self.initialize_restart(reconnect=0)
+        except ClientPayloadError:
+            return await self.initialize_restart()
 
-        except aiohttp.ClientConnectionError:
+        except ClientConnectionError:
             self.increase_disconnetion_timeout()
             return await self.initialize_restart(reconnect=self.disconnection)
 
@@ -196,8 +187,7 @@ class StreamResponse:
         else:
             self.enhance_calm *= 2
 
-    async def initialize_restart(self, reconnect=DISCONNECTION_TIMEOUT,
-                                 error=None):
+    async def initialize_restart(self, reconnect=0, error=None):
         """
             Restart the stream on error
 
@@ -208,8 +198,6 @@ class StreamResponse:
         error : :class:`Exception`, optional
             Whether to print the error or not
         """
-        self.response.close()
-
         if reconnect is not None:
             if error:
                 utils.print_error()
@@ -227,6 +215,7 @@ class StreamResponse:
         """
             Restart the stream on error
         """
+        await self.response.release()
         await asyncio.sleep(self.reconnecting)
         await self.__aiter__()
         self.reconnecting = False

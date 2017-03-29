@@ -54,6 +54,8 @@ class EventStream:
 
     def __init__(self, client):
         self._client = client
+        self.functions = [getattr(self, func)
+                          for func in dir(self) if self._check(func)]
 
     def __getitem__(self, key):
         return self._client[key]
@@ -74,8 +76,8 @@ class EventStream:
         else:
             stream_request = self.stream_request
 
-        async with stream_request as ressource:
-            async for data in ressource:
+        async with stream_request as resource:
+            async for data in resource:
                 try:
                     await self._run(data)
                 except Exception as e:
@@ -90,10 +92,7 @@ class EventStream:
 
     def _get(self, data):
         try:
-            functions = [getattr(self, func)
-                         for func in dir(self) if self._check(func)]
-
-            for event_handler in functions:
+            for event_handler in self.functions:
                 if event_handler.is_event(data):
                     return event_handler
 

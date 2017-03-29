@@ -64,14 +64,13 @@ class UserStream(peony.EventStream):
 
     @peony.events.on_restart.handler
     def restart_notice(self):
-        print(datetime.now())
         print("*Stream restarted*\n" + "-" * 10)
 
     @peony.events.on_dm.handler
     def direct_message(self, data):
         data = data.direct_message
         text = html.unescape(data.text)
-        fmt = "@{sender} → @{recipient}: {text}"
+        fmt = "@{sender} → @{recipient}: {text}\n" + "-"*10
         print(fmt.format(sender=data.sender.screen_name,
                          recipient=data.recipient.screen_name,
                          text=text))

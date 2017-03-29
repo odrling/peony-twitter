@@ -124,11 +124,10 @@ def error_handler(request):
     """
 
     @functools.wraps(request)
-    async def decorated_request(timeout=10, **kwargs):
+    async def decorated_request(**kwargs):
         while True:
             try:
-                with aiohttp.Timeout(timeout):
-                    return await request(**kwargs)
+                return await request(**kwargs)
 
             except exceptions.RateLimitExceeded as e:
                 delay = int(e.reset_in) + 1

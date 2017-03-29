@@ -45,6 +45,8 @@ class BasePeonyClient:
         session to use to make requests
     proxy : str
         proxy used with every request
+    compression : :obj:`bool`, optional
+        activate response compression on every requests
     loop : event loop, optional
         An event loop, if not specified :func:`asyncio.get_event_loop`
         is called
@@ -64,8 +66,8 @@ class BasePeonyClient:
                  error_handler=utils.error_handler,
                  session=None,
                  proxy=None,
-                 loop=None,
                  compression=True,
+                 loop=None,
                  **kwargs):
 
         if streaming_apis is None:

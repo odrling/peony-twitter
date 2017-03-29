@@ -31,21 +31,14 @@ class StreamResponse:
     ----------
     *args : optional
         Positional arguments
-    _headers : dict
-        Headers to authorize the request
+    client : peony.BasePeonyClient
+        client used to make the request
     session : :obj:`aiohttp.Session`, optional
         Session used by the request
-    reconnect : :obj:`int`, optional
-        Time to wait for on error
     loads : function, optional
         function used to decode the JSON data received
     timeout : :obj:`int`, optional
-        Timeout for requests
-    _timeout : :obj:`int`, optional
-        Stream timeout, the connection will be closed if this timeout
-        is exceeded
-    _error_handler : function, optional
-        Request's error handler
+        Timeout on connection
     **kwargs
         Keyword parameters of the request
     """

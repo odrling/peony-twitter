@@ -126,7 +126,7 @@ class Commands(Functions):
                 (key, utils.doc(value))
                 for key, value in self.items()
                 if utils.permission_check(data,
-                                          _permissions=_self.permissions,
+                                          command_permissions=_self.permissions,
                                           command=value)
             ]
 
@@ -145,12 +145,14 @@ class Commands(Functions):
             return key  # sort other commands alphabeticaly
 
     def restricted(self, *permissions):
+
         def decorator(func):
+
             @wraps(func)
             async def decorated(_self, *args, data):
                 permission = utils.permission_check(
                     data,
-                    _permissions=_self.permissions,
+                    command_permissions=_self.permissions,
                     permissions=permissions
                 )
 

@@ -14,7 +14,18 @@ def get_value(func):
 
     return value
 
+
 class Handler:
+    """
+        A decorator, the decorated function is used when the
+        event is detected related to this handler is detected
+    
+    Parameters
+    ----------
+    event : func
+        a function that returns True when the data received
+        corresponds to an event
+    """
 
     def __init__(self, event):
         self.event = event
@@ -22,38 +33,74 @@ class Handler:
     def __call__(self, func):
         return EventHandler(func=func, event=self.event)
 
-    def with_prefix(self, prefix):
+    def with_prefix(self, prefix, strict=False):
+        """ 
+            decorator to handle commands with prefixes
+        
+        Parameters
+        ----------
+        prefix : str
+            the prefix of the command
+        strict : :obj:`bool`, optional
+            If set to True the command must be at the beginning
+            of the message. Defaults to False.
+            
+        Returns
+        -------
+        function
+            a decorator that returns an :class:`EventHandler` instance
+        """
 
         def decorated(func):
-            return EventHandler(func=func, event=self.event, prefix=prefix)
+            return EventHandler(func=func, event=self.event,
+                                prefix=prefix, strict=strict)
 
         return decorated
 
 
 class Event:
+    """
+        Represents an event, the handler attribute is
+        an instance of Handler
+    
+    Parameters
+    ----------
+    func : callable
+        a function that returns True when the data received
+        corresponds to an event
+    name : str
+        name given to the event
+    """
 
     def __init__(self, func, name):
         self._func = func
         self.handler = Handler(func)
-        self.name = name
+        self.__name__ = name
 
     def envelope(self):
+        """ returns an :class:`Event` that can be used for site streams """
 
         def enveloped_event(data):
             return 'for_user' in data and self._func(data.get('message'))
 
-        return self.__class__(enveloped_event, self.name)
+        return self.__class__(enveloped_event, self.__name__)
 
     for_user = envelope
 
+    def __call__(self, data):
+        return self._func(data)
+
     def __str__(self):
-        return "Event {name}".format(name=self.name)
+        return "Event {name}".format(name=self.__name__)
 
     def __repr__(self):
         return str(self)
 
 
 class Events(dict):
+    """
+        A class to manage event handlers easily
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -63,7 +110,8 @@ class Events(dict):
         return self[key]
 
     def __setitem__(self, key, func):
-        super().__setitem__(key, Event(func, key))
+        event = func if isinstance(func, Event) else Event(func, key)
+        super().__setitem__(key, event)
 
     def _set_aliases(self, *keys, func):
         for key in keys:
@@ -76,20 +124,20 @@ class Events(dict):
     def alias(self, *keys):
 
         def decorator(func):
-            func = self(func)
-            self._set_aliases(*keys, func=func)
+            event = self(func)
+            self._set_aliases(*keys, func=event._func)
 
-            return func
+            return event
 
         return decorator
 
     def event_alias(self, *keys):
 
         def decorator(func):
-            func = self.event(func)
-            self._set_aliases(*keys, func=func)
+            event = self.event(func)
+            self._set_aliases(*keys, func=event._func)
 
-            return func
+            return event
 
         return decorator
 
@@ -103,10 +151,10 @@ class Events(dict):
 
             self[func.__name__] = decorated
             self['on_' + func.__name__] = decorated
-            return decorated
+            return self[func.__name__]
         else:
             self[func.__name__] = func
-            return func
+            return self[func.__name__]
 
     def __call__(self, func):
         if not len(get_args(func)):
@@ -117,24 +165,23 @@ class Events(dict):
                 return value in data
 
             self[func.__name__] = decorated
-            return decorated
+            return self[func.__name__]
         else:
             self[func.__name__] = func
-            return func
+            return self[func.__name__]
 
     @property
     def no_aliases(self):
         return {key: value for key, value in self.items()
                 if key not in self.aliases}
 
+    def priority(self, p):
 
-def priority(p):
+        def decorated(func):
+            func.priority = p
+            return self(func)
 
-    def decorated(func):
-        func.priority = p
-        return func
-
-    return decorated
+        return decorated
 
 
 events = Events()
@@ -153,7 +200,7 @@ def direct_message():
 
 
 @events.alias(on)
-@priority(-1)
+@events.priority(-1024)
 def retweeted_status(data):
     return tweet(data) and 'retweeted_status' in data
 
@@ -315,3 +362,9 @@ def stream_restart():
 @events.alias(on, 'reconnect', 'on_reconnect')
 def reconnecting_in():
     pass
+
+
+# matches any event that wasn't handled
+@events.priority(1024)
+def default(_):
+    return True

@@ -61,7 +61,7 @@ class Home(peony.PeonyClient):
 class UserStream(peony.EventStream):
 
     def stream_request(self):
-        return self.userstream.user.get()
+        return self.userstream.user.get(stall_warnings="true", replies="all")
 
     @peony.events.on_connect.handler
     async def init_timeline(self):
@@ -81,20 +81,22 @@ class UserStream(peony.EventStream):
 
     @peony.events.on_dm.handler
     def direct_message(self, data):
-        data = data.direct_message
-        text = html.unescape(data.text)
+        dm = data.direct_message
+        text = html.unescape(dm.text)
         fmt = "@{sender} → @{recipient}: {text}\n" + "-"*10
-        print(fmt.format(sender=data.sender.screen_name,
-                         recipient=data.recipient.screen_name,
+        print(fmt.format(sender=dm.sender.screen_name,
+                         recipient=dm.recipient.screen_name,
                          text=text))
 
-    @peony.events.warning.handler
-    def warnings(self, data):
-        pprint(data)
+    @peony.events.on_favorite.handler
+    def on_favorite(self, data):
+        if data.source.id != self.user.id:
+            print(data.source.screen_name, "favorited:",
+                  html.unescape(data.target_object.text) + "\n" + "-"*10)
 
-    @peony.events.disconnect.handler
-    def disconnection(self, data):
-        pprint(data)
+    @peony.events.default.handler
+    def default(self, data):
+        pprint(data, "\n" + "-"*10)
 
 if __name__ == '__main__':
     client = Home(**api.keys)

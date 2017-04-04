@@ -151,7 +151,7 @@ def get_args(func, skip=0):
 
     Parameters
     ----------
-    func : function
+    func : callable
         Function to get the arguments from
     skip : :obj:`int`, optional
         Arguments to skip, defaults to 0 set it to 1 to skip the
@@ -162,11 +162,15 @@ def get_args(func, skip=0):
     tuple
         Function's arguments
     """
-    argcount = func.__code__.co_argcount
-    return func.__code__.co_varnames[skip:argcount]
+
+    code = getattr(func, '__code__', None)
+    if code is None:
+        code = func.__call__.__code__
+
+    return code.co_varnames[skip:code.co_argcount]
 
 
-def print_error(msg=None, stderr=sys.stderr, error=None):
+def print_error(msg=None, stderr=sys.stderr):
     """
         Print an exception and its traceback to stderr
 

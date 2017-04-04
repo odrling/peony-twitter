@@ -8,14 +8,14 @@ from ..utils import print_error
 
 class EventHandler(task):
 
-    def __init__(self, *args, func, event, prefix=None, **values):
+    def __init__(self, func, event, prefix=None, strict=False):
         super().__init__(func)
 
         self.prefix = prefix
         self.is_event = event
 
         if prefix is not None:
-            self.command = Commands(prefix=prefix)
+            self.command = Commands(prefix=prefix, strict=strict)
 
     def __call__(self, *args):
         argcount = self.__wrapped__.__code__.co_argcount
@@ -34,11 +34,10 @@ class EventHandler(task):
         )
 
     @classmethod
-    def event_handler(cls, *args, event, prefix=None, **values):
+    def event_handler(cls, event, prefix=None, **values):
 
         def decorator(func):
             event_handler = cls(
-                *args,
                 func=func,
                 event=event,
                 prefix=prefix,
@@ -56,6 +55,7 @@ class EventStream:
         self._client = client
         self.functions = [getattr(self, func)
                           for func in dir(self) if self._check(func)]
+
         self.functions.sort(key=lambda i: getattr(i.is_event, 'priority', 0))
 
     def __getitem__(self, key):
@@ -92,29 +92,23 @@ class EventStream:
             return False
 
     def _get(self, data):
-        try:
-            for event_handler in self.functions:
-                if event_handler.is_event(data):
-                    return event_handler
-
-        except:
-            msg = "error in %s._get:\n" % self.__class__.__name__
-            print_error(msg)
+        for event_handler in self.functions:
+            if event_handler.is_event(data):
+                return event_handler
 
     async def _run(self, data):
         event_handler = self._get(data)
 
-        try:
-            if event_handler:
-                coro = event_handler(self, data)
+        if event_handler:
+            coro = event_handler(self, data)
+            try:
                 return await utils.execute(coro)
+            except:
+                fmt = "error occurred while running {classname}.{handler}:"
+                msg = fmt.format(classname=self.__class__.__name__,
+                                 handler=event_handler.__name__)
 
-        except:
-            fmt = "error occurred while running {classname} {handler}:\n"
-            msg = fmt.format(classname=self.__class__.__name__,
-                             handler=event_handler.__name__)
-
-            print_error(msg)
+                print_error(msg)
 
 
 def check_setup(func):

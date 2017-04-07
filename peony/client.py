@@ -15,8 +15,8 @@ import aiohttp
 from . import exceptions, general, oauth, utils
 from .api import APIPath, StreamingAPIPath
 from .commands import EventStreams, task
-from .stream import StreamContext
 from .oauth import OAuth1Headers
+from .stream import StreamContext
 
 
 class BasePeonyClient:

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import html
-from pprint import pprint
+import pprint
 
 try:
     from . import peony, api, testdir
@@ -65,7 +65,7 @@ class UserStream(peony.EventStream):
 
     @peony.events.on_connect.handler
     async def init_timeline(self):
-        await self.get_timeline()
+        pass
 
     @peony.events.on_retweeted_status.handler
     def on_retweet(self, data):
@@ -73,7 +73,6 @@ class UserStream(peony.EventStream):
 
     @peony.events.on_tweet.handler
     def on_tweet(self, data):
-        pprint(data)
         self.print_tweet(data)
 
     @peony.events.on_restart.handler
@@ -97,7 +96,7 @@ class UserStream(peony.EventStream):
 
     @peony.events.default.handler
     def default(self, data):
-        pprint(data, "\n" + "-"*10)
+        print(pprint.pformat(data), "\n" + "-"*10)
 
 if __name__ == '__main__':
     client = Home(**api.keys)

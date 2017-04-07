@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
+import json
 import time
-from functools import wraps
 
 from . import utils
 
@@ -19,25 +19,26 @@ def _get_error(data):
 
 async def throw(response, **kwargs):
     """ Get the response data if possible and raise an exception """
+    data = await response.read()
+
     ctype = response.headers.get('CONTENT-TYPE', "").lower()
-
-    data = None
-
     if "json" in ctype:
         try:
-            data = await response.json(loads=utils.loads)
+            data = utils.loads(data.decode(encoding='utf-8'))
             err = _get_error(data)
             if isinstance(err, dict):
                 code = err.get('code')
-                if str(code) in errors:
+                if code in errors:
                     exception = errors[code]
                     raise exception(response=response, data=data, **kwargs)
-        except:
-            pass
-    else:
-        data = await response.read()
 
-    if str(response.status) in statuses:
+        except UnicodeDecodeError:
+            pass
+
+        except json.JSONDecodeError:
+            pass
+
+    if response.status in statuses:
         exception = statuses[response.status]
         raise exception(response=response, data=data, **kwargs)
 
@@ -82,28 +83,8 @@ class StreamLimit(PeonyException):
     pass
 
 
-def _convert_int_keys(func):
-    """ convert input keys to str """
-    @wraps(func)
-    def decorated(self, key, *args, **kwargs):
-        if isinstance(key, int):  # convert int keys to str
-            key = str(key)
-
-        return func(self, key, *args, **kwargs)
-
-    return decorated
-
-
 class ErrorDict(dict):
     """ A dict to easily add exception associated to a code """
-
-    @_convert_int_keys
-    def __getitem__(self, key):
-        return super().__getitem__(key)
-
-    @_convert_int_keys
-    def __setitem__(self, key, value):
-        super().__setitem__(key, value)
 
     def code(self, code):
         """ Decorator to associate a code to an exception """

@@ -193,7 +193,7 @@ def oauth_dance(consumer_key, consumer_secret,
     dict
         Access tokens
     """
-    loop = loop or asyncio.get_event_loop()
+    loop = asyncio.get_event_loop() if loop is None else loop
 
     coro = async_oauth_dance(consumer_key, consumer_secret, oauth_callback)
     return loop.run_until_complete(coro)

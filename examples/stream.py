@@ -73,6 +73,7 @@ class UserStream(peony.EventStream):
 
     @peony.events.on_tweet.handler
     def on_tweet(self, data):
+        pprint(data)
         self.print_tweet(data)
 
     @peony.events.on_restart.handler

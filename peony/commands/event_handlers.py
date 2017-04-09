@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
-
+import peony.utils
 from . import utils
 from .commands import Commands
 from .tasks import task
-from ..utils import print_error
 
 
 class EventHandler(task):
@@ -83,7 +82,7 @@ class EventStream:
                     await self._run(data)
                 except Exception as e:
                     msg = "error in %s._start:\n" % self.__class__.__name__
-                    print_error(msg)
+                    peony.utils.print_error(msg)
 
     def _check(self, func):
         if not func.startswith("_"):
@@ -102,13 +101,13 @@ class EventStream:
         if event_handler:
             coro = event_handler(self, data)
             try:
-                return await utils.execute(coro)
+                return await peony.utils.execute(coro)
             except:
                 fmt = "error occurred while running {classname}.{handler}:"
                 msg = fmt.format(classname=self.__class__.__name__,
                                  handler=event_handler.__name__)
 
-                print_error(msg)
+                peony.utils.print_error(msg)
 
 
 def check_setup(func):

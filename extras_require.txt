@@ -1,15 +1,24 @@
 # magic: upload medias from file objects or filenames without a known extension
 python-magic
 
+# aiofiles: read a file without blocking the loop (while uploading media)
+aiofiles
+
 # pil: upload optimized medias using the auto_convert option
 Pillow
 
+# media: libraries recommended for uploading media
+aiofiles
+Pillow
+python-magic
+
 # aiohttp: optional libraries for aiohttp
-cchardet
 aiodns
+cchardet
 
 # all: required modules for all the features of peony
-python-magic
-Pillow
-cchardet
 aiodns
+aiofiles
+cchardet
+Pillow
+python-magic

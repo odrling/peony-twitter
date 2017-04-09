@@ -9,6 +9,9 @@ the Twitter APIs, with a method to upload a media
 
 import asyncio
 import io
+import itertools
+import pathlib
+from concurrent.futures import ProcessPoolExecutor
 
 import aiohttp
 
@@ -18,14 +21,24 @@ from .commands import EventStreams, task
 from .oauth import OAuth1Headers
 from .stream import StreamContext
 
+try:
+    from aiofiles import open
+except ImportError:
+    pass
+
 
 class BasePeonyClient:
     """
-        Attributes/items become a :class:`api.APIPath` or
-        :class:`api.StreamingAPIPath` automatically
+        Access the Twitter API easily
 
-    This class only handles the requests and makes accessing Twitter's
-    APIs easy.
+    You can create tasks by decorating a function from a child
+    class with :class:`peony.task`
+
+    You also attach a :class:`EventStream` to a subclass using
+    the :func:`event_stream` of the subclass
+
+    After creating an instance of the child class you will be able
+    to run all the tasks easily by executing :func:`get_tasks`
 
     Parameters
     ----------
@@ -316,20 +329,67 @@ class BasePeonyClient:
             **kwargs
         )
 
+    @classmethod
+    def event_stream(cls, event_stream):
+        """ Decorator to attach an event stream to the class """
+        if getattr(cls, '_streams', None) is None:
+            cls._streams = EventStreams()
+
+        cls._streams.append(event_stream)
+        return event_stream
+
+    def get_tasks(self):
+        """
+            Get the tasks attached to the instance
+
+        Returns
+        -------
+        list
+            List of tasks (:class:`asyncio.Task`)
+        """
+        funcs = [getattr(self, key) for key in dir(self)]
+        tasks = [self.loop.create_task(func(self))
+                 for func in funcs if isinstance(func, task)]
+
+        if isinstance(self._streams, EventStreams):
+            tasks.extend(self._streams.get_tasks(self))
+
+        return tasks
+
+    async def run_tasks(self):
+        """ Run the tasks attached to the instance """
+        await self.setup()
+        await asyncio.wait(self.get_tasks())
+
+    def run(self):
+        """ Run the tasks attached to the instance """
+        self.loop.create_task(self.run_tasks())
+        try:
+            self.loop.run_forever()
+        except KeyboardInterrupt:
+            pending = asyncio.Task.all_tasks(loop=self.loop)
+            gathered = asyncio.gather(*pending, loop=self.loop)
+            try:
+                gathered.cancel()
+                self.loop.run_until_complete(gathered)
+
+                # we want to retrieve any exceptions to make sure that
+                # they don't nag us about it being un-retrieved.
+                gathered.exception()
+            except:
+                pass
+        finally:
+            self.loop.close()
+
 
 class PeonyClient(BasePeonyClient):
     """
-        A client with an easy handling of tasks
-
-    You can create tasks by decorating a function from a child
-    class with :class:`peony.task`
-
-    You also attach a :class:`EventStream` to a subclass using
-    the :func:`event_stream` of the subclass
-
-    After creating an instance of the child class you will be able
-    to run all the tasks easily by executing :func:`get_tasks`
+        A client with some useful methods
     """
+
+    def __init__(self, *args, executor=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.executor = ProcessPoolExecutor() if executor is None else executor
 
     def init_tasks(self):
         tasks = [self.__get_twitter_configuration()]
@@ -389,7 +449,7 @@ class PeonyClient(BasePeonyClient):
         utils.PeonyResponse
             Response of the request
         """
-        media_size = utils.get_size(media)
+        media_size = await utils.get_size(media)
 
         if media_type is None or media_category is None:
             media_type, media_category = utils.get_type(media, path)
@@ -404,9 +464,11 @@ class PeonyClient(BasePeonyClient):
 
         media_id = response['media_id']
 
-        chunks = utils.media_chunks(media, chunk_size, media_size)
+        for i in itertools.count():
+            chunk = await utils.execute(media.read(chunk_size))
+            if not chunk:
+                break
 
-        for i, chunk in enumerate(chunks):
             await self.upload.media.upload.post(command="APPEND",
                                                 media_id=media_id,
                                                 media=chunk,
@@ -449,7 +511,7 @@ class PeonyClient(BasePeonyClient):
 
         Parameters
         ----------
-        file_ : :obj:`str` or file
+        file_ : :obj:`str` or :class:`pathlib.Path` or file
             Path to the file or file object
         auto_convert : :obj:`bool`, optional
             If set to True the media will be optimized by calling
@@ -471,8 +533,13 @@ class PeonyClient(BasePeonyClient):
         """
         formats = formats or general.formats
 
-        image_metadata = utils.get_image_metadata(file_)
+        image_metadata = await utils.get_image_metadata(file_)
         media_type, media_category, is_image, file_ = image_metadata
+
+        if hasattr(file_, 'read'):
+            media = file_
+        else:
+            media = await utils.execute(open(str(file_), 'rb'))
 
         if is_image and auto_convert:
             if not max_size:
@@ -480,18 +547,16 @@ class PeonyClient(BasePeonyClient):
                 large_sizes = photo_sizes['large']
                 max_size = large_sizes['w'], large_sizes['h']
 
-            media = utils.optimize_media(file_, max_size, formats)
-        elif hasattr(file_, 'read'):
-            file_.seek(0)
-            media = io.BytesIO(file_.read())
-            file_.seek(0)
-        else:
-            media = open(file_, 'rb')
+            data = io.BytesIO(await utils.execute(media.read()))
+
+            media = await self.loop.run_in_executor(
+                self.executor, utils.optimize_media, data, max_size, formats
+            )
 
         if not isinstance(self.twitter_configuration, APIPath) or size_limit:
             if size_limit is None:
                 size_limit = self.twitter_configuration['photo_size_limit']
-            size_test = utils.get_size(media) > size_limit
+            size_test = await utils.get_size(media) > size_limit
         else:
             size_test = False
 
@@ -499,62 +564,10 @@ class PeonyClient(BasePeonyClient):
             args = media, file_, media_type, media_category
             response = await self._chunked_upload(*args, **params)
         else:
-            response = await self.upload.media.upload.post(media=media,
-                                                           **params)
+            params['media'] = media
+            response = await self.upload.media.upload.post(**params)
 
-        if not media.closed:
+        if not hasattr(file_, 'read') and not media.closed:
             media.close()
 
         return response
-
-    @classmethod
-    def event_stream(cls, event_stream):
-        """ Decorator to attach an event stream to the class """
-        if getattr(cls, '_streams', None) is None:
-            cls._streams = EventStreams()
-
-        cls._streams.append(event_stream)
-        return event_stream
-
-    def get_tasks(self):
-        """
-            Get the tasks attached to the instance
-
-        Returns
-        -------
-        list
-            List of tasks (:class:`asyncio.Task`)
-        """
-        funcs = [getattr(self, key) for key in dir(self)]
-        tasks = [self.loop.create_task(func(self))
-                 for func in funcs if isinstance(func, task)]
-
-        if isinstance(self._streams, EventStreams):
-            tasks.extend(self._streams.get_tasks(self))
-
-        return tasks
-
-    async def run_tasks(self):
-        """ Run the tasks attached to the instance """
-        await self.setup()
-        await asyncio.wait(self.get_tasks())
-
-    def run(self):
-        """ Run the tasks attached to the instance """
-        self.loop.create_task(self.run_tasks())
-        try:
-            self.loop.run_forever()
-        except KeyboardInterrupt:
-            pending = asyncio.Task.all_tasks(loop=self.loop)
-            gathered = asyncio.gather(*pending, loop=self.loop)
-            try:
-                gathered.cancel()
-                self.loop.run_until_complete(gathered)
-
-                # we want to retrieve any exceptions to make sure that
-                # they don't nag us about it being un-retrieved.
-                gathered.exception()
-            except:
-                pass
-        finally:
-            self.loop.close()

@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import asyncio
-
 
 def doc(func):
     """
@@ -28,13 +26,6 @@ def doc(func):
             return docstring.rstrip(stripped_chars)
 
     return ""
-
-
-async def execute(coro):
-    if asyncio.iscoroutine(coro):
-        return await coro
-    else:
-        return coro
 
 
 def permission_check(data, command_permissions, command=None, permissions=None):

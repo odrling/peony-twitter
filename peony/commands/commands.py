@@ -3,8 +3,8 @@
 import re
 from functools import wraps
 
+import peony.utils
 from . import utils
-from ..utils import print_error
 
 
 def process_keys(func):
@@ -101,11 +101,11 @@ class Functions(dict):
         try:
             if cmd is not None:
                 command = self[cmd](*args, data=data)
-                return await utils.execute(command)
+                return await peony.utils.execute(command)
 
         except:
             fmt = "Error occurred while running function {cmd}:"
-            print_error(fmt.format(cmd=cmd))
+            peony.utils.print_error(fmt.format(cmd=cmd))
 
     def __call__(self, func, name=None):
         name = name or func.__name__
@@ -161,7 +161,7 @@ class Commands(Functions):
                     args = (*args, data)[:argcount]
                     cmd = func(_self, *args)
 
-                    return await utils.execute(cmd)
+                    return await peony.utils.execute(cmd)
 
             decorated.permissions = permissions
 

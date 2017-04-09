@@ -5,11 +5,10 @@ import functools
 import io
 import json
 import os
+import pathlib
 import sys
 import traceback
 from urllib.parse import urlparse
-
-import aiohttp
 
 from . import exceptions
 
@@ -17,6 +16,11 @@ try:
     import PIL.Image
 except ImportError:
     PIL = None
+
+try:
+    from aiofiles import open
+except ImportError:
+    pass
 
 try:
     import magic
@@ -213,31 +217,6 @@ def loads(json_data, *args, encoding="utf-8", **kwargs):
     return json.loads(json_data, *args, object_hook=JSONObject, **kwargs)
 
 
-def media_chunks(media, chunk_size, media_size=None):
-    """
-        read the file by chunks
-
-    Parameters
-    ----------
-    media : file
-        The file object to read
-    chunk_size : int
-        The size of a chunk in bytes
-    media_size : :obj:`int`, optional
-        Size of the file in bytes
-
-    Yields
-    ------
-    bytes
-        A chunk of the file
-    """
-    if media_size is None:
-        media_size = get_size(media)
-
-    while media.tell() < media_size:
-        yield media.read(chunk_size)
-
-
 def convert(img, formats):
     """
         Convert the image to all the formats specified
@@ -249,15 +228,30 @@ def convert(img, formats):
     formats : list
         List of all the formats to use
 
-    Yields
-    ------
+    Returns
+    -------
     io.BytesIO
         A file object containing the converted image
     """
+    media = None
+    min_size = 0
+
     for kwargs in formats:
         f = io.BytesIO()
         img.save(f, **kwargs)
-        yield f
+        size = f.tell()
+        assert size > 0
+
+        if media is None or size < min_size:
+            if media is not None:
+                media.close()
+
+            media = f
+            min_size = size
+        else:
+            f.close()
+
+    return media
 
 
 def optimize_media(file_, max_size, formats):
@@ -289,27 +283,21 @@ def optimize_media(file_, max_size, formats):
         raise RuntimeError(msg)
 
     img = PIL.Image.open(file_)
-    ratio = max(hw / max_hw for hw, max_hw in zip(img.size, max_size))
 
     # resize the picture (defaults to the 'large' photo size of Twitter
     # in peony.PeonyClient.upload_media)
+    ratio = max(hw / max_hw for hw, max_hw in zip(img.size, max_size))
+
     if ratio > 1:
         size = tuple(int(hw // ratio) for hw in img.size)
         img = img.resize(size, PIL.Image.ANTIALIAS)
 
-    files = list(convert(img, formats))
+    media = convert(img, formats)
 
     # do not close a file opened by the user
     # only close if a filename was given
     if not hasattr(file_, 'read'):
         img.close()
-
-    files.sort(key=get_size)
-    media = files.pop(0)
-
-    for f in files:
-        if not f.closed:
-            f.close()
 
     return media
 
@@ -320,10 +308,10 @@ def reset_io(func):
     of the file before and after the decorated function
     """
     @functools.wraps(func)
-    def decorated(media):
-        media.seek(0)
-        result = func(media)
-        media.seek(0)
+    async def decorated(media):
+        await execute(media.seek(0))
+        result = await func(media)
+        await execute(media.seek(0))
 
         return result
 
@@ -331,7 +319,7 @@ def reset_io(func):
 
 
 @reset_io
-def get_media_metadata(media):
+async def get_media_metadata(media):
     """
         Get the metadata of the file
 
@@ -349,14 +337,14 @@ def get_media_metadata(media):
     bool
         Tell whether this file is an image or a video
     """
-    media_type, media_category = get_type(media)
+    media_type, media_category = await get_type(media)
     is_image = not (media_type.endswith('gif')
                     or media_type.startswith('video'))
 
     return media_type, media_category, is_image
 
 
-def get_image_metadata(file_):
+async def get_image_metadata(file_):
     """
         Get all the file's metadata and read any kind of file object
 
@@ -376,22 +364,28 @@ def get_image_metadata(file_):
     str
         Path to the file
     """
-    # try to get the path no matter how the input is
-    if isinstance(file_, str):
-        path = urlparse(file_).path.strip(" \"'")
+    # try to get the path no matter what the input is
+    if isinstance(file_, pathlib.Path):
+        file_ = str(file_)
 
-        with open(path, 'rb') as original:
-            return (*get_media_metadata(original), path)
+    if isinstance(file_, str):
+        file_ = urlparse(file_).path.strip(" \"'")
+
+        original = await execute(open(file_, 'rb'))
+        media_metadata = await get_media_metadata(original)
+        await execute(original.close())
 
     elif hasattr(file_, 'read'):
-        return (*get_media_metadata(file_), file_)
+        media_metadata = await get_media_metadata(file_)
     else:
         raise TypeError("upload_media input must be a file object or a"
                         "filename")
 
+    return (*media_metadata, file_)
+
 
 @reset_io
-def get_size(media):
+async def get_size(media):
     """
         Get the size of a file
 
@@ -405,12 +399,12 @@ def get_size(media):
     int
         The size of the file
     """
-    media.seek(0, os.SEEK_END)
-    return media.tell()
+    await execute(media.seek(0, os.SEEK_END))
+    return await execute(media.tell())
 
 
 @reset_io
-def get_type(media, path=None):
+async def get_type(media, path=None):
     """
     Parameters
     ----------
@@ -427,7 +421,7 @@ def get_type(media, path=None):
         The category of the media on Twitter
     """
     if magic:
-        media_type = mime.from_buffer(media.read(1024))
+        media_type = mime.from_buffer(await execute(media.read(1024)))
     else:
         media_type = None
         if path:
@@ -447,3 +441,10 @@ def get_type(media, path=None):
         media_category = "tweet_image"
 
     return media_type, media_category
+
+
+async def execute(coro):
+    if asyncio.iscoroutine(coro):
+        return await coro
+    else:
+        return coro

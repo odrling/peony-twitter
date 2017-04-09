@@ -28,6 +28,8 @@ ERROR = DISCONNECTION
 RECONNECTION = 2
 ENHANCE_YOUR_CALM = 3
 
+HandledErrors = asyncio.TimeoutError, ClientPayloadError, TimeoutError
+
 
 class StreamResponse:
     """
@@ -143,16 +145,12 @@ class StreamResponse:
 
             return self.loads(line)
 
-        except asyncio.TimeoutError:
+        except HandledErrors:
             self._state = ERROR
             return await self.init_restart()
 
         except ClientConnectionError:
             self._state = DISCONNECTION
-            return await self.init_restart()
-
-        except ClientPayloadError:
-            self._state = ERROR
             return await self.init_restart()
 
         except:

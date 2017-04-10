@@ -1,15 +1,17 @@
 # -*- coding: utf-8 -*-
 
+from abc import ABC, abstractmethod
+
 from . import iterators
 
 
-class BaseRequest:
+class Endpoint():
     """
-        Does what all requests need
-
+        A class representing an endpoint
+    
     Parameters
     ----------
-    api : api.BaseAPIPath
+    api : api.AbstractAPIPath
         API path of the request
     method : str
         HTTP method to be used by the request
@@ -19,30 +21,30 @@ class BaseRequest:
         self.api = api
         self.method = method
 
-    def __call__(self, _suffix=None, **kwargs):
+
+class AbstractRequest(ABC, Endpoint):
+    """
+        
+    """
+
+    def _get_params(self, _suffix=None, **kwargs):
         if _suffix is None:
-            _suffix = self.api._suffix
+            _suffix = self.api.suffix
 
-        return (*self.api.sanitize_params(self.method, **kwargs),
-                self.api.url(_suffix))
+        kwargs, skip_params = self.api.sanitize_params(self.method, **kwargs)
+
+        return kwargs, skip_params, self.api.url(_suffix)
+
+    @abstractmethod
+    def __call__(self, **kwargs):
+        pass
 
 
-class Iterators:
+class Iterators(Endpoint):
     """
     Access the iterators from :mod:`peony.iterators` right from a
     request object
-
-    Parameters
-    ----------
-    api : api.BaseAPIPath
-        API path of the request
-    method : str
-        HTTP method to be used by the request
     """
-
-    def __init__(self, api, method):
-        self.api = api
-        self.method = method
 
     def _get_iterator(self, iterator):
         def iterate(**kwargs):
@@ -54,13 +56,13 @@ class Iterators:
         return self._get_iterator(getattr(iterators, key))
 
 
-class Request(BaseRequest):
+class Request(AbstractRequest):
     """
         Requests to REST APIs
 
     Parameters
     ----------
-    api : api.BaseAPIPath
+    api : api.AbstractAPIPath
         API path of the request
     method : str
         HTTP method to be used by the request
@@ -70,41 +72,28 @@ class Request(BaseRequest):
         super().__init__(api, method)
         self.iterator = Iterators(api, method)
 
-    def __call__(self, _skip_params=None,
-                 _error_handling=True,
-                 **kwargs):
-        kwargs, skip_params, url = super().__call__(**kwargs)
+    def __call__(self, _skip_params=None, _error_handling=True, **kwargs):
+        kwargs, skip_params, url = self._get_params(**kwargs)
 
         skip_params = skip_params if _skip_params is None else _skip_params
+        kwargs.update(method=self.method, url=url, skip_params=skip_params)
 
-        kwargs.update(method=self.method,
-                      url=url,
-                      skip_params=skip_params)
+        client_request = self.api.client.request
 
-        client_request = self.api._client.request
-
-        if self.api._client.error_handler and _error_handling:
-            client_request = self.api._client.error_handler(client_request)
+        if self.api.client.error_handler and _error_handling:
+            client_request = self.api.client.error_handler(client_request)
 
         return client_request(**kwargs)
 
 
-class StreamingRequest(BaseRequest):
+class StreamingRequest(AbstractRequest):
     """
         Requests to Streaming APIs
-
-    Parameters
-    ----------
-    api : api.BaseAPIPath
-        API path of the request
-    method : str
-        HTTP method to be used by the request
     """
 
     def __call__(self, **kwargs):
-        kwargs, skip_params, url = super().__call__(**kwargs)
+        kwargs, skip_params, url = self._get_params(**kwargs)
 
-        return self.api._client.stream_request(self.method,
-                                               url=url,
-                                               skip_params=skip_params,
-                                               **kwargs)
+        return self.api.client.stream_request(self.method, url=url,
+                                              skip_params=skip_params,
+                                              **kwargs)

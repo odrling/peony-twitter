@@ -1,22 +1,25 @@
 # -*- coding: utf-8 -*-
 
 from types import GeneratorType
+from abc import ABC, abstractmethod
 
 from . import general, requests
 
+iterable = (list, set, tuple, GeneratorType)
 
-class BaseAPIPath:
-    r"""
+
+class AbstractAPIPath(ABC):
+    """
         The syntactic sugar factory
 
-    Everytime you get an attribute or an item from an instance of this
+    Every time you get an attribute or an item from an instance of this
     class this will be appended to its _path variable (that you should
     not call) until you call a request method (like get or post)
 
     It makes it easy to call any endpoint of the api
 
-    ⚠ You must create a child class of BaseAPIPath to perform
-    requests (you have to overload the _request method)
+    ⚠ You must create a child class of AbstractAPIPath to perform
+    requests (you have to implement the _request method)
 
     The client given as an parameter during the creation of the
     BaseAPIPath instance can be accessed as the "client" attribute of
@@ -25,8 +28,8 @@ class BaseAPIPath:
 
     def __init__(self, path, suffix, client):
         self._path = path
-        self._suffix = suffix
-        self._client = client
+        self.suffix = suffix
+        self.client = client
 
     def url(self, suffix=None):
         """
@@ -42,7 +45,7 @@ class BaseAPIPath:
         str
             Path to the endpoint
         """
-        return "/".join(self._path) + (suffix or self._suffix)
+        return "/".join(self._path) + (suffix or self.suffix)
 
     def __getitem__(self, k):
         """
@@ -77,8 +80,8 @@ class BaseAPIPath:
                 new_path = self._path + [k]
 
             return self.__class__(path=new_path,
-                                  suffix=self._suffix,
-                                  client=self._client)
+                                  suffix=self.suffix,
+                                  client=self.client)
 
     def __getattr__(self, k):
         """
@@ -102,7 +105,9 @@ class BaseAPIPath:
 
         Parameters
         ----------
-        **kwargs
+        method : str
+            method to use to make the request
+        kwargs : dict
             Keywords arguments given to the request
 
         Returns
@@ -114,8 +119,6 @@ class BaseAPIPath:
         items = [(key, value) for key, value in kwargs.items()
                  if not key.startswith("_")]
         params, skip_params = {}, False
-
-        iterable = (list, set, tuple, GeneratorType)
 
         for key, value in items:
             # binary data
@@ -155,21 +158,28 @@ class BaseAPIPath:
 
         return kwargs, skip_params
 
+    @abstractmethod
     def _request(self, method):
-        """ method to be overloaded """
-        pass
+        """
+            Make a request for the endpoint
+        
+        Parameters
+        ----------
+        method : str
+            method to use to make the request
+        """
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.url())
 
 
-class APIPath(BaseAPIPath):
+class APIPath(AbstractAPIPath):
     """ Class to make requests to a REST API """
 
     _request = requests.Request
 
 
-class StreamingAPIPath(BaseAPIPath):
+class StreamingAPIPath(AbstractAPIPath):
     """ Class to make requests to a Streaming API """
 
     _request = requests.StreamingRequest

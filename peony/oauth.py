@@ -1,33 +1,60 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 import base64
 import hmac
 import random
 import string
 import time
-from hashlib import sha1
 import urllib.parse
+from abc import ABC, abstractmethod
+from hashlib import sha1
 
 from . import __version__
 
-quote = lambda s: urllib.parse.quote(s, safe="")
+
+def quote(s):
+    return urllib.parse.quote(s, safe="")
 
 
-class PeonyHeaders(dict):
+class PeonyHeaders(ABC, dict):
     """
         Dynamic headers for Peony
 
     This is the base class of :class:`OAuth1Headers` and
     :class:`OAuth2Headers`.
+    
+    Parameters
+    ----------
+    compression : :obj:`bool`, optional
+        If set to True the client will be able to receive compressed
+        responses else it should not happen unless you provide the
+        corresponding header when you make a request. Defaults to True.
+    user_agent : :obj:`str`, optional
+        The user agent set in the headers. Defaults to
+        "peony v{version number}"
+    headers : dict
+        dict containing custom headers
     """
 
-    def __init__(self, compression=True, **kwargs):
+    def __init__(self, compression=True, user_agent=None, headers=None):
         """ Add a nice User-Agent """
-        self['User-Agent'] = "peony v%s" % __version__
+        super().__init__()
+
+        if user_agent is None:
+            self['User-Agent'] = "peony v" + __version__
+        else:
+            self['User-Agent'] = user_agent
+
         if compression:
             self['Accept-Encoding'] = "deflate, gzip"
 
-        super().__init__(**kwargs)
+        if headers is not None:
+            for key, value in headers.items():
+                self[key] = value
+
+    def __setitem__(self, key, value):
+        super().__setitem__(key.title(), value)
 
     def prepare_request(self, method, url,
                         headers=None,
@@ -76,14 +103,28 @@ class PeonyHeaders(dict):
 
         return kwargs
 
-    def prepare_headers(self):
-        pass
+    def _user_headers(self, headers=None):
+        """ Make sure the user doesn't override the Authorization header """
+        h = self.copy()
 
+        if headers is not None:
+            for key in set(headers.keys()) - {'Authorization'}:
+                h[key] = headers[key]
+
+        return h
+
+    @abstractmethod
+    async def prepare_headers(self):
+        """
+            prepare the headers, after creating an instance of PeonyHeaders
+        """
+
+    @abstractmethod
     def sign(self, *args, headers=None, **kwargs):
-        if headers is None:
-            return self.copy()
-        else:
-            return self.copy().update(headers)
+        """
+            sign, that is, generate the `Authorization` headers before making
+            a request
+        """
 
 
 class OAuth1Headers(PeonyHeaders):
@@ -107,9 +148,10 @@ class OAuth1Headers(PeonyHeaders):
     """
 
     def __init__(self, consumer_key, consumer_secret,
-                 access_token=None, access_token_secret=None, **kwargs):
+                 access_token=None, access_token_secret=None,
+                 compression=True, user_agent=None):
         """ create the OAuth1 client """
-        super().__init__(**kwargs)
+        super().__init__(compression, user_agent)
 
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
@@ -118,15 +160,17 @@ class OAuth1Headers(PeonyHeaders):
 
         self.alphabet = string.ascii_letters + string.digits
 
+    async def prepare_headers(self):
+        """ There is nothing to do for OAuth1 headers """
+
     def sign(self, method='GET', url=None,
              data=None,
              params=None,
              skip_params=False,
              headers=None,
              **kwargs):
-        """ sign, that is, generate the `Authorization` headers """
 
-        headers = super().sign(headers=headers)
+        headers = self._user_headers(headers)
 
         if data:
             if skip_params:
@@ -134,7 +178,7 @@ class OAuth1Headers(PeonyHeaders):
             else:
                 default = "application/x-www-form-urlencoded"
 
-            if not 'Content-Type' in headers:
+            if 'Content-Type' not in headers:
                 headers['Content-Type'] = default
 
             params = data
@@ -219,17 +263,26 @@ class OAuth2Headers(PeonyHeaders):
     """
 
     def __init__(self, consumer_key, consumer_secret, client,
-                 bearer_token=None, **kwargs):
-        super().__init__(**kwargs)
+                 bearer_token=None, compression=True, user_agent=None):
+        super().__init__(compression, user_agent)
+
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
         self.client = client
-        if bearer_token:
-            self.set_token(bearer_token)
-        else:
-            self.prepare_headers = self.refresh_token
-
         self.basic_authorization = self.get_basic_authorization()
+        self._refreshed = asyncio.Event()
+
+        if bearer_token is not None:
+            self.set_token(bearer_token)
+
+    async def prepare_headers(self):
+        if 'Authorization' not in self:
+            await self.refresh_token()
+
+    async def sign(self, headers=None, **kwargs):
+        self.prepare_headers()
+
+        return self._user_headers(headers)
 
     def get_basic_authorization(self):
         encoded_keys = map(quote, (self.consumer_key, self.consumer_secret))
@@ -248,6 +301,11 @@ class OAuth2Headers(PeonyHeaders):
         await request(access_token=token, _headers=self.basic_authorization)
 
     async def refresh_token(self):
+        if not self._refreshed.is_set():
+            return await self._refreshed.wait()
+
+        self._refreshed.clear()
+
         if 'Authorization' in self:
             await self.invalidate_token()
 
@@ -258,3 +316,5 @@ class OAuth2Headers(PeonyHeaders):
                               _is_init_task=True)
 
         self.set_token(token['access_token'])
+
+        self._refreshed.set()

@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from abc import ABC, abstractmethod
 
-class BaseIterator:
+
+class AbstractIterator(ABC):
     """
         Asynchronous iterator
 
@@ -20,11 +22,12 @@ class BaseIterator:
     def __aiter__(self):
         return self
 
+    @abstractmethod
     async def __anext__(self):
         pass
 
 
-class IdIterator(BaseIterator):
+class IdIterator(AbstractIterator):
     """
         Iterate using ids
 
@@ -154,7 +157,7 @@ class SinceIdIterator(IdIterator):
         return response[:-1]
 
 
-class CursorIterator(BaseIterator):
+class CursorIterator(AbstractIterator):
     """
         Iterate using a cursor
 

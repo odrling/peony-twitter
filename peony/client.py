@@ -55,11 +55,13 @@ class BasePeonyClient:
     error_handler : :obj:`function`, optional
         Requests decorator
     session : :obj:`asyncio.ClientSession`, optional
-        session to use to make requests
+        Session to use to make requests
     proxy : str
-        proxy used with every request
+        Proxy used with every request
     compression : :obj:`bool`, optional
-        activate response compression on every requests
+        Activate response compression on every requests, defaults to True
+    user_agent : :obj:`str`, optional
+        Set a custom user agent header
     loop : event loop, optional
         An event loop, if not specified :func:`asyncio.get_event_loop`
         is called
@@ -80,6 +82,7 @@ class BasePeonyClient:
                  session=None,
                  proxy=None,
                  compression=True,
+                 user_agent=None,
                  loop=None,
                  **kwargs):
 
@@ -123,6 +126,8 @@ class BasePeonyClient:
             'access_token_secret': access_token_secret,
             'bearer_token': bearer_token,
             'compression': compression,
+            'user_agent': user_agent,
+            'headers': headers,
             'client': self
         }
 
@@ -133,7 +138,7 @@ class BasePeonyClient:
         kwargs = {key: value for key, value in kwargs.items()
                   if key in args}
 
-        self.headers = auth(**kwargs, **headers)
+        self.headers = auth(**kwargs)
 
         self.__setup = {'event': asyncio.Event(),
                         'state': False}

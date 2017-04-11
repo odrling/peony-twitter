@@ -58,7 +58,7 @@ class AbstractAPIPath(ABC):
 
         Parameters
         ----------
-        k : str
+        key : :obj:`str`, :obj:`tuple` or :obj:`list`
             Key used to access an API endpoint and appended to the
             path attribute
 
@@ -67,18 +67,21 @@ class AbstractAPIPath(ABC):
         BaseAPIPath
             New APIPath instance with a new ``path`` value
         """
-        if key.lower() in general.request_methods:
-            return self._request(key)
-        else:
-            if isinstance(key, (tuple, list)):
-                key = map(str, key)
-                new_path = self._path + key
+        if isinstance(key, str):
+            if key.lower() in general.request_methods:
+                return self._request(key)
             else:
                 new_path = self._path + [key]
+        elif isinstance(key, (tuple, list)):
+            key = [str(i) for i in key]
+            new_path = self._path + key
+        else:
+            raise TypeError("Could not create endpoint from %s"
+                            "of type %s" % (key, type(key)))
 
-            return self.__class__(path=new_path,
-                                  suffix=self._suffix,
-                                  client=self._client)
+        return self.__class__(path=new_path,
+                              suffix=self._suffix,
+                              client=self._client)
 
     def __getattr__(self, k):
         """
@@ -100,6 +103,9 @@ class AbstractAPIPath(ABC):
         method : str
             method to use to make the request
         """
+
+    def __str__(self):
+        return repr(self)
 
     def __repr__(self):
         return "<%s %s>" % (self.__class__.__name__, self.url())

@@ -76,7 +76,7 @@ class AbstractAPIPath(ABC):
             key = [str(i) for i in key]
             new_path = self._path + key
         else:
-            raise TypeError("Could not create endpoint from %s"
+            raise TypeError("Could not create endpoint from %s "
                             "of type %s" % (key, type(key)))
 
         return self.__class__(path=new_path,

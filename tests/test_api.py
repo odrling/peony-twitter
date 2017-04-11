@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import pytest
+
 import peony.api
 from peony import BasePeonyClient
 from peony.general import twitter_base_api_url
@@ -23,10 +25,8 @@ def test_api_endpoint_creation_tuple():
 
 
 def test_api_endpoint_creation_exception():
-    try:
+    with pytest.raises(TypeError):
         api[set()]
-    except TypeError:
-        pass
 
 
 def test_api_client():

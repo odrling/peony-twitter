@@ -44,7 +44,7 @@ class AbstractAPIPath(ABC):
         """
         return "/".join(self._path) + (suffix or self._suffix)
 
-    def __getitem__(self, k):
+    def __getitem__(self, key):
         """
             Where the magic happens
 
@@ -67,14 +67,14 @@ class AbstractAPIPath(ABC):
         BaseAPIPath
             New APIPath instance with a new ``path`` value
         """
-        if k.lower() in general.request_methods:
-            return self._request(self, k)
+        if key.lower() in general.request_methods:
+            return self._request(key)
         else:
-            if isinstance(k, (tuple, list)):
-                k = map(str, k)
-                new_path = self._path + k
+            if isinstance(key, (tuple, list)):
+                key = map(str, key)
+                new_path = self._path + key
             else:
-                new_path = self._path + [k]
+                new_path = self._path + [key]
 
             return self.__class__(path=new_path,
                                   suffix=self._suffix,
@@ -108,10 +108,12 @@ class AbstractAPIPath(ABC):
 class APIPath(AbstractAPIPath):
     """ Class to make requests to a REST API """
 
-    _request = requests.Request
+    def _request(self, method):
+        return requests.Request(self, method)
 
 
 class StreamingAPIPath(AbstractAPIPath):
     """ Class to make requests to a Streaming API """
 
-    _request = requests.StreamingRequest
+    def _request(self, method):
+        return requests.StreamingRequest(self, method)

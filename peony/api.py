@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 
-from types import GeneratorType
 from abc import ABC, abstractmethod
 
 from . import general, requests
-
-iterable = (list, set, tuple, GeneratorType)
 
 
 class AbstractAPIPath(ABC):
@@ -21,15 +18,15 @@ class AbstractAPIPath(ABC):
     ⚠ You must create a child class of AbstractAPIPath to perform
     requests (you have to implement the _request method)
 
-    The client given as an parameter during the creation of the
-    BaseAPIPath instance can be accessed as the "client" attribute of
+    The _client given as an parameter during the creation of the
+    BaseAPIPath instance can be accessed as the "_client" attribute of
     the instance.
     """
 
     def __init__(self, path, suffix, client):
         self._path = path
-        self.suffix = suffix
-        self.client = client
+        self._suffix = suffix
+        self._client = client
 
     def url(self, suffix=None):
         """
@@ -45,7 +42,7 @@ class AbstractAPIPath(ABC):
         str
             Path to the endpoint
         """
-        return "/".join(self._path) + (suffix or self.suffix)
+        return "/".join(self._path) + (suffix or self._suffix)
 
     def __getitem__(self, k):
         """
@@ -56,8 +53,8 @@ class AbstractAPIPath(ABC):
 
         otherwise append the key to the _path attribute
 
-        >>> instance = APIPath()  # you would have to add more arguments
-        >>> instance["client"]    # appends `client` to _path
+        >>> api = APIPath()  # you would have to add more arguments
+        >>> api['_client']   # appends '_client' to _path
 
         Parameters
         ----------
@@ -80,8 +77,8 @@ class AbstractAPIPath(ABC):
                 new_path = self._path + [k]
 
             return self.__class__(path=new_path,
-                                  suffix=self.suffix,
-                                  client=self.client)
+                                  suffix=self._suffix,
+                                  client=self._client)
 
     def __getattr__(self, k):
         """
@@ -92,71 +89,6 @@ class AbstractAPIPath(ABC):
         you should call __getitem__ instead
         """
         return self[k]
-
-    @staticmethod
-    def sanitize_params(method, **kwargs):
-        """
-            Request params can be extracted from the ``**kwargs``
-
-        Arguments starting with `_` will be stripped from it, so they
-        can be used as an argument for the request
-        (eg. "_headers" → "headers" in the kwargs returned by this
-        function while "headers" would be inserted in the params)
-
-        Parameters
-        ----------
-        method : str
-            method to use to make the request
-        kwargs : dict
-            Keywords arguments given to the request
-
-        Returns
-        -------
-        dict
-            New requests parameters, correctly formatted
-        """
-        # items which does not have a key starting with `_`
-        items = [(key, value) for key, value in kwargs.items()
-                 if not key.startswith("_")]
-        params, skip_params = {}, False
-
-        for key, value in items:
-            # binary data
-            if hasattr(value, 'read') or isinstance(value, bytes):
-                params[key] = value
-                # The params won't be used to make the signature
-                skip_params = True
-
-            # booleans conversion
-            elif isinstance(value, bool):
-                params[key] = value and "true" or "false"
-
-            # integers conversion
-            elif isinstance(value, int):
-                params[key] = str(value)
-
-            # iterables conversion
-            elif isinstance(value, iterable):
-                params[key] = ",".join(map(str, value))
-
-            # skip params with value None
-            elif value is None:
-                pass
-
-            # the rest is sent as is
-            else:
-                params[key] = value
-
-        # dict with other items (+ strip "_" from keys)
-        kwargs = {key[1:]: value for key, value in kwargs.items()
-                  if key.startswith("_")}
-
-        if method.lower() == "post":
-            kwargs['data'] = params  # post requests use the data argument
-        else:
-            kwargs['params'] = params
-
-        return kwargs, skip_params
 
     @abstractmethod
     def _request(self, method):

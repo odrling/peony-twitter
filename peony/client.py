@@ -117,6 +117,7 @@ class BasePeonyClient:
         self.loop = asyncio.get_event_loop() if loop is None else loop
 
         self._session = session
+        self._user_session = session is not None
 
         # all the possible args required by headers in :mod:`peony.oauth`
         kwargs = {
@@ -229,21 +230,12 @@ class BasePeonyClient:
         else:
             return APIPath([base_url], suffix=suffix, client=self)
 
-    def __getattr__(self, api):
-        """
-            Access the api you want
-
-        Same as calling client[api]
-
-        Returns
-        -------
-        api.BaseAPIPath
-            To access an API endpoint
-        """
-        return self[api]
+    __getattr__ = __getitem__
 
     def __del__(self):
-        self._session.close()
+        # close the session only if it was created by peony
+        if not self._user_session:
+            self._session.close()
 
     async def request(self, method, url,
                       headers=None,
@@ -389,7 +381,7 @@ class BasePeonyClient:
 
 class PeonyClient(BasePeonyClient):
     """
-        A client with some useful methods
+        A client with some useful methods for most usages
     """
 
     def __init__(self, *args, executor=None, **kwargs):

@@ -150,7 +150,6 @@ class OAuth1Headers(PeonyHeaders):
     def __init__(self, consumer_key, consumer_secret,
                  access_token=None, access_token_secret=None,
                  compression=True, user_agent=None):
-        """ create the OAuth1 client """
         super().__init__(compression, user_agent)
 
         self.consumer_key = consumer_key

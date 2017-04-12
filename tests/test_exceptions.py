@@ -15,7 +15,7 @@ message = "to err is human, to arr is pirate"
 class MockResponse:
 
     def __init__(self, data=None, error=None,
-                 content_type="text/json", headers=None, status=200):
+                 content_type="application/json", headers=None, status=200):
 
         if error is not None:
             data = json.dumps({'errors': [{'code': error,
@@ -42,10 +42,16 @@ class MockResponse:
     async def read(self):
         return self.data
 
-    async def text(self, encoding='utf-8'):
+    async def text(self, encoding=None):
+        if encoding is None:
+            encoding = 'utf-8'
+
         return self.data.decode(encoding=encoding)
 
-    async def json(self, encoding, loads=json.loads):
+    async def json(self, encoding=None, loads=json.loads):
+        if encoding is None:
+            encoding = 'utf-8'
+
         return loads(self.data, encoding=encoding)
 
 

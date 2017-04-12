@@ -453,16 +453,12 @@ async def execute(coro):
 async def read(response, loads=loads, encoding=None):
     ctype = response.headers.get('Content-Type', "").lower()
 
-    kwargs = {}
-    if encoding is not None:
-        kwargs['encoding'] = encoding
-
     try:
-        if "json" in ctype:
-            return await response.json(loads=loads, **kwargs)
+        if "application/json" in ctype:
+            return await response.json(encoding=encoding, loads=loads)
 
         if "text" in ctype:
-            return await response.text(**kwargs)
+            return await response.text(encoding=encoding)
 
     except UnicodeDecodeError:
         # I don't think this could happen but to be extra sure

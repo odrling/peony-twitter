@@ -239,7 +239,6 @@ class BasePeonyClient:
 
     async def request(self, method, url,
                       headers=None,
-                      json=False,
                       session=None,
                       **kwargs):
         """
@@ -255,8 +254,6 @@ class BasePeonyClient:
             Custom headers (doesn't overwrite `Authorization` headers)
         session : :obj:`aiohttp.ClientSession`, optional
             Client session used to make the request
-        json : bool
-            Force json decoding
 
         Returns
         -------
@@ -280,21 +277,16 @@ class BasePeonyClient:
 
         async with session.request(**req_kwargs) as response:
             if response.status // 100 == 2:
-                if json or url.endswith(".json") and json is not None:
-                    # decode as json
-                    content = await response.json(loads=self._loads)
-                else:
-                    # decode as text
-                    content = await response.text()
+                data = await utils.read(response, self._loads)
 
                 return utils.PeonyResponse(
-                    response=content,
+                    response=data,
                     headers=response.headers,
                     url=response.url,
                     request=req_kwargs
                 )
             else:  # throw exception if status is not 2xx
-                await exceptions.throw(response)
+                await exceptions.throw(response, loads=self._loads)
 
     def stream_request(self, method, url, headers=None, _session=None,
                        *args, **kwargs):

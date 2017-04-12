@@ -448,3 +448,26 @@ async def execute(coro):
         return await coro
     else:
         return coro
+
+
+async def read(response, loads=loads):
+    ctype = response.headers.get('Content-Type', "").lower()
+
+    try:
+        if "json" in ctype:
+            return await response.json(loads=loads, encoding='utf-8')
+
+        elif "text" in ctype:
+            return await response.text(encoding='utf-8')
+
+    except UnicodeDecodeError:
+        # I don't think this could happen but to be extra sure
+        # that it wouldn't break everything
+        pass
+
+    except json.JSONDecodeError:
+        # if the data is not correct json
+        # again just to be sure nothing breaks while raising an error
+        pass
+
+    return await response.read()

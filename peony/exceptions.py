@@ -1,47 +1,31 @@
 # -*- coding: utf-8 -*-
-import json
 import time
 
 from . import utils
 
 
-def _get_error(data):
-    """ Get the error from the data """
-    if data is not None:
-        try:
-            if 'errors' in data:
-                return data['errors'][0]
-            elif 'error' in data:
-                return data['error']
-        except TypeError:
-            print(data)
-
-
-async def throw(response, **kwargs):
+async def throw(response, loads=utils.loads, **kwargs):
     """ Get the response data if possible and raise an exception """
-    data = await response.read()
+    data = await utils.read(response, loads=loads)
 
-    ctype = response.headers.get('CONTENT-TYPE', "").lower()
-    if "json" in ctype:
-        try:
-            data = utils.loads(data.decode(encoding='utf-8'))
-            err = _get_error(data)
-            if isinstance(err, dict):
-                code = err.get('code')
-                if code in errors:
-                    exception = errors[code]
-                    raise exception(response=response, data=data, **kwargs)
+    if isinstance(data, dict):
+        if 'errors' in data:
+            error = data['errors'][0]
+        else:
+            error = data.get('error', None)
 
-        except UnicodeDecodeError:
-            pass
-
-        except json.JSONDecodeError:
-            pass
+        if isinstance(error, dict):
+            code = error.get('code')
+            if code in errors:
+                exception = errors[code]
+                raise exception(response=response, error=error,
+                                data=data, **kwargs)
 
     if response.status in statuses:
         exception = statuses[response.status]
         raise exception(response=response, data=data, **kwargs)
 
+    print(type(data))
     # raise PeonyException if no specific exception was found
     raise PeonyException(response=response, data=data, **kwargs)
 
@@ -49,7 +33,7 @@ async def throw(response, **kwargs):
 class PeonyException(Exception):
     """ Parent class of all the exceptions of Peony """
 
-    def __init__(self, response=None, data=None, message=None):
+    def __init__(self, response=None, error=None, data=None, message=None):
         """
             Add the response and data attributes
 
@@ -57,6 +41,7 @@ class PeonyException(Exception):
         """
         self.response = response
         self.data = data
+        self.error = error
 
         if not message:
             message = self.get_message()
@@ -64,15 +49,14 @@ class PeonyException(Exception):
         super().__init__(message)
 
     def get_message(self):
-        if not isinstance(self.data, bytes):
-            err = _get_error(self.data)
-            if isinstance(err, dict):
-                if 'message' in err:
-                    return err['message']
-            elif isinstance(err, str):
-                return err
+        if self.error is not None:
+            return self.error.get('message', self.error)
 
         return str(self.data)
+
+    @property
+    def url(self):
+        return self.response.url
 
 
 class MediaProcessingError(PeonyException):
@@ -106,10 +90,6 @@ class NotAuthenticated(PeonyException):
 
 @errors.code(34)
 class DoesNotExist(PeonyException):
-
-    @property
-    def url(self):
-        return self.response.url
 
     def get_message(self):
         return super().get_message() + "\n(%s)" % self.url
@@ -261,7 +241,9 @@ class Forbidden(PeonyException):
 
 @statuses.code(404)
 class NotFound(PeonyException):
-    pass
+
+    def get_message(self):
+        return super().get_message() + "\n(%s)" % self.url
 
 
 @statuses.code(406)

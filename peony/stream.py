@@ -114,7 +114,8 @@ class StreamResponse:
         elif self.response.status in (420, 429):
             self._state = ENHANCE_YOUR_CALM
         else:
-            raise await exceptions.throw(self.response)
+            raise await exceptions.throw(self.response,
+                                         loads=self.client._loads)
 
         return self
 

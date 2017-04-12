@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 import time
 
-from . import utils
+from . import utils, general
 
 
-async def throw(response, loads=utils.loads, **kwargs):
+async def throw(response, loads=utils.loads,
+                encoding=None, **kwargs):
     """ Get the response data if possible and raise an exception """
-    data = await utils.read(response, loads=loads)
+    data = await utils.read(response, loads=loads, encoding=encoding)
 
     if isinstance(data, dict):
         if 'errors' in data:

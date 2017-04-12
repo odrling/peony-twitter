@@ -10,7 +10,7 @@ import sys
 import traceback
 from urllib.parse import urlparse
 
-from . import exceptions
+from . import exceptions, general
 
 try:
     import PIL.Image
@@ -450,15 +450,19 @@ async def execute(coro):
         return coro
 
 
-async def read(response, loads=loads):
+async def read(response, loads=loads, encoding=None):
     ctype = response.headers.get('Content-Type', "").lower()
+
+    kwargs = {}
+    if encoding is not None:
+        kwargs['encoding'] = encoding
 
     try:
         if "json" in ctype:
-            return await response.json(loads=loads, encoding='utf-8')
+            return await response.json(loads=loads, **kwargs)
 
-        elif "text" in ctype:
-            return await response.text(encoding='utf-8')
+        if "text" in ctype:
+            return await response.text(**kwargs)
 
     except UnicodeDecodeError:
         # I don't think this could happen but to be extra sure

@@ -62,6 +62,8 @@ class BasePeonyClient:
         Activate response compression on every requests, defaults to True
     user_agent : :obj:`str`, optional
         Set a custom user agent header
+    encoding : :obj:`str`, optional
+        text encoding of the response from the server
     loop : event loop, optional
         An event loop, if not specified :func:`asyncio.get_event_loop`
         is called
@@ -83,6 +85,7 @@ class BasePeonyClient:
                  proxy=None,
                  compression=True,
                  user_agent=None,
+                 encoding=None,
                  loop=None,
                  **kwargs):
 
@@ -111,8 +114,17 @@ class BasePeonyClient:
 
         self._suffix = suffix
 
-        self._loads = loads
         self.error_handler = error_handler
+
+        self.encoding = encoding
+
+        if encoding is not None:
+            def _loads(*args, **kwargs):
+                return loads(*args, encoding=encoding, **kwargs)
+
+            self._loads = _loads
+        else:
+            self._loads = loads
 
         self.loop = asyncio.get_event_loop() if loop is None else loop
 
@@ -240,6 +252,7 @@ class BasePeonyClient:
     async def request(self, method, url,
                       headers=None,
                       session=None,
+                      encoding=None,
                       **kwargs):
         """
             Make requests to the REST API
@@ -270,14 +283,18 @@ class BasePeonyClient:
             **kwargs
         )
 
+        if encoding is None:
+            encoding = self.encoding
+
         if 'proxy' not in req_kwargs:
             req_kwargs['proxy'] = self.proxy
 
         session = session if (session is not None) else self._session
 
         async with session.request(**req_kwargs) as response:
-            if response.status // 100 == 2:
-                data = await utils.read(response, self._loads)
+            if response.status < 400:
+                data = await utils.read(response, self._loads,
+                                        encoding=encoding)
 
                 return utils.PeonyResponse(
                     response=data,
@@ -286,7 +303,8 @@ class BasePeonyClient:
                     request=req_kwargs
                 )
             else:  # throw exception if status is not 2xx
-                await exceptions.throw(response, loads=self._loads)
+                await exceptions.throw(response, loads=self._loads,
+                                       encoding=encoding)
 
     def stream_request(self, method, url, headers=None, _session=None,
                        *args, **kwargs):

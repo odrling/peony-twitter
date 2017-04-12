@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import asyncio
-import os
+import os.path
 
 try:
     from . import peony, api, testdir
@@ -14,11 +14,10 @@ client = peony.PeonyClient(**api.keys)
 
 async def send_tweet_with_media():
     status = input("status: ")
-    path = input('file to upload:\n')
 
-    if not path:
-        dirname = os.path.dirname(os.path.abspath(__file__))
-        path = os.path.join(dirname, "test.gif")
+    path = ""
+    while not path and not os.path.exists(path):
+        path = input('file to upload:\n')
 
     media = await client.upload_media(
         path,

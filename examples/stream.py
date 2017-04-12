@@ -65,7 +65,7 @@ class UserStream(peony.EventStream):
 
     @peony.events.on_connect.handler
     async def init_timeline(self):
-        pass
+        await self.get_timeline()
 
     @peony.events.on_retweeted_status.handler
     def on_retweet(self, data):

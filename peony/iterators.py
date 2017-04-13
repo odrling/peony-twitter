@@ -24,7 +24,7 @@ class AbstractIterator(ABC):
 
     @abstractmethod
     async def __anext__(self):
-        pass
+        """ the function called on each iteration """
 
 
 class IdIterator(AbstractIterator):
@@ -65,12 +65,9 @@ class IdIterator(AbstractIterator):
 
         return response
 
+    @abstractmethod
     async def call_on_response(self, response):
-        """
-            The parameter is set to the id of the tweet at index i - 1
-        """
-        self.kwargs[self.param] = response[self.i]['id'] - 1
-        return response
+        """ function that prepares for the next request """
 
 
 class MaxIdIterator(IdIterator):
@@ -91,6 +88,13 @@ class MaxIdIterator(IdIterator):
                          _i=-1,
                          _force=False,
                          **kwargs)
+
+    async def call_on_response(self, response):
+        """
+            The parameter is set to the id of the tweet at index i - 1
+        """
+        self.kwargs[self.param] = response[self.i]['id'] - 1
+        return response
 
 
 class SinceIdIterator(IdIterator):
@@ -117,10 +121,12 @@ class SinceIdIterator(IdIterator):
                          **kwargs)
 
         self.fill_gaps = _fill_gaps
+        self.last_id = None
 
     async def set_param(self, response):
         if self.fill_gaps:
             self.kwargs[self.param] = response[self.i]['id'] - 1
+            self.last_id = response[self.i]['id']
         else:
             self.kwargs[self.param] = response[self.i]['id']
 
@@ -134,12 +140,10 @@ class SinceIdIterator(IdIterator):
         response : dict or list
             The response
         """
-        since_id = self.kwargs.get(self.param, 0)
-        if self.fill_gaps:
-            since_id += 1
+        since_id = self.kwargs.get(self.param, 0) + 1
 
-        if since_id != response[-1]['id']:
-            if self.fill_gaps:
+        if self.fill_gaps:
+            if response[-1]['id'] != since_id:
                 responses = with_max_id(
                     _request=self.request,
                     max_id=response[-1]['id'] - 1,
@@ -149,12 +153,14 @@ class SinceIdIterator(IdIterator):
                 async for tweets in responses:
                     response.extend(tweets)
 
-            if since_id != response[-1]['id']:
-                await self.set_param(response)
-                return response
+            if response[-1]['id'] == self.last_id:
+                response = response[:-1]
+
+                if not response and not self.force:
+                    raise StopAsyncIteration
 
         await self.set_param(response)
-        return response[:-1]
+        return response
 
 
 class CursorIterator(AbstractIterator):

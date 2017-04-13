@@ -444,6 +444,13 @@ async def get_type(media, path=None):
 
 
 async def execute(coro):
+    """
+        run a function or coroutine
+    
+    Parameters
+    ----------
+    coro : coroutine or function
+    """
     if asyncio.iscoroutine(coro):
         return await coro
     else:
@@ -451,6 +458,24 @@ async def execute(coro):
 
 
 async def read(response, loads=loads, encoding=None):
+    """
+        read the data of the response
+
+    Parameters
+    ----------
+    response : aiohttp.ClientResponse
+        response
+    loads : callable
+        json loads function
+    encoding : :obj:`str`, optional
+        character encoding of the response, if set to None
+        aiohttp should guess the right encoding
+    
+    Returns
+    -------
+    :obj:`bytes`, :obj:`str`, :obj:`dict` or :obj:`list`
+        the data returned depends on the response
+    """
     ctype = response.headers.get('Content-Type', "").lower()
 
     try:

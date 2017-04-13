@@ -139,7 +139,7 @@ class StreamResponse:
             while not line:
                 with aiohttp.Timeout(90):
                     line = await self.response.content.readline()
-                    line = line.rstrip(b'\r\n')
+                    line = line.strip(b'\r\n')
 
             if line in rate_limit_notices:
                 raise StreamLimit(line)

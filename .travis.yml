@@ -3,5 +3,6 @@ python:
   - "3.5"
   - "3.6"
 install:
+  - pip install --upgrade pip wheel
   - pip install -r tests_requirements.txt
 script: pytest tests

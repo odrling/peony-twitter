@@ -1,6 +1,7 @@
 # include files used by setup.py
 include README.rst
 include requirements.txt
+include extras_require.txt
 
 # include the license
 include LICENSE

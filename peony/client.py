@@ -10,7 +10,6 @@ the Twitter APIs, with a method to upload a media
 import asyncio
 import io
 import itertools
-import pathlib
 from concurrent.futures import ProcessPoolExecutor
 
 import aiohttp
@@ -247,7 +246,10 @@ class BasePeonyClient:
     def __del__(self):
         # close the session only if it was created by peony
         if not self._user_session:
-            self._session.close()
+            # close is None for Python 3.5 here (?)
+            if (not getattr(self._session, 'closed') and
+                    getattr(self._session, 'close', None) is not None):
+                self._session.close()
 
     async def request(self, method, url,
                       headers=None,

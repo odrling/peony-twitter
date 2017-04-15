@@ -16,6 +16,9 @@ python-magic
 aiodns
 cchardet
 
+# tests: requirements for tests
+pytest
+
 # all: required modules for all the features of peony
 aiodns
 aiofiles

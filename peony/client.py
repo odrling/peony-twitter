@@ -58,7 +58,7 @@ class BasePeonyClient:
     proxy : str
         Proxy used with every request
     compression : :obj:`bool`, optional
-        Activate response compression on every requests, defaults to True
+        Activate data compression on every requests, defaults to True
     user_agent : :obj:`str`, optional
         Set a custom user agent header
     encoding : :obj:`str`, optional
@@ -299,7 +299,7 @@ class BasePeonyClient:
                                         encoding=encoding)
 
                 return utils.PeonyResponse(
-                    response=data,
+                    data=data,
                     headers=response.headers,
                     url=response.url,
                     request=req_kwargs
@@ -538,7 +538,7 @@ class PeonyClient(BasePeonyClient):
         Returns
         -------
         utils.PeonyResponse
-            response of the request
+            Response of the request
         """
         formats = formats or general.formats
 

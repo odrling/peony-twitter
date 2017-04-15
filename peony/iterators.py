@@ -55,7 +55,7 @@ class IdIterator(AbstractIterator):
         super().__init__(_request, **kwargs)
 
     async def __anext__(self):
-        """ return each response until getting an empty response """
+        """ return each response until getting an empty data """
         response = await self.request(**self.kwargs)
 
         if response:
@@ -133,7 +133,7 @@ class SinceIdIterator(IdIterator):
     async def call_on_response(self, response):
         """
         Try to fill the gaps and strip last tweet from the response
-        if its id is that of the first tweet of the former response
+        if its id is that of the first tweet of the last response
 
         Parameters
         ----------

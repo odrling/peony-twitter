@@ -14,28 +14,28 @@ from . import exceptions, general
 
 try:
     import PIL.Image
-except ImportError:
+except ImportError:  # pragma: no cover
     PIL = None
 
 try:
     from aiofiles import open
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 try:
     import magic
     mime = magic.Magic(mime=True)
-except:
+except:  # pragma: no cover
     import mimetypes
     mime = mimetypes.MimeTypes()
     magic = None
 
 
-class JSONObject(dict):
+class JSONData(dict):
     """
         A dict in which you can access items as attributes
 
-    >>> obj = JSONObject(key=True)
+    >>> obj = JSONData(key=True)
     >>> obj['key'] is obj.key
     True
     """
@@ -46,10 +46,11 @@ class JSONObject(dict):
         raise AttributeError("%s has no property named %s." %
                              (self.__class__.__name__, key))
 
-    def __setattr__(self, *args):
-        raise AttributeError("%s instances are read-only." %
-                             self.__class__.__name__)
-    __delattr__ = __setitem__ = __delitem__ = __setattr__
+    def __delattr__(self, item):
+        del self[item]
+
+    def __setattr__(self, key, value):
+        self[key] = value
 
 
 class PeonyResponse:
@@ -57,28 +58,28 @@ class PeonyResponse:
         Response objects
 
     In these object you can access the headers, the request, the url
-    and the response
+    and the data
     getting an attribute/item of this object will get the corresponding
-    attribute/item of the response
+    attribute/item of the data
 
     >>> peonyresponse = PeonyResponse(
-    ...     response=JSONObject(key="test"), headers={},
+    ...     data=JSONData(key="test"), headers={},
     ...     url="http://google.com", request={}
     ... )
-    >>> peonyresponse.key is peonyresponse.response.key  # returns True
+    >>> peonyresponse.key is peonyresponse.data.key  # returns True
     >>>
     >>> peonyresponse = PeonyResponse(
-    ...     response=[JSONObject(key="test"), JSONObject(key=1)], headers={},
+    ...     data=[JSONData(key="test"), JSONData(key=1)], headers={},
     ...     url="http://google.com", request={}
     ... )
-    >>> # iterate over peonyresponse.response
+    >>> # iterate over peonyresponse.data
     >>> for key in peonyresponse:
     ...     pass  # do whatever you want
 
     Parameters
     ----------
-    response : JSONObject or list
-        Response object
+    data : JSONData, dict or list
+        Data object
     headers : dict
         Headers of the response
     url : str
@@ -87,35 +88,46 @@ class PeonyResponse:
         Requests arguments
     """
 
-    def __init__(self, response, headers, url, request):
-        self.response = response
-        self.headers = headers
-        self.url = url
-        self.request = request
+    def __init__(self, data, headers, url, request):
+        super().__setattr__('data', data)
+        super().__setattr__('headers', headers)
+        super().__setattr__('url', url)
+        super().__setattr__('request', request)
 
     def __getattr__(self, key):
-        """ get attributes from the response """
-        return getattr(self.response, key)
+        """ get attributes from the data """
+        return getattr(self.data, key)
 
     def __getitem__(self, key):
-        """ get items from the response """
-        return self.response[key]
+        """ get items from the data """
+        return self.data[key]
+
+    def __contains__(self, item):
+        return item in self.data
 
     def __iter__(self):
-        """ iterate over the response """
-        return iter(self.response)
+        """ iterate over the data """
+        return iter(self.data)
 
     def __str__(self):
-        """ use the string of the response """
-        return str(self.response)
+        """ use the string of the data """
+        return str(self.data)
 
     def __repr__(self):
-        """ use the representation of the response """
-        return repr(self.response)
+        """ use the representation of the data """
+        return repr(self.data)
 
     def __len__(self):
-        """ get the lenght of the response """
-        return len(self.response)
+        """ get the length of the data """
+        return len(self.data)
+
+    def __setitem__(self, key, value):
+        self.data[key] = value
+    __setattr__ = __setitem__
+
+    def __delitem__(self, key):
+        del self.data[key]
+    __delattr__ = __delitem__
 
 
 def error_handler(request):
@@ -214,7 +226,7 @@ def loads(json_data, *args, encoding="utf-8", **kwargs):
     if isinstance(json_data, bytes):
         json_data = json_data.decode(encoding)
 
-    return json.loads(json_data, *args, object_hook=JSONObject, **kwargs)
+    return json.loads(json_data, *args, object_hook=JSONData, **kwargs)
 
 
 def convert(img, formats):

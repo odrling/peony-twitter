@@ -5,4 +5,7 @@ python:
 install:
   - pip install --upgrade pip wheel
   - pip install -r tests_requirements.txt
-script: pytest tests
+script:
+  - pytest tests --cov=peony
+after_success:
+  - codecov

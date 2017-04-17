@@ -2,10 +2,10 @@ Asynchronous Twitter API client for Python 3.5+
 ===============================================
 
 
-.. image:: https://travis-ci.org/odrling/peony-twitter.svg?branch=1.0.0
+.. image:: https://travis-ci.org/odrling/peony-twitter.svg?branch=master
   :target: https://travis-ci.org/odrling/peony-twitter
 
-.. image:: https://codecov.io/gh/odrling/peony-twitter/branch/1.0.0/graph/badge.svg
+.. image:: https://codecov.io/gh/odrling/peony-twitter/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/odrling/peony-twitter
 
 

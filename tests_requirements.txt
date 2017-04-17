@@ -1,4 +1,7 @@
+aiofiles
 aiohttp
 codecov
+Pillow
 pytest
 pytest-cov
+python-magic

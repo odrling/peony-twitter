@@ -3,14 +3,14 @@
 import asyncio
 
 from peony import iterators
-from . import MockRequest
+from . import MockIteratorRequest
 
 loop = asyncio.get_event_loop()
 
 
 def test_max_id():
     async def test():
-        responses = iterators.with_max_id(MockRequest(), max_id=499)
+        responses = iterators.with_max_id(MockIteratorRequest(), max_id=499)
 
         ids = set()
         async for response in responses:
@@ -28,7 +28,7 @@ def test_max_id():
 
 def test_since_id():
     async def test():
-        responses = iterators.with_since_id(MockRequest(), since_id=499,
+        responses = iterators.with_since_id(MockIteratorRequest(), since_id=499,
                                             count=10, _fill_gaps=False,
                                             _force=False)
 
@@ -49,7 +49,7 @@ def test_since_id():
 
 def test_fill_gaps():
     async def test():
-        responses = iterators.with_since_id(MockRequest(), since_id=499,
+        responses = iterators.with_since_id(MockIteratorRequest(), since_id=499,
                                             _fill_gaps=True, _force=False)
 
         ids = set()
@@ -69,7 +69,7 @@ def test_fill_gaps():
 
 def test_cursor():
     async def test():
-        responses = iterators.with_cursor(MockRequest(), cursor=500)
+        responses = iterators.with_cursor(MockIteratorRequest(), cursor=500)
 
         ids = set()
         async for response in responses:

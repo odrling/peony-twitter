@@ -140,20 +140,20 @@ def error_handler(request):
     """
 
     @functools.wraps(request)
-    async def decorated_request(**kwargs):
+    async def decorated_request(url=None, **kwargs):
         while True:
             try:
-                return await request(**kwargs)
+                return await request(url=url, **kwargs)
 
             except exceptions.RateLimitExceeded as e:
                 delay = int(e.reset_in) + 1
                 fmt = "Sleeping for {}s (rate limit exceeded on endpoint {})"
-                print(fmt.format(delay, kwargs['url']), file=sys.stderr)
+                print(fmt.format(delay, url), file=sys.stderr)
                 await asyncio.sleep(delay)
 
             except asyncio.TimeoutError:
                 fmt = "Request to {url} timed out, retrying"
-                print(fmt.format(url=kwargs['url']), file=sys.stderr)
+                print(fmt.format(url=url), file=sys.stderr)
 
             except:
                 raise
@@ -186,7 +186,23 @@ def get_args(func, skip=0):
     return code.co_varnames[skip:code.co_argcount]
 
 
-def print_error(msg=None, stderr=sys.stderr):
+def format_error(msg=None):
+    """
+        return a string representing an exception and its traceback
+    
+    Parameters
+    ----------
+    msg : :obj:`str`, optional
+        A message to add to the error
+    """
+    exc = traceback.format_exc().strip()
+    if msg is None:
+        return exc
+    else:
+        return "{exc}\n{msg}".format(exc=exc, msg=msg)
+
+
+def print_error(msg=None, stderr=sys.stderr, **kwargs):
     """
         Print an exception and its traceback to stderr
 
@@ -197,10 +213,7 @@ def print_error(msg=None, stderr=sys.stderr):
     stderr : file object
         A file object to write the errors to
     """
-    output = [] if msg is None else [msg]
-    output.append(traceback.format_exc().strip())
-
-    print(*output, sep='\n', file=stderr)
+    print(format_error(msg), file=stderr, **kwargs)
 
 
 def loads(json_data, *args, encoding="utf-8", **kwargs):

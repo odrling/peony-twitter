@@ -27,15 +27,10 @@ class MockResponse:
         elif isinstance(data, bytes):
             self.data = data
         else:
-            # well that would be funny if it happened
-            raise TypeError("Could not create mock response. "
-                            "Wrong data type %s" % type(data))
+            self.data = b""
 
         self.status = status
-        if headers is None:
-            self.headers = {}
-        else:
-            self.headers = headers
+        self.headers = {} if headers is None else headers
 
         self.headers['Content-Type'] = content_type
         self.url = ''  # quite irrelevant here
@@ -56,7 +51,7 @@ class MockResponse:
         return loads(self.data, encoding=encoding)
 
 
-class MockRequest():
+class MockIteratorRequest:
 
     def __init__(self, ids=range(1000)):
         self.ids = ids

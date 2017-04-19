@@ -3,5 +3,6 @@ aiohttp
 codecov
 Pillow
 pytest
+pytest-asyncio
 pytest-cov
 python-magic

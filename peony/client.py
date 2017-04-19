@@ -247,9 +247,10 @@ class BasePeonyClient:
         # close the session only if it was created by peony
         if not self._user_session:
             # close is None for Python 3.5 here (?)
-            if (not getattr(self._session, 'closed') and
-                    getattr(self._session, 'close', None) is not None):
+            try:
                 self._session.close()
+            except TypeError:
+                pass
 
     async def request(self, method, url,
                       headers=None,

@@ -10,8 +10,6 @@ from peony import exceptions
 from peony import utils
 from . import MockResponse
 
-loop = asyncio.get_event_loop()
-
 
 @pytest.fixture
 def json_data():
@@ -81,7 +79,8 @@ def test_response_len(response):
     assert len(response) == len(response.data)
 
 
-def test_error_handler_rate_limit():
+@pytest.mark.asyncio
+async def test_error_handler_rate_limit():
     global tries
     tries = 3
 
@@ -94,10 +93,11 @@ def test_error_handler_rate_limit():
                                     headers={'X-Rate-Limit-Reset': 0})
             raise await exceptions.throw(response)
 
-    loop.run_until_complete(utils.error_handler(rate_limit)())
+    await utils.error_handler(rate_limit)()
 
 
-def test_error_handler_asyncio_timeout():
+@pytest.mark.asyncio
+async def test_error_handler_asyncio_timeout():
     global tries
     tries = 3
 
@@ -108,27 +108,26 @@ def test_error_handler_asyncio_timeout():
         if tries > 0:
             raise asyncio.TimeoutError
 
-    loop.run_until_complete(utils.error_handler(timeout)())
+    await utils.error_handler(timeout)()
 
 
-def test_error_handler_other_exception():
+@pytest.mark.asyncio
+async def test_error_handler_other_exception():
     async def error(**kwargs):
         raise exceptions.PeonyException
 
     with pytest.raises(exceptions.PeonyException):
-        loop.run_until_complete(utils.error_handler(error)())
+        await utils.error_handler(error)()
 
 
-def test_error_handler_response():
+@pytest.mark.asyncio
+async def test_error_handler_response():
     async def request(**kwargs):
         return MockResponse(data=MockResponse.message)
 
-    async def test():
-        response = await utils.error_handler(request)()
-        text = await response.text()
-        assert text == MockResponse.message
-
-    loop.run_until_complete(test())
+    resp = await utils.error_handler(request)()
+    text = await resp.text()
+    assert text == MockResponse.message
 
 
 def test_get_args():

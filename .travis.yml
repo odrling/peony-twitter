@@ -7,5 +7,6 @@ install:
   - pip install -r tests_requirements.txt
 script:
   - pytest tests --cov=peony
+cache: pip
 after_success:
   - codecov

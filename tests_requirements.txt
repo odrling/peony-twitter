@@ -1,8 +1,6 @@
-aiofiles
-aiohttp
+-r requirements.txt
+-r extras_require.txt
 codecov
-Pillow
 pytest
 pytest-asyncio
 pytest-cov
-python-magic

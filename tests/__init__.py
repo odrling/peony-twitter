@@ -12,6 +12,77 @@ test_dir = os.path.dirname(file_)
 sys.path.insert(0, os.path.dirname(test_dir))
 
 
+class Media:
+
+    def __init__(self, filename, type, category, content_length):
+        self.filename = filename
+        self.url = "http://static.odrling.xyz/peony/tests/" + filename
+        self.type = type
+        self.category = category
+        self.content_length = content_length
+        self._accept_bytes_range = None
+        self._cache = b""
+
+    async def download(self, session, chunk=-1):
+        if self._accept_bytes_range is None:
+            async with session.head(self.url) as response:
+                accept = response.headers.get('Accept-Ranges', "")
+                self._accept_bytes_range = "bytes" in accept
+
+        if 0 <= chunk <= len(self._cache):
+            return self._cache[:chunk]
+
+        elif self._accept_bytes_range and self._cache:
+            byte_range = "bytes={cached}-{chunk}".format(
+                cached=len(self._cache),
+                chunk=chunk if chunk > -1 else self.content_length
+            )
+            headers = {'Range': byte_range}
+
+            async with session.get(self.url, headers=headers) as response:
+                self._cache += await response.read()
+                return self._cache
+
+        else:
+            async with session.get(self.url) as response:
+                self._cache = await response.content.read(chunk)
+                return self._cache
+
+
+medias = {
+    'lady_peony': Media(
+        filename="lady_peony.jpg",
+        type="image/jpeg",
+        category="tweet_image",
+        content_length=302770
+    ),
+    'pink_queen': Media(
+        filename="pink_queen.jpg",
+        type="image/jpeg",
+        category="tweet_image",
+        content_length=62183
+    ),
+    'bloom': Media(
+        filename="bloom.gif",
+        type="image/gif",
+        category="tweet_gif",
+        content_length=503407
+    ),
+    'video': Media(
+        filename="peony.mp4",
+        type="video/mp4",
+        category="tweet_video",
+        content_length=9773437
+    ),
+    'seismic waves': Media(
+        filename="seismic_waves.png",
+        type="image/png",
+        category="tweet_image",
+        content_length=43262
+    )
+}
+
+
 class MockResponse:
     message = "to err is human, to arr is pirate"
 

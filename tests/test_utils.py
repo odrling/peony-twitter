@@ -2,13 +2,35 @@
 
 import asyncio
 import io
+import mimetypes
 import traceback
+from functools import wraps
 
+import aiohttp
 import pytest
 
 from peony import exceptions
 from peony import utils
-from . import MockResponse
+from . import MockResponse, medias
+
+
+def builtin_mimetypes(func):
+
+    @wraps(func)
+    async def decorated(session):
+        magic = utils.magic
+        mime = utils.mime
+
+        utils.magic = None
+        utils.mime = mimetypes.MimeTypes()
+
+        try:
+            await func(session)
+        finally:
+            utils.magic = magic
+            utils.mime = mime
+
+    return decorated
 
 
 @pytest.fixture
@@ -22,6 +44,12 @@ def response(json_data):
                                headers={},
                                url="",
                                request={})
+
+@pytest.yield_fixture
+def session(event_loop):
+    session = aiohttp.ClientSession(loop=event_loop)
+    yield session
+    event_loop.run_until_complete(session.close())
 
 
 def test_json_data_get(json_data):
@@ -163,3 +191,57 @@ def test_loads():
     j = utils.loads("""{"a": 1, "b": 2}""")
     assert isinstance(j, utils.JSONData)
     assert j.a == 1 and j.b == 2
+
+
+@pytest.mark.asyncio
+async def test_reset_io():
+    @utils.reset_io
+    async def test(media):
+        assert media.tell() == 0
+        media.write(MockResponse.message)
+        assert media.tell() != 0
+
+    f = io.StringIO()
+    f.write("Hello World")
+    assert f.tell() != 0
+    await test(f)
+    assert f.tell() == 0
+
+
+@pytest.mark.asyncio
+async def test_get_type(session):
+    async def test(media, session, chunk_size=1024):
+        f = io.BytesIO(await media.download(session, chunk_size))
+        media_type, media_category = await utils.get_type(f)
+        assert media_type == media.type
+        assert media_category == media.category
+
+    tasks = [test(media, session) for media in medias.values()]
+    await asyncio.gather(*tasks)
+
+@pytest.mark.asyncio
+async def test_get_type_exception():
+    with pytest.raises(RuntimeError):
+        await utils.get_type(io.BytesIO())
+
+
+@pytest.mark.asyncio
+@builtin_mimetypes
+async def test_get_type_builtin(session):
+    async def test(media, session, chunk_size=1024):
+        f = io.BytesIO(await media.download(session, chunk_size))
+        media_type, media_category = await utils.get_type(f, media.filename)
+        assert media_type == media.type
+        assert media_category == media.category
+
+    tasks = [test(media, session) for media in medias.values()]
+    await asyncio.gather(*tasks)
+
+
+@pytest.mark.asyncio
+@builtin_mimetypes
+async def test_get_type_builtin_exception(session):
+    media = medias['lady_peony']
+    f = io.BytesIO(await media.download(session, 1024))
+    with pytest.raises(RuntimeError):
+        await utils.get_type(f)

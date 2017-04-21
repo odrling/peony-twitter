@@ -333,18 +333,21 @@ def reset_io(func):
     of the file before and after the decorated function
     """
     @functools.wraps(func)
-    async def decorated(media):
-        await execute(media.seek(0))
-        result = await func(media)
-        await execute(media.seek(0))
+    async def decorated(media, *args, **kwargs):
+        if await execute(media.tell()):
+            await execute(media.seek(0))
+
+        result = await func(media, *args, **kwargs)
+
+        if await execute(media.tell()):
+            await execute(media.seek(0))
 
         return result
 
     return decorated
 
 
-@reset_io
-async def get_media_metadata(media):
+async def get_media_metadata(media, name=None):
     """
         Get the metadata of the file
 
@@ -352,6 +355,8 @@ async def get_media_metadata(media):
     ----------
     media : file
         The file to analyze
+    name : str, optional
+        name of the file (used with builtin mimetype module)
 
     Returns
     -------
@@ -362,9 +367,8 @@ async def get_media_metadata(media):
     bool
         Tell whether this file is an image or a video
     """
-    media_type, media_category = await get_type(media)
-    is_image = not (media_type.endswith('gif')
-                    or media_type.startswith('video'))
+    media_type, media_category = await get_type(media, name)
+    is_image = media_type.startswith('image')
 
     return media_type, media_category, is_image
 
@@ -397,7 +401,7 @@ async def get_image_metadata(file_):
         file_ = urlparse(file_).path.strip(" \"'")
 
         original = await execute(open(file_, 'rb'))
-        media_metadata = await get_media_metadata(original)
+        media_metadata = await get_media_metadata(original, file_)
         await execute(original.close())
 
     elif hasattr(file_, 'read'):
@@ -409,7 +413,6 @@ async def get_image_metadata(file_):
     return (*media_metadata, file_)
 
 
-@reset_io
 async def get_size(media):
     """
         Get the size of a file
@@ -425,7 +428,8 @@ async def get_size(media):
         The size of the file
     """
     await execute(media.seek(0, os.SEEK_END))
-    return await execute(media.tell())
+    size = await execute(media.tell())
+    await execute(media.seek(0))
 
 
 @reset_io
@@ -450,6 +454,7 @@ async def get_type(media, path=None):
     else:
         media_type = None
         if path:
+            print("path:", str(path))
             media_type = mime.guess_type(path)[0]
 
         if media_type is None:
@@ -462,8 +467,11 @@ async def get_type(media, path=None):
         media_category = "tweet_video"
     elif media_type.endswith('gif'):
         media_category = "tweet_gif"
-    else:
+    elif media_type.startswith('image'):
         media_category = "tweet_image"
+    else:
+        raise RuntimeError("The provided media cannot be handled.\n"
+                           "mimetype: %s" % media_type)
 
     return media_type, media_category
 

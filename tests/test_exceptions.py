@@ -51,12 +51,18 @@ async def test_json_decode_error():
 
 @pytest.mark.asyncio
 async def test_rate_limit():
+    t = time()
+    exceptions.time = lambda: t
+
     try:
-        headers = {'X-Rate-Limit-Reset': time() + 50}
+        headers = {'X-Rate-Limit-Reset': t + 50}
         response = MockResponse(error=88, headers=headers)
         await exceptions.throw(response)
     except exceptions.RateLimitExceeded as e:
-        assert e.reset - time() == pytest.approx(e.reset_in, rel=0.001)
+        assert int(t+50) == e.reset
+        assert int(t+50) == round(t+e.reset_in)
+    finally:
+        exceptions.time = time
 
 
 @pytest.mark.asyncio

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-import time
+from time import time
 
 from . import utils, general
 
@@ -141,7 +141,7 @@ class RateLimitExceeded(PeonyException):
         int
             Time in seconds until the limit will be reset
         """
-        return self.reset - time.time()
+        return self.reset - time()
 
 
 @errors.code(92)

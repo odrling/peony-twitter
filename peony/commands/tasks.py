@@ -3,10 +3,13 @@
 from functools import update_wrapper
 
 
-class task:
+class Task:
 
     def __init__(self, func):
         update_wrapper(self, func)
 
     def __call__(self, *args, **kwargs):
         return self.__wrapped__(*args, **kwargs)
+
+
+task = Task

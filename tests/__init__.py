@@ -14,10 +14,10 @@ sys.path.insert(0, os.path.dirname(test_dir))
 
 class Media:
 
-    def __init__(self, filename, type, category, content_length):
+    def __init__(self, filename, mimetype, category, content_length):
         self.filename = filename
         self.url = "http://static.odrling.xyz/peony/tests/" + filename
-        self.type = type
+        self.type = mimetype
         self.category = category
         self.content_length = content_length
         self._accept_bytes_range = None
@@ -52,31 +52,31 @@ class Media:
 medias = {
     'lady_peony': Media(
         filename="lady_peony.jpg",
-        type="image/jpeg",
+        mimetype="image/jpeg",
         category="tweet_image",
         content_length=302770
     ),
     'pink_queen': Media(
         filename="pink_queen.jpg",
-        type="image/jpeg",
+        mimetype="image/jpeg",
         category="tweet_image",
         content_length=62183
     ),
     'bloom': Media(
         filename="bloom.gif",
-        type="image/gif",
+        mimetype="image/gif",
         category="tweet_gif",
         content_length=503407
     ),
     'video': Media(
         filename="peony.mp4",
-        type="video/mp4",
+        mimetype="video/mp4",
         category="tweet_video",
         content_length=9773437
     ),
     'seismic_waves': Media(
         filename="seismic_waves.png",
-        type="image/png",
+        mimetype="image/png",
         category="tweet_image",
         content_length=43262
     )

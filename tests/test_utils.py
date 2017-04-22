@@ -339,7 +339,7 @@ async def test_optimize_media(event_loop, session, executor):
 
 
 def test_optimize_media_exception():
-    PIL = utils.PIL
+    import PIL
     utils.PIL = None
 
     try:

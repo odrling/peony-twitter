@@ -19,7 +19,9 @@ doc:
 
 install:
 	pip3 install --upgrade pip wheel
-	pip3 install --upgrade -r tests_requirements.txt
+	pip3 install --upgrade -r requirements.txt
+	pip3 install --upgrade -r extras_require.txt
+
 
 dev:
 	pip3 install --upgrade pip wheel

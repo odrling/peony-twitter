@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from types import GeneratorType
 from abc import ABC, abstractmethod
+from types import GeneratorType
 
 from . import iterators
 

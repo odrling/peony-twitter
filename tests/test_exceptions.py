@@ -4,8 +4,8 @@ import json
 from time import time
 
 import pytest
-
 from peony import exceptions
+
 from . import MockResponse
 
 

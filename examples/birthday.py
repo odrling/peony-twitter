@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import asyncio
-import time
 import os
+import time
 
 try:
     from . import peony, api, testdir

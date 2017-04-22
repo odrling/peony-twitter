@@ -2,7 +2,7 @@
 
 import peony
 import peony.api
-from peony.general import twitter_base_api_url, twitter_api_version
+from peony.general import twitter_api_version, twitter_base_api_url
 
 client = peony.BasePeonyClient("", "")
 base_url = twitter_base_api_url.format(api='api', version=twitter_api_version)

@@ -2,8 +2,8 @@
 
 from functools import wraps
 
-from .event_handlers import EventHandler
 from ..utils import get_args
+from .event_handlers import EventHandler
 
 
 def get_value(func):

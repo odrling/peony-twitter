@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-import html
 import asyncio
+import html
 
 try:
     from . import peony, api, testdir

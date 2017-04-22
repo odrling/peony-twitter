@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import pytest
-
 import peony.api
+import pytest
 from peony import BasePeonyClient
 from peony.general import twitter_base_api_url
 

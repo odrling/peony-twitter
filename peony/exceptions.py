@@ -60,6 +60,12 @@ class PeonyException(Exception):
         return self.response.url
 
 
+class PeonyDecodeError(PeonyException):
+
+    def get_message(self):
+        return "Could not decode response %s" % self.data
+
+
 class MediaProcessingError(PeonyException):
     pass
 

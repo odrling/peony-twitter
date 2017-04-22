@@ -500,14 +500,8 @@ async def read(response, loads=loads, encoding=None):
         if "text" in ctype:
             return await response.text(encoding=encoding)
 
-    except UnicodeDecodeError:
-        # I don't think this could happen but to be extra sure
-        # that it wouldn't break everything
-        pass
-
-    except json.JSONDecodeError:
-        # if the data is not correct json
-        # again just to be sure nothing breaks while raising an error
-        pass
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        data = await response.read()
+        raise exceptions.PeonyDecodeError(response=response, data=data)
 
     return await response.read()

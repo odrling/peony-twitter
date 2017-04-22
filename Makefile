@@ -1,4 +1,4 @@
-.PHONY: test doc clean test_deps isort dev
+.PHONY: test doc clean test_deps isort dev pep8
 
 help:
 	@echo "Please use \`make <target>\` where <target> is one of"
@@ -32,3 +32,8 @@ isort:
 	@isort -rc peony > /dev/null
 	@isort -rc tests > /dev/null
 	@isort -rc examples > /dev/null
+
+pep8:
+	@autopep8 -r --in-place peony
+	@autopep8 -r --in-place examples
+	@autopep8 -r --in-place tests

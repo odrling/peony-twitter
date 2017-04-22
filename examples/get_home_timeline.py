@@ -12,6 +12,7 @@ except (SystemError, ImportError):
 
 client = peony.PeonyClient(**api.keys)
 
+
 async def get_home(**params):
     responses = client.api.statuses.home_timeline.get.iterator.with_since_id(
         count=200,
@@ -34,6 +35,7 @@ async def get_home(**params):
 def main():
     loop = asyncio.get_event_loop()
     loop.run_until_complete(get_home())
+
 
 if __name__ == '__main__':
     main()

@@ -189,7 +189,7 @@ def get_args(func, skip=0):
 def format_error(msg=None):
     """
         return a string representing an exception and its traceback
-    
+
     Parameters
     ----------
     msg : :obj:`str`, optional
@@ -461,7 +461,7 @@ async def get_type(media, path=None):
 async def execute(coro):
     """
         run a function or coroutine
-    
+
     Parameters
     ----------
     coro : coroutine or function
@@ -485,7 +485,7 @@ async def read(response, loads=loads, encoding=None):
     encoding : :obj:`str`, optional
         character encoding of the response, if set to None
         aiohttp should guess the right encoding
-    
+
     Returns
     -------
     :obj:`bytes`, :obj:`str`, :obj:`dict` or :obj:`list`

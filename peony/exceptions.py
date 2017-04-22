@@ -3,6 +3,7 @@ from time import time
 
 from . import general, utils
 
+
 async def throw(response, loads=utils.loads,
                 encoding=None, **kwargs):
     """ Get the response data if possible and raise an exception """

@@ -19,7 +19,7 @@ class Handler:
     """
         A decorator, the decorated function is used when the
         event is detected related to this handler is detected
-    
+
     Parameters
     ----------
     event : func
@@ -34,9 +34,9 @@ class Handler:
         return EventHandler(func=func, event=self.event)
 
     def with_prefix(self, prefix, strict=False):
-        """ 
+        """
             decorator to handle commands with prefixes
-        
+
         Parameters
         ----------
         prefix : str
@@ -44,7 +44,7 @@ class Handler:
         strict : :obj:`bool`, optional
             If set to True the command must be at the beginning
             of the message. Defaults to False.
-            
+
         Returns
         -------
         function
@@ -62,7 +62,7 @@ class Event:
     """
         Represents an event, the handler attribute is
         an instance of Handler
-    
+
     Parameters
     ----------
     func : callable
@@ -207,7 +207,7 @@ def retweeted_status(data):
 
 @events.alias(on)
 def tweet(data):
-    return 'text' in data and not 'event' in data
+    return 'text' in data and 'event' not in data
 
 
 @events.alias(on, 'deleted_tweet')
@@ -259,6 +259,7 @@ def too_many_follows(data):
             data.get('warning').get('code') == "FOLLOWS_OVER_LIMIT")
 
 # events, the data looks like; {"event": EVENT_NAME, ...}
+
 
 @events.event
 def access_revoked():

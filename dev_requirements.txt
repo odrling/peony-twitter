@@ -1,0 +1,4 @@
+-r tests_requirements.txt
+autopep8
+isort
+pytest-sugar

@@ -4,12 +4,12 @@
 def doc(func):
     """
         Find the message shown when someone calls the help command
-    
+
     Parameters
     ----------
     func : function
         the function
-    
+
     Returns
     -------
     str
@@ -28,7 +28,8 @@ def doc(func):
     return ""
 
 
-def permission_check(data, command_permissions, command=None, permissions=None):
+def permission_check(data, command_permissions,
+                     command=None, permissions=None):
     """
         Check the permissions of the user requesting a command
 
@@ -43,7 +44,7 @@ def permission_check(data, command_permissions, command=None, permissions=None):
         the command that is run
     permissions : :obj:`tuple`, :obj:`list`
         a list of permissions for the command
-    
+
     Returns
     -------
     bool
@@ -68,7 +69,7 @@ def permission_check(data, command_permissions, command=None, permissions=None):
 def restart_on(exc):
     """
         restart a function every time the `exc` exception is raised
-        
+
     Parameters
     ----------
     exc : Exception

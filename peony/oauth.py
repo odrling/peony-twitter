@@ -23,7 +23,7 @@ class PeonyHeaders(ABC, dict):
 
     This is the base class of :class:`OAuth1Headers` and
     :class:`OAuth2Headers`.
-    
+
     Parameters
     ----------
     compression : :obj:`bool`, optional

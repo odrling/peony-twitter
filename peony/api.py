@@ -97,7 +97,7 @@ class AbstractAPIPath(ABC):
     def _request(self, method):
         """
             Make a request for the endpoint
-        
+
         Parameters
         ----------
         method : str

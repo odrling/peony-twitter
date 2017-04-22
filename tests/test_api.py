@@ -15,6 +15,7 @@ url = twitter_base_api_url + "/test/endpoint.json"
 
 # fixture functions
 
+
 @pytest.fixture
 def api():
     return peony.api.APIPath([twitter_base_api_url], '.json', client)
@@ -28,7 +29,6 @@ def streaming():
 @pytest.fixture
 def endpoint(api):
     return api.test.endpoint
-
 
 
 # test functions

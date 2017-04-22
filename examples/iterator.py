@@ -14,11 +14,7 @@ def print_data(func):
 
     def decorated(self, tweet):
         if self.last_tweet_id < tweet.id:
-            #print(func(self, tweet) + "\n" + "-"*10)
-
-            self.last_tweet_id = tweet.id
-        else:
-            print("nooo")
+            print(func(self, tweet) + "\n" + "-" * 10)
 
     return decorated
 

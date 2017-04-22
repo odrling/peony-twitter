@@ -126,9 +126,11 @@ class Commands(Functions):
             kdoc = [
                 (key, utils.doc(value))
                 for key, value in self.items()
-                if utils.permission_check(data,
-                                          command_permissions=_self.permissions,
-                                          command=value)
+                if utils.permission_check(
+                    data,
+                    command_permissions=_self.permissions,
+                    command=value
+                )
             ]
 
             kdoc.sort(key=self._key)

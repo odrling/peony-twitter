@@ -127,14 +127,18 @@ class MockIteratorRequest:
     def __init__(self, ids=range(1000)):
         self.ids = ids
 
-    async def __call__(self, since_id=None, max_id=None, cursor=None, count=10):
+    async def __call__(self,
+                       since_id=None,
+                       max_id=None,
+                       cursor=None,
+                       count=10):
         if max_id is not None:
             if max_id < 0:
                 return []
 
-            max_id = min(max_id, len(self.ids)-1)
+            max_id = min(max_id, len(self.ids) - 1)
 
-            end = max_id-count
+            end = max_id - count
             if since_id is not None and end < since_id:
                 end = since_id
 
@@ -147,11 +151,11 @@ class MockIteratorRequest:
             if cursor == -1:
                 cursor = 0
 
-            next_cursor = cursor+count
+            next_cursor = cursor + count
             if next_cursor >= len(self.ids):
                 next_cursor = 0
 
-            return {'ids': self.ids[cursor:cursor+count],
+            return {'ids': self.ids[cursor:cursor + count],
                     'next_cursor': next_cursor}
 
         else:

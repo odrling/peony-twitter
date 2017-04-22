@@ -59,8 +59,8 @@ async def test_rate_limit():
         response = MockResponse(error=88, headers=headers)
         await exceptions.throw(response)
     except exceptions.RateLimitExceeded as e:
-        assert int(t+50) == e.reset
-        assert int(t+50) == round(t+e.reset_in)
+        assert int(t + 50) == e.reset
+        assert int(t + 50) == round(t + e.reset_in)
     finally:
         exceptions.time = time
 

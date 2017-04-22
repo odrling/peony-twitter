@@ -142,7 +142,7 @@ async def test_error_handler_asyncio_timeout():
 
     async def timeout(**kwargs):
         global tries
-        tries -=1
+        tries -= 1
 
         if tries > 0:
             raise asyncio.TimeoutError

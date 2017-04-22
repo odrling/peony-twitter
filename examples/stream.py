@@ -14,7 +14,7 @@ def print_data(func):
 
     def decorated(self, tweet):
         if self.last_tweet_id < tweet.id:
-            print(func(self, tweet) + "\n" + "-"*10)
+            print(func(self, tweet) + "\n" + "-" * 10)
 
             self.last_tweet_id = tweet.id
 
@@ -83,7 +83,7 @@ class UserStream(peony.EventStream):
     def direct_message(self, data):
         dm = data.direct_message
         text = html.unescape(dm.text)
-        fmt = "@{sender} → @{recipient}: {text}\n" + "-"*10
+        fmt = "@{sender} → @{recipient}: {text}\n" + "-" * 10
         print(fmt.format(sender=dm.sender.screen_name,
                          recipient=dm.recipient.screen_name,
                          text=text))
@@ -92,11 +92,12 @@ class UserStream(peony.EventStream):
     def on_favorite(self, data):
         if data.source.id != self.user.id:
             print(data.source.screen_name, "favorited:",
-                  html.unescape(data.target_object.text) + "\n" + "-"*10)
+                  html.unescape(data.target_object.text) + "\n" + "-" * 10)
 
     @peony.events.default.handler
     def default(self, data):
-        print(pprint.pformat(data), "\n" + "-"*10)
+        print(pprint.pformat(data), "\n" + "-" * 10)
+
 
 if __name__ == '__main__':
     client = Home(**api.keys)

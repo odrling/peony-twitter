@@ -12,6 +12,7 @@ except (SystemError, ImportError):
 
 client = peony.PeonyClient(**api.keys)
 
+
 async def set_avi(path):
     with open(path, 'rb') as avi:
         avib64 = base64.b64encode(avi.read()).decode('utf-8')
@@ -25,6 +26,7 @@ def main():
 
     loop = asyncio.get_event_loop()
     loop.run_until_complete(set_avi(path))
+
 
 if __name__ == '__main__':
     main()

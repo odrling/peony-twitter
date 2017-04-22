@@ -11,7 +11,7 @@ iterable = (list, set, tuple, GeneratorType)
 class Endpoint():
     """
         A class representing an endpoint
-    
+
     Parameters
     ----------
     api : api.AbstractAPIPath

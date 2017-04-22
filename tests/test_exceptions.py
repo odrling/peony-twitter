@@ -57,3 +57,11 @@ async def test_rate_limit():
         await exceptions.throw(response)
     except exceptions.RateLimitExceeded as e:
         assert e.reset - time() == pytest.approx(e.reset_in, rel=0.001)
+
+
+@pytest.mark.asyncio
+async def test_peony_exception():
+    with pytest.raises(exceptions.PeonyException):
+        # there is no error 0 this should raise a generic PeonyException
+        response = MockResponse(error=0)
+        await exceptions.throw(response)

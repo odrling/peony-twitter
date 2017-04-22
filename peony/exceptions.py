@@ -26,7 +26,6 @@ async def throw(response, loads=utils.loads,
         exception = statuses[response.status]
         raise exception(response=response, data=data, **kwargs)
 
-    print(type(data))
     # raise PeonyException if no specific exception was found
     raise PeonyException(response=response, data=data, **kwargs)
 

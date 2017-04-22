@@ -5,6 +5,7 @@ import io
 import mimetypes
 import os
 import tempfile
+import json
 import traceback
 from concurrent.futures import ProcessPoolExecutor
 from functools import wraps
@@ -421,3 +422,43 @@ async def test_get_media_metadata_bytes(session):
 async def test_get_media_metadata_exception():
     with pytest.raises(TypeError):
         await utils.get_media_metadata([])
+
+
+@pytest.mark.asyncio
+async def test_read(json_data):
+    response = MockResponse(data=MockResponse.message,
+                            content_type="text/plain")
+    assert await utils.read(response) == MockResponse.message
+
+    response = MockResponse(data=json.dumps(json_data),
+                            content_type="application/json")
+
+    data = await utils.read(response)
+    assert all(data[key] == json_data[key]
+               for key in {*data.keys(), *json_data.keys()})
+
+    response = MockResponse(data=MockResponse.message,
+                            content_type="application/octet-stream")
+    assert await utils.read(response) == MockResponse.message.encode()
+
+
+@pytest.mark.asyncio
+async def test_read_decode_error():
+    response = MockResponse(data=b'\x80', content_type="text/plain")
+    try:
+        await utils.read(response, encoding='utf-8')
+    except exceptions.PeonyDecodeError as exc:
+        assert exc.data == b'\x80'
+    else:
+        pytest.fail("Did not raise PeonyDecoderError")
+
+
+@pytest.mark.asyncio
+async def test_read_json_decode_error():
+    response = MockResponse(data='{', content_type="application/json")
+    try:
+        await utils.read(response, encoding='utf-8')
+    except exceptions.PeonyDecodeError as exc:
+        assert exc.data == b'{'
+    else:
+        pytest.fail("Did not raise PeonyDecoderError")

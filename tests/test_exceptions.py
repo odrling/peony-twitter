@@ -37,14 +37,14 @@ async def test_error():
 
 @pytest.mark.asyncio
 async def test_unicode_decode_error():
-    with pytest.raises(exceptions.PeonyException):
+    with pytest.raises(exceptions.PeonyDecodeError):
         response = MockResponse(b"\x80")
         await exceptions.throw(response)
 
 
 @pytest.mark.asyncio
 async def test_json_decode_error():
-    with pytest.raises(exceptions.PeonyException):
+    with pytest.raises(exceptions.PeonyDecodeError):
         response = MockResponse(b"{")
         await exceptions.throw(response)
 

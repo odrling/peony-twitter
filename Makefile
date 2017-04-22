@@ -8,7 +8,7 @@ help:
 	@echo "  clean      to clean the repository"
 
 clean:
-	@rm -rf build dist .cache .coverage .tox
+	@rm -rf build dist .cache .coverage* .tox
 	@rm -rf *.egg-info
 	@python3 setup.py clean --all > /dev/null 2> /dev/null
 

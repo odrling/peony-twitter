@@ -543,8 +543,8 @@ class PeonyClient(BasePeonyClient):
         """
         formats = formats or general.formats
 
-        image_metadata = await utils.get_image_metadata(file_)
-        media_type, media_category, is_image, file_ = image_metadata
+        media_metadata = await utils.get_media_metadata(file_)
+        media_type, media_category, is_image, file_ = media_metadata
 
         if hasattr(file_, 'read'):
             media = file_

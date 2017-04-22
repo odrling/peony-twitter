@@ -265,7 +265,6 @@ def convert(img, formats):
         f = io.BytesIO()
         img.save(f, **kwargs)
         size = f.tell()
-        assert size > 0
 
         if media is None or size < min_size:
             if media is not None:
@@ -347,40 +346,15 @@ def reset_io(func):
     return decorated
 
 
-async def get_media_metadata(media, name=None):
-    """
-        Get the metadata of the file
-
-    Parameters
-    ----------
-    media : file
-        The file to analyze
-    name : str, optional
-        name of the file (used with builtin mimetype module)
-
-    Returns
-    -------
-    str
-        The mimetype of the media
-    str
-        The category of the media on Twitter
-    bool
-        Tell whether this file is an image or a video
-    """
-    media_type, media_category = await get_type(media, name)
-    is_image = media_type.startswith('image')
-
-    return media_type, media_category, is_image
-
-
-async def get_image_metadata(file_):
+async def get_media_metadata(file_):
     """
         Get all the file's metadata and read any kind of file object
 
     Parameters
     ----------
-    file_ : file object
-        A file object of the image
+    file_ : :obj:`str`, :obj:`bytes` or file object
+        A filename, binary data or file object corresponding to
+        the media
 
     Returns
     -------
@@ -390,7 +364,7 @@ async def get_image_metadata(file_):
         The category of the media on Twitter
     bool
         Tell whether this file is an image or a video
-    str
+    :obj:`str` or file object
         Path to the file
     """
     # try to get the path no matter what the input is
@@ -401,16 +375,23 @@ async def get_image_metadata(file_):
         file_ = urlparse(file_).path.strip(" \"'")
 
         original = await execute(open(file_, 'rb'))
-        media_metadata = await get_media_metadata(original, file_)
+        media_type, media_category = await get_type(original, file_)
         await execute(original.close())
 
     elif hasattr(file_, 'read'):
-        media_metadata = await get_media_metadata(file_)
+        media_type, media_category = await get_type(file_)
+
+    elif isinstance(file_, bytes):
+        file_ = io.BytesIO(file_)
+        media_type, media_category = await get_type(file_)
+
     else:
         raise TypeError("upload_media input must be a file object or a"
-                        "filename")
+                        "filename or binary data")
 
-    return (*media_metadata, file_)
+    is_image = media_type.startswith('image')
+
+    return media_type, media_category, is_image, file_
 
 
 async def get_size(media):
@@ -430,6 +411,7 @@ async def get_size(media):
     await execute(media.seek(0, os.SEEK_END))
     size = await execute(media.tell())
     await execute(media.seek(0))
+    return size
 
 
 @reset_io

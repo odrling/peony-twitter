@@ -74,7 +74,7 @@ medias = {
         category="tweet_video",
         content_length=9773437
     ),
-    'seismic waves': Media(
+    'seismic_waves': Media(
         filename="seismic_waves.png",
         type="image/png",
         category="tweet_image",

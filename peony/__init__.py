@@ -18,5 +18,5 @@ __license__ = "MIT License"
 
 __keywords__ = "twitter, asyncio, asynchronous"
 
-from .client import BasePeonyClient, PeonyClient
-from .commands import EventStream, event_handler, events, task
+from .client import BasePeonyClient, PeonyClient  # noqa
+from .commands import EventStream, event_handler, events, task  # noqa

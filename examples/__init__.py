@@ -5,9 +5,9 @@ import sys
 
 try:
     try:
-        from . import api
+        from . import api  # noqa
     except (SystemError, ImportError):
-        import api
+        import api  # noqa
 except ImportError:
     print("You must set your keys in the file example/api.py."
           "\nCopy/paste the file api_example.py and set your "
@@ -21,5 +21,7 @@ testdir = os.path.dirname(file_)
 
 sys.path.insert(0, os.path.dirname(testdir))
 
-import peony
-print("peony v" + peony.__version__)
+import peony  # noqa
+msg = "peony v" + peony.__version__
+msg += "\n" + "-" * len(msg)
+print(msg)

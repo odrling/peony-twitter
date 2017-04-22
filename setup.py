@@ -22,9 +22,7 @@ def get_metadata(metadatafile):
         ex = r'"{3}[^\w]*(?P<name>[^\s]*)[^\w]+(?P<description>.*)'
         match = re.search(ex, text)
 
-        package_info = {key: value.strip()
-                        for key, value in match.groupdict().items()}
-        metadata.update(re.search(ex, text).groupdict())
+        metadata.update(match.groupdict())
 
     return metadata
 

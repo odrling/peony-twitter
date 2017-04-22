@@ -10,7 +10,7 @@ import sys
 import traceback
 from urllib.parse import urlparse
 
-from . import exceptions, general
+from . import exceptions
 
 try:
     import PIL.Image

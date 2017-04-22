@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import asyncio
-from urllib.parse import unquote
 
 try:
-    from . import peony, api, testdir
+    from . import peony, api
 except (SystemError, ImportError):
-    from __init__ import peony, testdir
+    from __init__ import peony
     import api
 
 loop = asyncio.get_event_loop()

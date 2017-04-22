@@ -277,11 +277,6 @@ def unfollow():
 
 
 @events.event
-def access_revoked():
-    pass
-
-
-@events.event
 def block():
     pass
 

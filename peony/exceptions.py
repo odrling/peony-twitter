@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from time import time
 
-from . import general, utils
+from . import utils
 
 
 async def throw(response, loads=utils.loads,

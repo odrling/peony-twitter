@@ -1,4 +1,4 @@
-.PHONY: test doc clean test_deps isort dev pep8
+.PHONY: test doc clean test_deps dev format
 
 help:
 	@echo "Please use \`make <target>\` where <target> is one of"
@@ -30,12 +30,10 @@ dev:
 test:
 	py.test --cov=peony --cov-report term-missing -v tests
 
-isort:
+format:
 	@isort -rc peony > /dev/null
 	@isort -rc tests > /dev/null
 	@isort -rc examples > /dev/null
-
-pep8:
 	@autopep8 -r --in-place peony
 	@autopep8 -r --in-place examples
 	@autopep8 -r --in-place tests

@@ -10,6 +10,7 @@ import tempfile
 import traceback
 from concurrent.futures import ProcessPoolExecutor
 from functools import wraps
+from unittest.mock import patch
 
 import aiohttp
 import pytest
@@ -23,17 +24,12 @@ def builtin_mimetypes(func):
 
     @wraps(func)
     async def decorated(session):
-        magic = utils.magic
-        mime = utils.mime
+        with patch.object(utils, 'magic') as magic:
+            magic.__bool__.return_value = False
+            with patch.object(utils, 'mime') as mime:
+                mime.guess_type.side_effect = mimetypes.MimeTypes().guess_type
 
-        utils.magic = None
-        utils.mime = mimetypes.MimeTypes()
-
-        try:
-            await func(session)
-        finally:
-            utils.magic = magic
-            utils.mime = mime
+                await func(session)
 
     return decorated
 
@@ -339,14 +335,10 @@ async def test_optimize_media(event_loop, session, executor):
 
 
 def test_optimize_media_exception():
-    import PIL
-    utils.PIL = None
-
-    try:
+    with patch.object(utils, 'PIL', return_value=None) as mocked:
+        mocked.__bool__.return_value = False
         with pytest.raises(RuntimeError):
             utils.optimize_media(io.BytesIO(), (100, 100), [])
-    finally:
-        utils.PIL = PIL
 
 
 @pytest.mark.asyncio

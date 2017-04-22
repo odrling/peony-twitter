@@ -2,6 +2,7 @@
 
 import json
 from time import time
+from unittest.mock import patch
 
 import pytest
 from peony import exceptions
@@ -52,17 +53,19 @@ async def test_json_decode_error():
 @pytest.mark.asyncio
 async def test_rate_limit():
     t = time()
-    exceptions.time = lambda: t
 
-    try:
-        headers = {'X-Rate-Limit-Reset': t + 50}
-        response = MockResponse(error=88, headers=headers)
-        await exceptions.throw(response)
-    except exceptions.RateLimitExceeded as e:
-        assert int(t + 50) == e.reset
-        assert int(t + 50) == round(t + e.reset_in)
-    finally:
-        exceptions.time = time
+    with patch.object(exceptions, 'time', return_value=t):
+        try:
+            headers = {'X-Rate-Limit-Reset': t + 50}
+            response = MockResponse(error=88, headers=headers)
+            await exceptions.throw(response)
+
+        except exceptions.RateLimitExceeded as e:
+            assert int(t + 50) == e.reset
+            assert int(t + 50) == round(t + e.reset_in)
+
+        else:
+            pytest.fail("RateLimitExceeded wasn't raised")
 
 
 @pytest.mark.asyncio

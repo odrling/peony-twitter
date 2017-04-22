@@ -449,6 +449,7 @@ async def test_read_decode_error():
         await utils.read(response, encoding='utf-8')
     except exceptions.PeonyDecodeError as exc:
         assert exc.data == b'\x80'
+        assert isinstance(exc.exception, UnicodeDecodeError)
     else:
         pytest.fail("Did not raise PeonyDecoderError")
 
@@ -460,5 +461,6 @@ async def test_read_json_decode_error():
         await utils.read(response, encoding='utf-8')
     except exceptions.PeonyDecodeError as exc:
         assert exc.data == b'{'
+        assert isinstance(exc.exception, json.JSONDecodeError)
     else:
         pytest.fail("Did not raise PeonyDecoderError")

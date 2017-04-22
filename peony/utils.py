@@ -500,8 +500,10 @@ async def read(response, loads=loads, encoding=None):
         if "text" in ctype:
             return await response.text(encoding=encoding)
 
-    except (UnicodeDecodeError, json.JSONDecodeError):
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         data = await response.read()
-        raise exceptions.PeonyDecodeError(response=response, data=data)
+        raise exceptions.PeonyDecodeError(response=response,
+                                          data=data,
+                                          exception=exc)
 
     return await response.read()

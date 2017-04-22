@@ -62,8 +62,12 @@ class PeonyException(Exception):
 
 class PeonyDecodeError(PeonyException):
 
+    def __init__(self, exception, *args, **kwargs):
+        self.exception = exception
+        super().__init__(*args, **kwargs)
+
     def get_message(self):
-        return "Could not decode response %s" % self.data
+        return "Could not decode response data:\n%s" % self.data
 
 
 class MediaProcessingError(PeonyException):

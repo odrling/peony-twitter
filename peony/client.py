@@ -155,9 +155,6 @@ class BasePeonyClient:
         self.__setup = {'event': asyncio.Event(),
                         'state': False}
 
-        if not self.loop.is_running():
-            self.loop.run_until_complete(self.setup())
-
     async def setup(self):
         """
             set up the client on the first request
@@ -244,7 +241,7 @@ class BasePeonyClient:
             # close is None for Python 3.5 here (?)
             try:
                 self._session.close()
-            except TypeError:
+            except (TypeError, AttributeError):
                 pass
 
     async def request(self, method, url,

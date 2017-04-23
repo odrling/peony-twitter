@@ -10,7 +10,9 @@ import urllib.parse
 from abc import ABC, abstractmethod
 from hashlib import sha1
 
-from . import __version__
+import aiohttp
+
+from . import __version__, utils
 
 
 def quote(s):
@@ -56,10 +58,10 @@ class PeonyHeaders(ABC, dict):
     def __setitem__(self, key, value):
         super().__setitem__(key.title(), value)
 
-    def prepare_request(self, method, url,
-                        headers=None,
-                        skip_params=False,
-                        **kwargs):
+    async def prepare_request(self, method, url,
+                              headers=None,
+                              skip_params=False,
+                              **kwargs):
         """
         prepare all the arguments for the request
 
@@ -92,12 +94,9 @@ class PeonyHeaders(ABC, dict):
 
         request_params.update(dict(method=method.upper(), url=url))
 
-        request_params['headers'] = self.sign(**request_params,
-                                              skip_params=skip_params,
-                                              headers=headers)
-
-        if headers is not None:
-            request_params['headers'].update(headers)
+        coro = self.sign(**request_params, skip_params=skip_params,
+                         headers=headers)
+        request_params['headers'] = await utils.execute(coro)
 
         kwargs.update(request_params)
 
@@ -108,16 +107,14 @@ class PeonyHeaders(ABC, dict):
         h = self.copy()
 
         if headers is not None:
-            for key in set(headers.keys()) - {'Authorization'}:
+            keys = set(headers.keys())
+            if h.get('Authorization', False):
+                keys -= {'Authorization'}
+
+            for key in keys:
                 h[key] = headers[key]
 
         return h
-
-    @abstractmethod
-    async def prepare_headers(self):
-        """
-            prepare the headers, after creating an instance of PeonyHeaders
-        """
 
     @abstractmethod
     def sign(self, *args, headers=None, **kwargs):
@@ -158,9 +155,6 @@ class OAuth1Headers(PeonyHeaders):
         self.access_token_secret = access_token_secret
 
         self.alphabet = string.ascii_letters + string.digits
-
-    async def prepare_headers(self):
-        """ There is nothing to do for OAuth1 headers """
 
     def sign(self, method='GET', url=None,
              data=None,
@@ -269,51 +263,79 @@ class OAuth2Headers(PeonyHeaders):
         self.consumer_secret = consumer_secret
         self.client = client
         self.basic_authorization = self.get_basic_authorization()
-        self._refreshed = asyncio.Event()
+        self._refreshing = asyncio.Event()
+        self._refreshing.clear()
 
         if bearer_token is not None:
             self.set_token(bearer_token)
 
-    async def prepare_headers(self):
-        if 'Authorization' not in self:
+    async def sign(self, url=None, headers=None, **kwargs):
+        if url == self.client['api', '', ''].oauth2.invalidate_token.url():
+            pass
+        elif 'Authorization' not in self:
             await self.refresh_token()
-
-    async def sign(self, headers=None, **kwargs):
-        self.prepare_headers()
 
         return self._user_headers(headers)
 
     def get_basic_authorization(self):
-        encoded_keys = map(quote, (self.consumer_key, self.consumer_secret))
-        creds = ':'.join(encoded_keys).encode('utf-8')
+        creds = quote(self.consumer_key), quote(self.consumer_secret)
+        keys = ':'.join(creds).encode('utf-8')
 
-        auth = "Basic " + base64.b64encode(creds).decode('utf-8')
+        auth = "Basic " + base64.b64encode(keys).decode('utf-8')
 
-        return {'Authorization': auth}
+        return {'Authorization': auth,
+                'Content-Type': "application/x-www-form-urlencoded;"
+                                "charset=UTF-8"}
 
     def set_token(self, access_token):
         self['Authorization'] = "Bearer " + access_token
 
-    async def invalidate_token(self, token=None):
-        token = token or self.pop('Authorization')[len("Bearer "):]
+    async def invalidate_token(self):
+        if 'Authorization' not in self:
+            raise RuntimeError('There is no token to invalidate')
+
+        token = self.pop('Authorization')[len("Bearer "):]
         request = self.client['api', '', ''].oauth2.invalidate_token.post
-        await request(access_token=token, _headers=self.basic_authorization)
+
+        data = RawFormData({'access_token': token}, quote_fields=False)
+
+        await request(_data=data, _headers=self.basic_authorization)
 
     async def refresh_token(self):
-        if not self._refreshed.is_set():
-            return await self._refreshed.wait()
+        if self._refreshing.is_set():
+            return await self._refreshing.wait()
 
-        self._refreshed.clear()
+        self._refreshing.set()
 
         if 'Authorization' in self:
             await self.invalidate_token()
 
         request = self.client['api', "", ""].oauth2.token.post
         token = await request(grant_type="client_credentials",
-                              _headers=self.basic_authorization,
-                              _json=True,
-                              _is_init_task=True)
+                              _headers=self.basic_authorization)
 
         self.set_token(token['access_token'])
 
-        self._refreshed.set()
+        self._refreshing.clear()
+
+
+class RawFormData(aiohttp.FormData):
+
+    def _gen_form_urlencoded(self):
+        data = ""
+        for type_options, _, value in self._fields:
+            if data:
+                data += "&%s=%s" % (type_options['name'], value)
+            else:
+                data += "%s=%s" % (type_options['name'], value)
+
+        charset = self._charset if self._charset is not None else 'utf-8'
+
+        if charset == 'utf-8':
+            content_type = 'application/x-www-form-urlencoded'
+        else:
+            content_type = ('application/x-www-form-urlencoded; '
+                            'charset=%s' % charset)
+
+        return aiohttp.payload.BytesPayload(data.encode(),
+                                            content_type=content_type)

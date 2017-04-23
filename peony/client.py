@@ -168,10 +168,6 @@ class BasePeonyClient:
             if self._session is None:
                 self._session = aiohttp.ClientSession()
 
-            prepare_headers = self.headers.prepare_headers()
-            if prepare_headers is not None:
-                await prepare_headers
-
             self.__setup['event'].set()
 
             if callable(self.init_tasks):
@@ -278,7 +274,7 @@ class BasePeonyClient:
         await self.setup()
 
         # prepare request arguments, particularly the headers
-        req_kwargs = self.headers.prepare_request(
+        req_kwargs = await self.headers.prepare_request(
             method=method,
             url=url,
             headers=headers,

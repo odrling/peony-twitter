@@ -200,10 +200,9 @@ def oauth_dance(consumer_key, consumer_secret,
     return loop.run_until_complete(coro)
 
 
-def oauth2_dance(consumer_key, consumer_secret):
+def oauth2_dance(consumer_key, consumer_secret, loop=None):
     """
-        oauth2 dance actually dealt with on creation of
-        :class:`peony.PeonyClient`
+        oauth2 dance
 
     Parameters
     ----------
@@ -217,7 +216,10 @@ def oauth2_dance(consumer_key, consumer_secret):
     str
         Bearer token
     """
-    client = PeonyClient(consumer_key=consumer_key,
-                         consumer_secret=consumer_secret,
-                         auth=oauth.OAuth2Headers)
+    loop = asyncio.get_event_loop() if loop is None else loop
+    client = BasePeonyClient(consumer_key=consumer_key,
+                             consumer_secret=consumer_secret,
+                             auth=oauth.OAuth2Headers)
+
+    loop.run_until_complete(client.headers.sign())
     return client.headers['Authorization'][len("Bearer "):]

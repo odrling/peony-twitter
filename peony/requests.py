@@ -97,9 +97,10 @@ class AbstractRequest(ABC, Endpoint):
         kwargs = {key[1:]: value for key, value in kwargs.items()
                   if key.startswith("_")}
 
-        if method.lower() == "post":
+        if method == "post" and not kwargs.get('data', None) and params:
             kwargs['data'] = params  # post requests use the data argument
-        else:
+
+        elif not kwargs.get('params', None) and params:
             kwargs['params'] = params
 
         return kwargs, skip_params

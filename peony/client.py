@@ -186,7 +186,6 @@ class BasePeonyClient:
 
     def init_tasks(self):
         """ tasks executed on initialization """
-        pass
 
     def __getitem__(self, values):
         """

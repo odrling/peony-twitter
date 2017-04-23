@@ -6,7 +6,7 @@ help:
 	@echo "  test       to test peony"
 	@echo "  doc        to make the documentation (html)"
 	@echo "  clean      to clean the repository"
-	@echo "  isort      to run isort on the project"
+	@echo "  format     to correct code style"
 
 clean:
 	@rm -rf build dist .cache .coverage* .tox
@@ -31,9 +31,6 @@ test:
 	py.test --flake8 --cov=peony --cov-report term-missing -v tests
 
 format:
-	@isort -rc peony > /dev/null
-	@isort -rc tests > /dev/null
-	@isort -rc examples > /dev/null
-	@autopep8 -r --in-place peony
-	@autopep8 -r --in-place examples
-	@autopep8 -r --in-place tests
+	@isort -rc examples peony tests > /dev/null
+	@autopep8 -r --in-place examples peony tests
+	@autoflake -r --in-place examples peony tests

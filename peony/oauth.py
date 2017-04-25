@@ -208,7 +208,7 @@ class OAuth1Headers(PeonyHeaders):
     def gen_signature(self, method, url, params, skip_params, oauth):
         signature = method.upper() + "&" + quote(url) + "&"
 
-        if skip_params:
+        if params is None or skip_params:
             params = oauth
         else:
             params.update(oauth)

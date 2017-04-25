@@ -8,7 +8,6 @@ import pytest
 from peony import BasePeonyClient, oauth
 from peony.general import twitter_api_version, twitter_base_api_url
 
-
 oauth2_keys = 'PEONY_CONSUMER_KEY', 'PEONY_CONSUMER_SECRET'
 oauth2 = all(key in os.environ for key in oauth2_keys)
 

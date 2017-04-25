@@ -206,7 +206,7 @@ class OAuth1Headers(PeonyHeaders):
         return ''.join(random.choice(self.alphabet) for i in range(32))
 
     def gen_signature(self, method, url, params, skip_params, oauth):
-        signature = method.upper() + "&" + quote(url) + "&"
+        signature = method.upper() + '&' + quote(url) + '&'
 
         if params is None or skip_params:
             params = oauth
@@ -217,20 +217,21 @@ class OAuth1Headers(PeonyHeaders):
 
         for key, value in sorted(params.items(), key=lambda i: i[0]):
             if param_string:
-                param_string += "&"
+                param_string += '&'
+
+            param_string += quote(key) + '='
 
             if key == "q":
                 encoded_value = urllib.parse.quote(value, safe="$:!?/()'*@")
-                param_string += quote(key) + "=" + encoded_value
+                param_string += encoded_value
             else:
-                param_string += quote(key) + "=" + quote(value)
+                param_string += quote(value)
 
         signature += quote(param_string)
 
         key = quote(self.consumer_secret).encode() + b"&"
         if self.access_token_secret is not None:
             key += quote(self.access_token_secret).encode()
-
         signature = hmac.new(key, signature.encode(), sha1)
 
         signature = base64.b64encode(signature.digest()).decode().rstrip("\n")

@@ -28,7 +28,7 @@ dev:
 	pip3 install --upgrade -r dev_requirements.txt
 
 test:
-	py.test --flake8 --cov=peony --cov-report term-missing -v tests
+	py.test --flake8 --cov=peony --cov-report term-missing tests
 
 format:
 	@isort -rc examples peony tests > /dev/null

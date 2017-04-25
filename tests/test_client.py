@@ -24,11 +24,7 @@ def test_create_endpoint():
 
 
 def oauth2_decorator(func):
-    decorator = pytest.mark.skipif(not oauth2, reason="no credentials found")(
-        pytest.mark.asyncio
-    )
-
-    return decorator(func)
+    return pytest.mark.skipif(not oauth2, reason="no credentials found")(func)
 
 
 def get_oauth2_client(**kwargs):
@@ -42,6 +38,7 @@ def oauth2_client(event_loop):
         return get_oauth2_client(loop=event_loop)
 
 
+@pytest.mark.asyncio
 @oauth2_decorator
 async def test_oauth2_get_token(oauth2_client):
     if 'Authorization' in oauth2_client.headers:
@@ -50,17 +47,20 @@ async def test_oauth2_get_token(oauth2_client):
     await oauth2_client.headers.sign()
 
 
+@pytest.mark.asyncio
 @oauth2_decorator
 async def test_oauth2_request(oauth2_client):
     await oauth2_client.api.search.tweets.get(q="@twitter hello :)")
 
 
+@pytest.mark.asyncio
 @oauth2_decorator
 async def test_oauth2_invalidate_token(oauth2_client):
     await oauth2_client.headers.sign()  # make sure there is a token
     await oauth2_client.headers.invalidate_token()
 
 
+@pytest.mark.asyncio
 @oauth2_decorator
 async def test_oauth2_bearer_token(oauth2_client, event_loop):
     await oauth2_client.headers.sign()

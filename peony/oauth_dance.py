@@ -210,6 +210,8 @@ def oauth2_dance(consumer_key, consumer_secret, loop=None):
         Your consumer key
     consumer_secret : str
         Your consumer secret
+    loop : :class:`asyncio.EventLoop`, optional
+        event loop to use
 
     Returns
     -------
@@ -222,4 +224,4 @@ def oauth2_dance(consumer_key, consumer_secret, loop=None):
                              auth=oauth.OAuth2Headers)
 
     loop.run_until_complete(client.headers.sign())
-    return client.headers['Authorization'][len("Bearer "):]
+    return client.headers.token

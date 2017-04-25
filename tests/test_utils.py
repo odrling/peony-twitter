@@ -175,10 +175,7 @@ def test_get_args():
     assert utils.get_args(test, skip=3) == tuple()
 
 
-def test_log_error():
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.WARNING)
-
+def setup_logger(logger):
     warning = io.StringIO()
     h = logging.StreamHandler(stream=warning)
     h.setLevel(logging.WARNING)
@@ -189,10 +186,18 @@ def test_log_error():
     h.setLevel(logging.DEBUG)
     logger.addHandler(h)
 
+    return warning, debug
+
+
+def test_log_error():
+    logger = logging.getLogger(__name__)
+    warning, debug = setup_logger(logger)
+
     try:
         raise RuntimeError
 
     except RuntimeError:
+        logger.setLevel(logging.WARNING)
         utils.log_error(MockResponse.message, logger=logger)
 
         warning.seek(0)
@@ -208,6 +213,22 @@ def test_log_error():
         output = debug.read()
         assert traceback.format_exc().strip() in output
         assert MockResponse.message in output
+
+
+def test_log_error_default_logger():
+    logger = logging.getLogger('peony.utils')
+    logger.setLevel(logging.WARNING)
+
+    warning, _ = setup_logger(logger)
+
+    try:
+        raise RuntimeError
+
+    except RuntimeError:
+        utils.log_error(MockResponse.message)
+
+        warning.seek(0)
+        assert MockResponse.message in warning.read()
 
 
 def test_loads():

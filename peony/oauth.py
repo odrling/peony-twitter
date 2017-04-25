@@ -267,7 +267,7 @@ class OAuth2Headers(PeonyHeaders):
         self._refreshing.clear()
 
         if bearer_token is not None:
-            self.set_token(bearer_token)
+            self.token = bearer_token
 
     async def sign(self, url=None, headers=None, **kwargs):
         if url == self.client['api', '', ''].oauth2.invalidate_token.url():
@@ -287,19 +287,33 @@ class OAuth2Headers(PeonyHeaders):
                 'Content-Type': "application/x-www-form-urlencoded;"
                                 "charset=UTF-8"}
 
-    def set_token(self, access_token):
+    @property
+    def token(self):
+        if 'Authorization' in self:
+            return self['Authorization'][len("Bearer "):]
+
+    @token.setter
+    def token(self, access_token):
         self['Authorization'] = "Bearer " + access_token
+
+    @token.deleter
+    def token(self):
+        del self['Authorization']
 
     async def invalidate_token(self):
         if 'Authorization' not in self:
             raise RuntimeError('There is no token to invalidate')
 
-        token = self.pop('Authorization')[len("Bearer "):]
-        request = self.client['api', '', ''].oauth2.invalidate_token.post
+        token = self.token
+        del self.token
 
-        data = RawFormData({'access_token': token}, quote_fields=False)
+        try:
+            request = self.client['api', '', ''].oauth2.invalidate_token.post
+            data = RawFormData({'access_token': token}, quote_fields=False)
 
-        await request(_data=data, _headers=self.basic_authorization)
+            await request(_data=data, _headers=self.basic_authorization)
+        except:
+            self.token = token
 
     async def refresh_token(self):
         if self._refreshing.is_set():
@@ -314,7 +328,7 @@ class OAuth2Headers(PeonyHeaders):
         token = await request(grant_type="client_credentials",
                               _headers=self.basic_authorization)
 
-        self.set_token(token['access_token'])
+        self.token = token['access_token']
 
         self._refreshing.clear()
 

@@ -3,6 +3,7 @@
 import asyncio
 import io
 import json
+import logging
 import mimetypes
 import os
 import pathlib
@@ -174,24 +175,39 @@ def test_get_args():
     assert utils.get_args(test, skip=3) == tuple()
 
 
-def test_format_error():
+def test_log_error():
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.WARNING)
+
+    warning = io.StringIO()
+    h = logging.StreamHandler(stream=warning)
+    h.setLevel(logging.WARNING)
+    logger.addHandler(h)
+
+    debug = io.StringIO()
+    h = logging.StreamHandler(stream=debug)
+    h.setLevel(logging.DEBUG)
+    logger.addHandler(h)
+
     try:
         raise RuntimeError
+
     except RuntimeError:
-        output = utils.format_error(MockResponse.message)
+        utils.log_error(MockResponse.message, logger=logger)
+
+        warning.seek(0)
+        output = warning.read()
+        assert MockResponse.message in output
+        # make sure the debug level is mentioned
+        assert 'debug' in output.lower()
+
+        logger.setLevel(logging.DEBUG)
+        utils.log_error(MockResponse.message, logger=logger)
+
+        debug.seek(0)
+        output = debug.read()
         assert traceback.format_exc().strip() in output
         assert MockResponse.message in output
-        assert traceback.format_exc().strip() in utils.format_error()
-
-
-def test_print_error():
-    out = io.StringIO()
-    try:
-        raise RuntimeError
-    except RuntimeError:
-        utils.print_error(MockResponse, stderr=out, end='')
-        out.seek(0)
-        assert utils.format_error(MockResponse) == out.read()
 
 
 def test_loads():

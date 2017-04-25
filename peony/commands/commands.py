@@ -106,7 +106,7 @@ class Functions(dict):
 
         except:
             fmt = "Error occurred while running function {cmd}:"
-            peony.utils.print_error(fmt.format(cmd=cmd))
+            peony.utils.log_error(fmt.format(cmd=cmd))
 
     def __call__(self, func, name=None):
         name = name or func.__name__

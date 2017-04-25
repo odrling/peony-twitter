@@ -4,10 +4,10 @@ import asyncio
 import functools
 import io
 import json
+import logging
 import os
 import pathlib
 import sys
-import traceback
 from urllib.parse import urlparse
 
 from . import exceptions
@@ -186,34 +186,25 @@ def get_args(func, skip=0):
     return code.co_varnames[skip:code.co_argcount]
 
 
-def format_error(msg=None):
+def log_error(msg=None, logger=None, **kwargs):
     """
-        return a string representing an exception and its traceback
+        log an exception and its traceback on the logger defined
 
     Parameters
     ----------
     msg : :obj:`str`, optional
         A message to add to the error
+    logger : logging.Logger
+        the logger to use
     """
-    exc = traceback.format_exc().strip()
-    if msg is None:
-        return exc
+    if logger is None:
+        logger = logging.getLogger(__name__)
+
+    if logging.DEBUG < logger.level <= logging.WARNING:
+        logger.warning("An error occurred, set the logger to the debug level"
+                       "to see the full report.\n" + msg)
     else:
-        return "{exc}\n{msg}".format(exc=exc, msg=msg)
-
-
-def print_error(msg=None, stderr=sys.stderr, **kwargs):
-    """
-        Print an exception and its traceback to stderr
-
-    Parameters
-    ----------
-    msg : :obj:`str`, optional
-        A message to add to the error
-    stderr : file object
-        A file object to write the errors to
-    """
-    print(format_error(msg), file=stderr, **kwargs)
+        logger.debug(msg, exc_info=True)
 
 
 def loads(json_data, *args, encoding="utf-8", **kwargs):

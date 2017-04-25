@@ -169,7 +169,7 @@ class StreamResponse:
         """
 
         if error:
-            utils.print_error()
+            utils.log_error()
 
         if self._state == DISCONNECTION:
             if self._error_timeout < MAX_RECONNECTION_TIMEOUT:

@@ -83,7 +83,7 @@ class EventStream:
                     await self._run(data)
                 except Exception as e:
                     msg = "error in %s._start:\n" % self.__class__.__name__
-                    peony.utils.print_error(msg)
+                    peony.utils.log_error(msg)
 
     def _check(self, func):
         if not func.startswith("_"):
@@ -108,7 +108,7 @@ class EventStream:
                 msg = fmt.format(classname=self.__class__.__name__,
                                  handler=event_handler.__name__)
 
-                peony.utils.print_error(msg)
+                peony.utils.log_error(msg)
 
 
 def check_setup(func):

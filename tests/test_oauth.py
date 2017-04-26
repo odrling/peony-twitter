@@ -6,7 +6,7 @@ from time import time
 from unittest.mock import patch
 
 import pytest
-from peony import oauth, exceptions
+from peony import exceptions, oauth
 
 
 @pytest.fixture

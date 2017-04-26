@@ -75,7 +75,7 @@ class AbstractRequest(ABC, Endpoint):
 
             # booleans conversion
             elif isinstance(value, bool):
-                params[key] = value and "true" or "false"
+                params[key] = "true" if value else "false"
 
             # integers conversion
             elif isinstance(value, int):
@@ -107,7 +107,7 @@ class AbstractRequest(ABC, Endpoint):
 
     @abstractmethod
     def __call__(self, **kwargs):
-        pass
+        """ method called to make the request """
 
 
 class Iterators(Endpoint):
@@ -116,14 +116,14 @@ class Iterators(Endpoint):
     request object
     """
 
-    def _get_iterator(self, iterator):
-        def iterate(**kwargs):
-            request = getattr(self.api, self.method)
-            return iterator(request, **kwargs)
-        return iterate
-
     def __getattr__(self, key):
-        return self._get_iterator(getattr(iterators, key))
+        iterator = getattr(iterators, key)
+        request = getattr(self.api, self.method)
+
+        def iterate(**kwargs):
+            return iterator(request, **kwargs)
+
+        return iterate
 
 
 class Request(AbstractRequest):

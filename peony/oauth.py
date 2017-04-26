@@ -83,9 +83,9 @@ class PeonyHeaders(ABC, dict):
         """
 
         if method.lower() == "post":
-            key = "data"
+            key = 'data'
         else:
-            key = "params"
+            key = 'params'
 
         if key in kwargs and not skip_params:
             request_params = {key: kwargs.pop(key)}
@@ -146,8 +146,8 @@ class OAuth1Headers(PeonyHeaders):
 
     def __init__(self, consumer_key, consumer_secret,
                  access_token=None, access_token_secret=None,
-                 compression=True, user_agent=None):
-        super().__init__(compression, user_agent)
+                 compression=True, user_agent=None, headers=None):
+        super().__init__(compression, user_agent, headers)
 
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
@@ -257,8 +257,9 @@ class OAuth2Headers(PeonyHeaders):
     """
 
     def __init__(self, consumer_key, consumer_secret, client,
-                 bearer_token=None, compression=True, user_agent=None):
-        super().__init__(compression, user_agent)
+                 bearer_token=None, compression=True, user_agent=None,
+                 headers=None):
+        super().__init__(compression, user_agent, headers)
 
         self.consumer_key = consumer_key
         self.consumer_secret = consumer_secret
@@ -270,7 +271,7 @@ class OAuth2Headers(PeonyHeaders):
         if bearer_token is not None:
             self.token = bearer_token
 
-    async def sign(self, url=None, headers=None, **kwargs):
+    async def sign(self, url=None, *args, headers=None, **kwargs):
         if url == self.client['api', '', ''].oauth2.invalidate_token.url():
             pass
         elif 'Authorization' not in self:
@@ -315,6 +316,7 @@ class OAuth2Headers(PeonyHeaders):
             await request(_data=data, _headers=self.basic_authorization)
         except:
             self.token = token
+            raise
 
     async def refresh_token(self):
         if self._refreshing.is_set():
@@ -337,20 +339,18 @@ class OAuth2Headers(PeonyHeaders):
 class RawFormData(aiohttp.FormData):
 
     def _gen_form_urlencoded(self):
+        def key(item):
+            return item[0]['name']
+
         data = ""
-        for type_options, _, value in self._fields:
+        for type_options, _, value in sorted(self._fields, key=key):
             if data:
-                data += "&%s=%s" % (type_options['name'], value)
-            else:
-                data += "%s=%s" % (type_options['name'], value)
+                data += "&"
+
+            data += "%s=%s" % (type_options['name'], value)
 
         charset = self._charset if self._charset is not None else 'utf-8'
-
-        if charset == 'utf-8':
-            content_type = 'application/x-www-form-urlencoded'
-        else:
-            content_type = ('application/x-www-form-urlencoded; '
-                            'charset=%s' % charset)
+        content_type = "application/x-www-form-urlencoded;charset=" + charset
 
         return aiohttp.payload.BytesPayload(data.encode(),
                                             content_type=content_type)

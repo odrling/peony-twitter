@@ -324,7 +324,8 @@ class BasePeonyClient:
             Stream context for the request
         """
         return StreamResponse(
-            method, url, *args,
+            method=method,
+            url=url,
             client=self,
             headers=headers,
             session=_session,

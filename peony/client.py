@@ -18,7 +18,7 @@ from . import exceptions, general, oauth, utils
 from .api import APIPath, StreamingAPIPath
 from .commands import EventStreams, task
 from .oauth import OAuth1Headers
-from .stream import StreamContext
+from .stream import StreamResponse
 
 try:
     from aiofiles import open
@@ -323,9 +323,9 @@ class BasePeonyClient:
         stream.StreamContext
             Stream context for the request
         """
-        return StreamContext(
-            method, url, self,
-            *args,
+        return StreamResponse(
+            method, url, *args,
+            client=self,
             headers=headers,
             session=_session,
             **kwargs

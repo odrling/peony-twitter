@@ -9,16 +9,13 @@ from . import exceptions, utils
 from .exceptions import StreamLimit
 from .general import rate_limit_notices
 
-if int(aiohttp.__version__.split('.')[0]) < 2:
-    ClientPayloadError = aiohttp.errors.ContentEncodingError
-    ClientConnectionError = aiohttp.errors.ClientDisconnectedError
-else:
-    ClientPayloadError = aiohttp.ClientPayloadError
-    ClientConnectionError = aiohttp.ClientConnectionError
+ClientPayloadError = aiohttp.ClientPayloadError
+ClientConnectionError = aiohttp.ClientConnectionError
 
 RECONNECTION_TIMEOUT = 5
 MAX_RECONNECTION_TIMEOUT = 320
 DISCONNECTION_TIMEOUT = 0.25
+ERROR_TIMEOUT = DISCONNECTION_TIMEOUT
 MAX_DISCONNECTION_TIMEOUT = 16
 ENHANCE_YOUR_CALM_TIMEOUT = 60
 
@@ -57,6 +54,7 @@ class StreamResponse:
                  loads=utils.loads,
                  timeout=10,
                  **kwargs):
+
         self.client = client
         self.session = self.client._session if session is None else session
         self.loads = loads
@@ -69,7 +67,7 @@ class StreamResponse:
         self._state = NORMAL
         self._error_timeout = 0
 
-    def connect(self):
+    async def connect(self):
         """
             Connect to the stream
 
@@ -78,13 +76,11 @@ class StreamResponse:
         asyncio.coroutine
             The streaming response
         """
-        kwargs = self.client.headers.prepare_request(**self.kwargs)
+        await self.client.setup()
+        kwargs = await self.client.headers.prepare_request(**self.kwargs)
         request = self.client.error_handler(self.session.request)
 
-        if 'proxy' not in kwargs:
-            kwargs['proxy'] = self.client.proxy
-
-        return request(*self.args, timeout=0, **kwargs)
+        return await request(*self.args, timeout=0, **kwargs)
 
     async def __aiter__(self):
         """
@@ -106,13 +102,13 @@ class StreamResponse:
 
         if self.response.status in range(200, 300):
             self._error_timeout = 0
-            self._state = NORMAL
+            self.state = NORMAL
         elif self.response.status == 500:
-            self._state = DISCONNECTION
+            self.state = DISCONNECTION
         elif self.response.status in range(501, 600):
-            self._state = RECONNECTION
+            self.state = RECONNECTION
         elif self.response.status in (420, 429):
-            self._state = ENHANCE_YOUR_CALM
+            self.state = ENHANCE_YOUR_CALM
         else:
             raise await exceptions.throw(self.response,
                                          loads=self.client._loads)
@@ -130,7 +126,7 @@ class StreamResponse:
         """
         line = b''
         try:
-            if self._state != NORMAL:
+            if self.state != NORMAL:
                 if self._reconnecting:
                     return await self.restart_stream()
                 else:
@@ -147,18 +143,27 @@ class StreamResponse:
             return self.loads(line)
 
         except HandledErrors:
-            self._state = ERROR
+            self.state = ERROR
             return await self.init_restart()
 
         except ClientConnectionError:
-            self._state = DISCONNECTION
+            self.state = DISCONNECTION
             return await self.init_restart()
 
-        except:
-            self._state = ERROR
-            return await self.init_restart(error=True)
+        except Exception as e:
+            self.state = ERROR
+            return await self.init_restart(error=e)
 
-    async def init_restart(self, error=False):
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        if value == NORMAL or self.state < value:
+            self._state = value
+
+    async def init_restart(self, error=None):
         """
             Restart the stream on error
 
@@ -171,17 +176,17 @@ class StreamResponse:
         if error:
             utils.log_error()
 
-        if self._state == DISCONNECTION:
-            if self._error_timeout < MAX_RECONNECTION_TIMEOUT:
+        if self.state == DISCONNECTION:
+            if self._error_timeout < MAX_DISCONNECTION_TIMEOUT:
                 self._error_timeout += DISCONNECTION_TIMEOUT
 
-        elif self._state == RECONNECTION:
+        elif self.state == RECONNECTION:
             if self._error_timeout < RECONNECTION_TIMEOUT:
                 self._error_timeout = RECONNECTION_TIMEOUT
             elif self._error_timeout < MAX_RECONNECTION_TIMEOUT:
                 self._error_timeout *= 2
 
-        elif self._state == ENHANCE_YOUR_CALM:
+        elif self.state == ENHANCE_YOUR_CALM:
             if self._error_timeout < ENHANCE_YOUR_CALM_TIMEOUT:
                 self._error_timeout = ENHANCE_YOUR_CALM_TIMEOUT
             else:
@@ -211,33 +216,20 @@ class StreamResponse:
         self._reconnecting = False
         return {'stream_restart': True}
 
+    def __enter__(self):
+        """
+            Prepare the stream
 
-class StreamContext:
-    """
-        A context that should close the request on exit
-
-    Parameters
-    ----------
-    method : str
-        HTTP method used to make the request
-    url : str
-        The API endpoint
-    *args : optional
-        Positional arguments
-    **kwargs
-        Keyword parameters of the request and of :class:`StreamResponse`
-    """
-
-    def __init__(self, method, url, client, *args, **kwargs):
-        self.method = method
-        self.url = url
-        self.client = client
-        self.args = args
-        self.kwargs = kwargs
+        Returns
+        -------
+        StreamResponse
+            The stream iterator
+        """
+        return self
 
     async def __aenter__(self):
         """
-            Create stream
+            Prepare the stream
 
         Returns
         -------
@@ -245,16 +237,13 @@ class StreamContext:
             The stream iterator
         """
         await self.client.setup()
-        self.stream = StreamResponse(method=self.method, url=self.url,
-                                     *self.args, client=self.client,
-                                     **self.kwargs)
+        return self
 
-        return self.stream
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """ Close the response on error """
+        if getattr(self, 'response', None) is not None:
+            self.response.close()
 
-    async def __aexit__(self, *args, **kwargs):
-        """
-            Close the response on error
-        """
-
-        if getattr(self.stream, "response", None) is not None:
-            self.stream.response.close()
+    async def __aexit__(self, *args):
+        """ Close the response on error """
+        self.__exit__(*args)

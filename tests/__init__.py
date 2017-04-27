@@ -105,6 +105,7 @@ class MockResponse:
 
         self.headers['Content-Type'] = content_type
         self.url = ''  # quite irrelevant here
+        self._closed = False
 
     async def read(self):
         return self.data
@@ -120,6 +121,37 @@ class MockResponse:
             encoding = 'utf-8'
 
         return loads(self.data, encoding=encoding)
+
+    async def readline(self):
+        if self.data:
+            if b'\n' in self.data:
+                i = self.data.index(b'\n')
+                line = self.data[:i + 1]
+                self.data = self.data[i + 1:]
+            else:
+                line = self.data
+                self.data = ""
+
+            return line
+
+        raise StopAsyncIteration
+
+    async def release(self):
+        pass
+
+    def close(self):
+        if self.closed:
+            raise RuntimeError
+
+        self._closed = True
+
+    @property
+    def closed(self):
+        return self._closed
+
+    @property
+    def content(self):
+        return self
 
 
 class MockIteratorRequest:

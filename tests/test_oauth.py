@@ -68,6 +68,18 @@ def test_oauth1_signature(oauth1_headers):
     assert "v3nfF8OWWLfGTuKhi7075R1BBGE=" == signature
 
 
+def test_oauth1_signature_no_token():
+    headers = oauth.OAuth1Headers("1234567890", "0987654321")
+
+    signature = headers.gen_signature(method='GET',
+                                      url="http://whatever.com",
+                                      params={'hello': "world"},
+                                      skip_params=False,
+                                      oauth={})
+
+    assert "Q9XX4OvdvoOb8ZJyXPrhWiYwOzk=" == signature
+
+
 def test_oauth1_signature_queries_safe_chars(oauth1_headers):
     query = "@twitter hello :) $:!?/()'*@"
 

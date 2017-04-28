@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import time
 import webbrowser
 
 from . import oauth
@@ -40,7 +39,7 @@ async def get_oauth_token(consumer_key, consumer_secret, callback_uri="oob"):
     return parse_token(response)
 
 
-def get_oauth_verifier(oauth_token):
+async def get_oauth_verifier(oauth_token):
     """
     Open authorize page in a browser,
     print the url if it didn't work
@@ -60,7 +59,7 @@ def get_oauth_verifier(oauth_token):
 
     try:
         browser = webbrowser.open(url)
-        time.sleep(2)
+        await asyncio.sleep(2)
 
         if not browser:
             raise RuntimeError
@@ -107,8 +106,7 @@ async def get_access_token(consumer_key, consumer_secret,
         oauth_verifier=oauth_verifier
     )
 
-    access_token = parse_token(response)
-    return access_token
+    return parse_token(response)
 
 
 async def async_oauth_dance(consumer_key, consumer_secret, callback_uri="oob"):
@@ -132,7 +130,7 @@ async def async_oauth_dance(consumer_key, consumer_secret, callback_uri="oob"):
 
     token = await get_oauth_token(consumer_key, consumer_secret, callback_uri)
 
-    oauth_verifier = get_oauth_verifier(token['oauth_token'])
+    oauth_verifier = await get_oauth_verifier(token['oauth_token'])
 
     token = await get_access_token(
         consumer_key,

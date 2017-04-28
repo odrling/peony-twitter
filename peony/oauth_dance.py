@@ -5,7 +5,7 @@ import time
 import webbrowser
 
 from . import oauth
-from .client import BasePeonyClient, PeonyClient
+from .client import BasePeonyClient
 
 
 async def get_oauth_token(consumer_key, consumer_secret, callback_uri="oob"):

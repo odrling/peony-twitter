@@ -6,7 +6,8 @@ install:
   - pip install --upgrade pip wheel
   - pip install -r tests_requirements.txt
 script:
-  - py.test --flake8 tests --cov=peony
+  - flake8
+  - py.test tests --cov=peony
 cache: pip
 after_success:
   - codecov

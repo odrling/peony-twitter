@@ -196,3 +196,15 @@ class MockIteratorRequest:
                         self.ids[:len(self.ids) - count - 1:-1]]
             else:
                 return [{'id': i} for i in self.ids[:since_id:-1]]
+
+
+class Data:
+
+    def __init__(self, data):
+        self._data = data
+
+    async def data(self):
+        return self._data
+
+    def __call__(self, *args, **kwargs):
+        return self.data()

@@ -16,17 +16,34 @@ import aiohttp
 
 from . import exceptions, general, oauth, utils
 from .api import APIPath, StreamingAPIPath
-from .commands import EventStreams, task
+from .commands import EventStreams, init_task, task
 from .oauth import OAuth1Headers
 from .stream import StreamResponse
 
 try:
     from aiofiles import open
-except ImportError:
+except ImportError:  # pragma: no cover
     pass
 
 
-class BasePeonyClient:
+class MetaPeonyClient(type):
+
+    def __new__(cls, name, bases, attrs, **kwargs):
+        """ put the :class:`BaseTask`s in the right place """
+        tasks = {'init_tasks': [], 'tasks': []}
+
+        for attr in attrs.values():
+            if isinstance(attr, init_task):
+                tasks['init_tasks'].append(attr)
+            elif isinstance(attr, task):
+                tasks['tasks'].append(attr)
+
+        attrs['_tasks'] = tasks
+
+        return super().__new__(cls, name, bases, attrs)
+
+
+class BasePeonyClient(metaclass=MetaPeonyClient):
     """
         Access the Twitter API easily
 
@@ -152,10 +169,15 @@ class BasePeonyClient:
 
         self.headers = auth(**kwargs)
 
-        self.__setup = {'event': asyncio.Event(),
+        self.__setup = {'done': asyncio.Event(),
+                        'early': asyncio.Event(),
                         'state': False}
 
-    async def setup(self):
+    def init_tasks(self):
+        """ tasks executed on initialization """
+        return self._get_tasks(kind=init_task)
+
+    async def setup(self, early=False):
         """
             set up the client on the first request
         """
@@ -165,20 +187,57 @@ class BasePeonyClient:
             if self._session is None:
                 self._session = aiohttp.ClientSession()
 
-            self.__setup['event'].set()
+            self.__setup['early'].set()
 
             if callable(self.init_tasks):
                 init_tasks = self.init_tasks()
             else:
                 init_tasks = self.init_tasks
 
-            if init_tasks is not None:
+            if init_tasks:
                 await asyncio.wait(init_tasks)
 
-        await self.__setup['event'].wait()
+            self.__setup['done'].set()
 
-    def init_tasks(self):
-        """ tasks executed on initialization """
+        if early:
+            await self.__setup['early'].wait()
+        else:
+            await self.__setup['done'].wait()
+
+    @staticmethod
+    def _get_base_url(base_url, api, version):
+        """
+            create the base url for the api
+
+        Parameters
+        ----------
+        base_url : str
+            format of the base_url using {api} and {version}
+        api : str
+            name of the api to use
+        version : str
+            version of the api
+
+        Returns
+        -------
+        str
+            the base url of the api you want to use
+        """
+        format_args = {}
+
+        if "{api}" in base_url:
+            if api == "":
+                base_url = base_url.replace('{api}.', '')
+            else:
+                format_args['api'] = api
+
+        if "{version}" in base_url:
+            if version == "":
+                base_url = base_url.replace('/{version}', '')
+            else:
+                format_args['version'] = version
+
+        return base_url.format(api=api, version=version)
 
     def __getitem__(self, values):
         """
@@ -208,7 +267,8 @@ class BasePeonyClient:
 
         if isinstance(values, dict):
             # set values in the right order
-            values = [values[key] for key in keys]
+            values = [values.get(key, defaults[i])
+                      for i, key in enumerate(keys)]
         elif isinstance(values, set):
             raise TypeError('Cannot use a set to access an api, '
                             'please use a dict, a tuple or a list instead')
@@ -225,7 +285,7 @@ class BasePeonyClient:
 
         api, version, suffix, base_url = values
 
-        base_url = base_url.format(api=api, version=version).rstrip('/')
+        base_url = self._get_base_url(base_url, api, version)
 
         # use StreamingAPIPath if subdomain is in self.streaming_apis
         if api in self.streaming_apis:
@@ -268,7 +328,7 @@ class BasePeonyClient:
         utils.PeonyResponse
             Response to the request
         """
-        await self.setup()
+        await self.setup(early=True)
 
         # prepare request arguments, particularly the headers
         req_kwargs = await self.headers.prepare_request(
@@ -341,6 +401,16 @@ class BasePeonyClient:
         cls._streams.append(event_stream)
         return event_stream
 
+    def _get_tasks(self, kind=task):
+        if kind == task:
+            key = 'tasks'
+        elif kind == init_task:
+            key = 'init_tasks'
+        else:
+            raise RuntimeError("Cannot get tasks of kind %s" % kind)
+
+        return [t(self) for t in self._tasks[key]]
+
     def get_tasks(self):
         """
             Get the tasks attached to the instance
@@ -350,9 +420,7 @@ class BasePeonyClient:
         list
             List of tasks (:class:`asyncio.Task`)
         """
-        funcs = [getattr(self, key) for key in dir(self)]
-        tasks = [self.loop.create_task(func(self))
-                 for func in funcs if isinstance(func, task)]
+        tasks = self._get_tasks()
 
         if isinstance(self._streams, EventStreams):
             tasks.extend(self._streams.get_tasks(self))
@@ -395,11 +463,12 @@ class PeonyClient(BasePeonyClient):
         self.executor = ProcessPoolExecutor() if executor is None else executor
 
     def init_tasks(self):
-        tasks = [self.__get_twitter_configuration()]
+        tasks = super().init_tasks()
         if isinstance(self.headers, oauth.OAuth1Headers):
             tasks.append(self.__get_user())
         return tasks
 
+    @init_task
     async def __get_twitter_configuration(self):
         """
         create a ``twitter_configuration`` attribute with the response

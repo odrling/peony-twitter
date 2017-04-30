@@ -30,13 +30,18 @@ class MetaPeonyClient(type):
 
     def __new__(cls, name, bases, attrs, **kwargs):
         """ put the :class:`BaseTask`s in the right place """
-        tasks = {'init_tasks': [], 'tasks': []}
+        tasks = {'init_tasks': set(), 'tasks': set()}
+
+        for base in bases:
+            if hasattr(base, '_tasks'):
+                for key, value in base._tasks.items():
+                    tasks[key] |= value
 
         for attr in attrs.values():
             if isinstance(attr, init_task):
-                tasks['init_tasks'].append(attr)
+                tasks['init_tasks'].add(attr)
             elif isinstance(attr, task):
-                tasks['tasks'].append(attr)
+                tasks['tasks'].add(attr)
 
         attrs['_tasks'] = tasks
 
@@ -449,8 +454,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 gathered.exception()
             except:
                 pass
-        finally:
-            self.loop.close()
 
 
 class PeonyClient(BasePeonyClient):

@@ -208,3 +208,7 @@ class Data:
 
     def __call__(self, *args, **kwargs):
         return self.data()
+
+
+async def dummy(*args, **kwargs):
+    pass

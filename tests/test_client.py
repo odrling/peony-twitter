@@ -8,7 +8,7 @@ import aiohttp
 import peony
 import peony.api
 import pytest
-from peony import BasePeonyClient, oauth, utils
+from peony import BasePeonyClient, data_processing, oauth
 from peony.general import twitter_api_version, twitter_base_api_url
 
 from . import Data, MockResponse, dummy
@@ -112,7 +112,7 @@ class SetupClientTest(BasePeonyClient):
     async def setup_c(self):
         data = Data({'hello': "world"})
 
-        with patch.object(utils, 'read', side_effect=data):
+        with patch.object(data_processing, 'read', side_effect=data):
             self.c = await self.api.test.get()
 
 

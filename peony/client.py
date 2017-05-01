@@ -14,7 +14,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 import aiohttp
 
-from . import exceptions, general, oauth, utils
+from . import data_processing, exceptions, general, oauth, utils
 from .api import APIPath, StreamingAPIPath
 from .commands import EventStreams, init_task, task
 from .oauth import OAuth1Headers
@@ -100,7 +100,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                  base_url=None,
                  api_version=None,
                  suffix='.json',
-                 loads=utils.loads,
+                 loads=data_processing.loads,
                  error_handler=utils.error_handler,
                  session=None,
                  proxy=None,
@@ -330,7 +330,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         Returns
         -------
-        utils.PeonyResponse
+        data.PeonyResponse
             Response to the request
         """
         await self.setup(early=True)
@@ -353,10 +353,10 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         async with session.request(**req_kwargs) as response:
             if response.status < 400:
-                data = await utils.read(response, self._loads,
-                                        encoding=encoding)
+                data = await data_processing.read(response, self._loads,
+                                                  encoding=encoding)
 
-                return utils.PeonyResponse(
+                return data_processing.PeonyResponse(
                     data=data,
                     headers=response.headers,
                     url=response.url,
@@ -521,7 +521,7 @@ class PeonyClient(BasePeonyClient):
 
         Returns
         -------
-        utils.PeonyResponse
+        data.PeonyResponse
             Response of the request
         """
         media_size = await utils.get_size(media)
@@ -603,7 +603,7 @@ class PeonyClient(BasePeonyClient):
 
         Returns
         -------
-        utils.PeonyResponse
+        data.PeonyResponse
             Response of the request
         """
         formats = formats or general.formats

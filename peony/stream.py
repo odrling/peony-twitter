@@ -5,7 +5,7 @@ import sys
 
 import aiohttp
 
-from . import exceptions, utils
+from . import data_processing, exceptions, utils
 from .exceptions import StreamLimit
 from .general import rate_limit_notices
 
@@ -51,7 +51,7 @@ class StreamResponse:
     def __init__(self, *args,
                  client,
                  session=None,
-                 loads=utils.loads,
+                 loads=data_processing.loads,
                  timeout=10,
                  **kwargs):
 

@@ -50,6 +50,7 @@ async def dummy(*args, **kwargs):
 async def test_get_oauth_verifier():
     def test_url(url):
         assert url == "https://api.twitter.com/oauth/authorize?oauth_token=abc"
+        return True
 
     with patch.object(oauth_dance.webbrowser, 'open', side_effect=test_url):
         with patch.object(oauth_dance.asyncio, 'sleep', side_effect=dummy):

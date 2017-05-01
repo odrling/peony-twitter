@@ -7,6 +7,8 @@ import pytest
 from peony import BasePeonyClient, iterators, requests
 from peony.api import APIPath
 
+from . import dummy
+
 url = "http://whatever.com/endpoint.json"
 
 
@@ -59,30 +61,38 @@ def test_iterator_unknown_iterator(request):
         request.iterator.whatchamacallit()
 
 
-def test_request(request):
-    with patch.object(request.api._client, 'request') as client_request:
-        r = request(_error_handler=False, test=1, _test=2)
-        assert client_request.called_with(method='get',
-                                          url=url,
-                                          skip_params=False,
-                                          test=2,
-                                          params={'test': 1})
-        assert asyncio.iscoroutine(r)
+def dummy_error_handler(request):
+    return request
+
+
+def test_request_without_error_handler(request):
+    with patch.object(request.api._client, 'request',
+                      side_effect=dummy) as client_request:
+        with patch.object(request.api._client, 'error_handler',
+                          side_effect=dummy_error_handler) as error_handler:
+            r = request(_error_handling=False, test=1, _test=2)
+            assert client_request.called_with(method='get',
+                                              url=url,
+                                              skip_params=False,
+                                              test=2,
+                                              params={'test': 1})
+            assert not error_handler.called
+            assert asyncio.iscoroutine(r)
 
 
 @pytest.mark.asyncio
 async def test_request_with_error_handler(request):
-    async def dummy(*args, **kwargs):
-        pass
-
     with patch.object(request.api._client, 'request',
                       side_effect=dummy) as client_request:
-        await request(test=1, _test=2)
-        assert client_request.called_with(method='get',
-                                          url=url,
-                                          skip_params=False,
-                                          test=2,
-                                          params={'test': 1})
+        with patch.object(request.api._client, 'error_handler',
+                          side_effect=dummy_error_handler) as error_handler:
+            await request(test=1, _test=2)
+            assert client_request.called_with(method='get',
+                                              url=url,
+                                              skip_params=False,
+                                              test=2,
+                                              params={'test': 1})
+            assert error_handler.called
 
 
 def test_streaming_request(api_path):

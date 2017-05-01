@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 from peony import exceptions, oauth
+from . import dummy
 
 
 @pytest.fixture
@@ -14,7 +15,7 @@ def oauth1_headers():
     return oauth.OAuth1Headers("1234567890", "0987654321", "aaaa", "bbbb")
 
 
-def dummy(arg, **kwargs):
+def dummy_func(arg, **kwargs):
     return arg
 
 
@@ -34,7 +35,7 @@ class MockClient:
 
         if _data is not None:
             with patch.object(oauth.aiohttp.payload, 'BytesPayload',
-                              side_effect=dummy):
+                              side_effect=dummy_func):
                 assert _data._gen_form_urlencoded() == b"access_token=abc"
 
         if _headers is not None:
@@ -131,7 +132,7 @@ def test_oauth1_sign(oauth1_headers):
     assert expected == headers['Authorization']
 
 
-def test_oauth1_sign_skip_params(oauth1_headers):
+def _test_oauth1_sign_skip_params(oauth1_headers, headers=None):
     t = time()
 
     with patch.object(oauth.time, 'time', return_value=t):
@@ -139,7 +140,8 @@ def test_oauth1_sign_skip_params(oauth1_headers):
         headers = oauth1_headers.sign(method='POST',
                                       url='http://whatever.com',
                                       data={'hello': "world"},
-                                      skip_params=True)
+                                      skip_params=True,
+                                      headers=headers)
 
     random.seed(0)
     nonce = oauth1_headers.gen_nonce()
@@ -169,6 +171,15 @@ def test_oauth1_sign_skip_params(oauth1_headers):
                                              time=int(t)))
 
     assert expected == headers['Authorization']
+
+
+def test_oauth1_sign_skip_params(oauth1_headers):
+    _test_oauth1_sign_skip_params(oauth1_headers)
+
+
+def test_oauth1_sign_skip_params_with_content_type(oauth1_headers):
+    headers = {'Content-Type': "application/x-www-form-urlencoded"}
+    _test_oauth1_sign_skip_params(oauth1_headers, headers=headers)
 
 
 def test_headers_options():
@@ -237,9 +248,6 @@ def test_oauth2_set_token():
 async def test_oauth2_refresh_token(oauth2_headers):
     assert oauth2_headers.token is None
 
-    async def dummy():
-        pass
-
     await oauth2_headers.refresh_token()
     assert oauth2_headers.token == "abc"
     with patch.object(oauth2_headers, 'invalidate_token',
@@ -250,10 +258,15 @@ async def test_oauth2_refresh_token(oauth2_headers):
 
 @pytest.mark.asyncio
 async def test_oauth2_sign(oauth2_headers):
+    with patch.object(oauth2_headers, 'refresh_token',
+                      side_effect=dummy) as refresh_token:
+        await oauth2_headers.sign(url='http://whatever.com')
+        assert refresh_token.called
+
     await oauth2_headers.sign(url='http://whatever.com')
     assert oauth2_headers.token == "abc"
     with patch.object(oauth2_headers, 'refresh_token') as refresh_token:
-        oauth2_headers.sign(url='http://whatever.com')
+        await oauth2_headers.sign(url='http://whatever.com')
         assert not refresh_token.called
 
 
@@ -277,7 +290,7 @@ async def test_oauth2_concurrent_refreshes(oauth2_headers):
 def test_raw_form_data():
 
     with patch.object(oauth.aiohttp.payload, 'BytesPayload',
-                      side_effect=dummy):
+                      side_effect=dummy_func):
         formdata = oauth.RawFormData({'access_token': "a%20bc%25",
                                       'access_token_secret': "cba"},
                                      quote_fields=False)

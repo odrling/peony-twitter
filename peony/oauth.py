@@ -156,6 +156,13 @@ class OAuth1Headers(PeonyHeaders):
 
         self.alphabet = string.ascii_letters + string.digits
 
+    @staticmethod
+    def _default_content_type(skip_params):
+        if skip_params:
+            return "application/octet-stream"
+        else:
+            return "application/x-www-form-urlencoded"
+
     def sign(self, method='GET', url=None,
              data=None,
              params=None,
@@ -166,12 +173,8 @@ class OAuth1Headers(PeonyHeaders):
         headers = self._user_headers(headers)
 
         if data:
-            if skip_params:
-                default = "application/octet-stream"
-            else:
-                default = "application/x-www-form-urlencoded"
-
             if 'Content-Type' not in headers:
+                default = self._default_content_type(skip_params)
                 headers['Content-Type'] = default
 
             params = data
@@ -272,9 +275,7 @@ class OAuth2Headers(PeonyHeaders):
             self.token = bearer_token
 
     async def sign(self, url=None, *args, headers=None, **kwargs):
-        if url == self.client['api', '', ''].oauth2.invalidate_token.url():
-            pass
-        elif 'Authorization' not in self:
+        if 'Authorization' not in self and url != self._invalidate_token.url():
             await self.refresh_token()
 
         return self._user_headers(headers)
@@ -302,6 +303,10 @@ class OAuth2Headers(PeonyHeaders):
     def token(self):
         del self['Authorization']
 
+    @property
+    def _invalidate_token(self):
+        return self.client['api', '', ''].oauth2.invalidate_token
+
     async def invalidate_token(self):
         if 'Authorization' not in self:
             raise RuntimeError('There is no token to invalidate')
@@ -310,7 +315,7 @@ class OAuth2Headers(PeonyHeaders):
         del self.token
 
         try:
-            request = self.client['api', '', ''].oauth2.invalidate_token.post
+            request = self._invalidate_token.post
             data = RawFormData({'access_token': token}, quote_fields=False)
 
             await request(_data=data, _headers=self.basic_authorization)

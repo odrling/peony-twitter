@@ -54,8 +54,7 @@ async def get_oauth_verifier(oauth_token):
     str
         The PIN entered by the user
     """
-    url = "https://api.twitter.com/oauth/authorize?oauth_token="
-    url += oauth_token
+    url = "https://api.twitter.com/oauth/authorize?oauth_token=" + oauth_token
 
     try:
         browser = webbrowser.open(url)
@@ -66,7 +65,8 @@ async def get_oauth_verifier(oauth_token):
     except RuntimeError:
         print("could not open a browser\ngo here to enter your PIN: " + url)
 
-    return input("\nEnter your PIN: ")
+    verifier = input("\nEnter your PIN: ")
+    return verifier
 
 
 async def get_access_token(consumer_key, consumer_secret,

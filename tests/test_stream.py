@@ -189,6 +189,13 @@ async def test_stream_reconnection_error_on_reconnection(stream):
 
 
 @pytest.mark.asyncio
+async def test_stream_init_restart_wrong_state(stream):
+    stream.state = peony.stream.NORMAL
+    with pytest.raises(RuntimeError):
+        await stream.init_restart()
+
+
+@pytest.mark.asyncio
 async def test_stream_reconnection_handled_errors(stream):
     async def handled_error():
         raise peony.stream.HandledErrors[0]
@@ -242,3 +249,31 @@ async def test_stream_context(event_loop):
                 await test_stream_iteration(stream)
 
         assert context.response.closed
+
+
+@pytest.mark.asyncio
+async def test_stream_context_response_already_closed(event_loop):
+    with aiohttp.ClientSession(loop=event_loop) as session:
+        client = peony.client.BasePeonyClient("", "", session=session)
+        context = peony.stream.StreamResponse(method='GET',
+                                              url="http://whatever.com/stream",
+                                              client=client)
+
+        with context as stream:
+            with patch.object(stream, 'connect', side_effect=stream_content):
+                await test_stream_iteration(stream)
+                stream.response.close()
+
+        assert context.response.closed
+
+
+@pytest.mark.asyncio
+async def test_stream_context_no_response(event_loop):
+    with aiohttp.ClientSession(loop=event_loop) as session:
+        client = peony.client.BasePeonyClient("", "", session=session)
+        stream = peony.stream.StreamResponse(method='GET',
+                                             url="http://whatever.com/stream",
+                                             client=client)
+
+        assert stream.response is None
+        await stream.__aexit__()

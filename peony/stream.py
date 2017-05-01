@@ -201,6 +201,8 @@ class StreamResponse:
                   "https://dev.twitter.com/streaming/overview\n"
                   "The stream will restart in %ss." % self._error_timeout,
                   file=sys.stderr)
+        else:
+            raise RuntimeError("Incorrect state: %d" % self.state)
 
         self._reconnecting = True
         return {'reconnecting_in': self._error_timeout, 'error': error}
@@ -239,10 +241,11 @@ class StreamResponse:
         await self.client.setup()
         return self
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *args):
         """ Close the response on error """
         if getattr(self, 'response', None) is not None:
-            self.response.close()
+            if not self.response.closed:
+                self.response.close()
 
     async def __aexit__(self, *args):
         """ Close the response on error """

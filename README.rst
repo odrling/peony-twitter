@@ -71,9 +71,25 @@ Make sure to get your api keys and access tokens from
 
 .. _Authorize your client: #authorize-your-client
 
+Tests
+-----
+
+To run the tests run:
+
+.. code-block:: bash
+
+    make install  # install the required dependencies
+    make test
+
+You can also use tox to run the tests, a configuration file is provided:
+
+.. code-block:: bash
+
+    tox
+
 Documentation
 -------------
 
 Read `Peony's documentation`_.
 
-.. _Peony's documentation: http://docs.odrling.xyz/peony-twitter
+.. _Peony's documentation: https://peony-twitter.readthedocs.io

@@ -67,7 +67,7 @@ class EventStream:
     @property
     def stream_request(self):
         clsname = self.__class__.__name__
-        msg = "You must overload stream_request property in " + clsname
+        msg = "You must overload stream_request in " + clsname
         raise RuntimeError(msg)
 
     @utils.restart_on(Exception)
@@ -81,7 +81,7 @@ class EventStream:
             async for data in resource:
                 try:
                     await self._run(data)
-                except Exception as e:
+                except Exception:
                     msg = "error in %s._start:\n" % self.__class__.__name__
                     peony.utils.log_error(msg)
 
@@ -93,7 +93,9 @@ class EventStream:
 
     def _get(self, data):
         for event_handler in self.functions:
-            if event_handler.is_event(data):
+            argcount = len(peony.utils.get_args(event_handler.is_event))
+            args = [data, self._client][:argcount]
+            if event_handler.is_event(*args):
                 return event_handler
 
     async def _run(self, data):

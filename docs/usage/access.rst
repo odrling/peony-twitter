@@ -7,6 +7,8 @@ You can easily access any Twitter API endpoint:
 
 .. code-block:: python
 
+    # NOTE: any reference to a `creds` variable in the documentation
+    # examples should have this format
     creds = dict(consumer_key=YOUR_CONSUMER_KEY,
                  consumer_secret=YOUR_CONSUMER_SECRET,
                  access_token=YOUR_ACCESS_TOKEN,
@@ -25,7 +27,7 @@ You can easily access any Twitter API endpoint:
     async def track():
         req = client.stream.statuses.filter.post(track="uwu")
         async with req as ressource:
-            pass  # do something, see next chapter
+            print(req.text)  # print the tweet's text
 
     # would GET subdomain.twitter.com/1.1/path.json if it were
     # an API endpoint
@@ -35,16 +37,17 @@ You can easily access any Twitter API endpoint:
 
 see :ref:`adv_api` to access APIs that do not use the version '1.1'
 
-*Note*: Arguments with a leading underscore are arguments that are used to
-change the behavior of peony for the request (e.g. `_headers` to add some
-additional headers to the request).
-Arguments without a leading underscore are parameters of the request you send.
-
+.. note::
+    Arguments with a leading underscore are arguments that are used to
+    change the behavior of peony for the request (e.g. `_headers` to add some
+    additional headers to the request).
+    Arguments without a leading underscore are parameters of the request you send.
 
 Access the response data of a REST API endpoint
 -----------------------------------------------
 
-A call to a REST API endpoint should return a PeonyResponse object.
+A call to a REST API endpoint should return a PeonyResponse object if the
+request was successful.
 
 .. code-block:: python
 
@@ -62,9 +65,34 @@ A call to a REST API endpoint should return a PeonyResponse object.
             # or as you would access an attribute
             username = tweet.user.screen_name
 
+            display_range = tweet.get('display_text_range', None)
+            if display_text_range is not None:
+                # get the text from the display range provided in the response
+                # if present
+                text = tweet.text[display_range[0]:display_range[1]]
+            else:
+                # just get the text
+                text = tweet.text
+
             print("@{username} ({id}): {text}".format(username=username,
                                                       id=user_id,
-                                                      text=tweet.text))
+                                                      text=text))
+
+
+.. note::
+    If ``extended_tweet`` is present in the response, attributes that are
+    in ``tweet.extended_tweet`` can be retrieved right from ``tweet``.
+    e.g. ``tweet.display_text_range`` == ``tweet.extended_tweet.display_text_range``
+    if ``tweet.extended_tweet.display_range`` exists.
+
+.. note::
+    Getting the ``text`` attribute of the data should always retrieve the
+    full text of the tweet even when the data is truncated. There should
+    be no need to look for a ``full_text`` attribute.
+
+.. note::
+    ``tweet.key`` and ``tweet['key']`` are always equivalent, even when the
+    key is an attribute in ``extended_tweet`` or ``text``.
 
 
 Access the response data of a Streaming API endpoint
@@ -83,7 +111,7 @@ yields a StreamResponse object.
             # stream is an asynchronous iterator (StreamResponse)
             async for tweet in stream:
                 # you can then access items as you would do with a
-                # PeonyResponse object
+                # `PeonyResponse` object
                 user_id = tweet['user']['id']
                 username = tweet.user.screen_name
 

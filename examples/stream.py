@@ -57,6 +57,11 @@ class Home(peony.PeonyClient):
             break
 
 
+@peony.events.priority(-5)
+def on_favorited(data, client):
+    return peony.events.on_favorite(data) and data.target.id == client.user.id
+
+
 @Home.event_stream
 class UserStream(peony.EventStream):
 
@@ -88,11 +93,10 @@ class UserStream(peony.EventStream):
                          recipient=dm.recipient.screen_name,
                          text=text))
 
-    @peony.events.on_favorite.handler
-    def on_favorite(self, data):
-        if data.source.id != self.user.id:
-            print(data.source.screen_name, "favorited:",
-                  html.unescape(data.target_object.text) + "\n" + "-" * 10)
+    @on_favorited.handler
+    def favorited(self, data):
+        print(data.source.screen_name, "favorited:",
+              html.unescape(data.target_object.text) + "\n" + "-" * 10)
 
     @peony.events.default.handler
     def default(self, data):
@@ -100,5 +104,5 @@ class UserStream(peony.EventStream):
 
 
 if __name__ == '__main__':
-    client = Home(**api.keys)
-    client.run()
+    home = Home(**api.keys)
+    home.run()

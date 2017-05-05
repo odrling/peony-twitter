@@ -14,7 +14,6 @@ peony.commands.event_types module
 
 .. automodule:: peony.commands.event_types
     :members:
-    :undoc-members:
     :show-inheritance:
 
 peony.commands.tasks module

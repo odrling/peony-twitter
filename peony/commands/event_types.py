@@ -5,8 +5,10 @@ from functools import wraps
 from ..utils import get_args
 from .event_handlers import EventHandler
 
+on = 'on_{name}'
 
-def get_value(func):
+
+def _get_value(func):
     value = func()
 
     if value is None:
@@ -76,6 +78,7 @@ class Event:
         self._func = func
         self.handler = Handler(func)
         self.__name__ = name
+        self.__doc__ = func.__doc__
 
     def envelope(self):
         """ returns an :class:`Event` that can be used for site streams """
@@ -106,26 +109,35 @@ class Events(dict):
         super().__init__(*args, **kwargs)
         self.aliases = {}
 
-    def __getattr__(self, key):
-        return self[key]
+    def __getitem__(self, item):
+        return getattr(self, item)
 
     def __setitem__(self, key, func):
         event = func if isinstance(func, Event) else Event(func, key)
-        super().__setitem__(key, event)
+        setattr(self, key, event)
 
-    def _set_aliases(self, *keys, func):
+    def _set_aliases(self, *keys, event=None, func=None):
+        keys = [key if "{name}" not in key else key.format(name=func.__name__)
+                for key in keys]
+
+        if func:
+            event = self(func)
+        elif event:
+            event = self.event(event)
+        else:
+            raise RuntimeError("Could not set alias")
+
         for key in keys:
-            if "{name}" in key:
-                key = key.format(name=func.__name__)
-
-            self[key] = func
+            self[key] = event
             self.aliases[key] = self[func.__name__]
+
+        return event
 
     def alias(self, *keys):
 
         def decorator(func):
-            event = self(func)
-            self._set_aliases(*keys, func=event._func)
+            func.__doc__ += "\n:aliases: %s\n" % ', '.join(keys)
+            event = self._set_aliases(*keys, func=func)
 
             return event
 
@@ -134,8 +146,8 @@ class Events(dict):
     def event_alias(self, *keys):
 
         def decorator(func):
-            event = self.event(func)
-            self._set_aliases(*keys, func=event._func)
+            func.__doc__ += "\n:aliases: %s\n" % ', '.join(keys)
+            event = self._set_aliases(*keys, event=func)
 
             return event
 
@@ -143,7 +155,7 @@ class Events(dict):
 
     def event(self, func):
         if not len(get_args(func)):
-            value = get_value(func)
+            value = _get_value(func)
 
             @wraps(func)
             def decorated(data):
@@ -151,6 +163,7 @@ class Events(dict):
 
             self[func.__name__] = decorated
             self['on_' + func.__name__] = decorated
+            self[func.__name__].__doc__ = func.__doc__
             return self[func.__name__]
         else:
             self[func.__name__] = func
@@ -158,17 +171,17 @@ class Events(dict):
 
     def __call__(self, func):
         if not len(get_args(func)):
-            value = get_value(func)
+            value = _get_value(func)
 
             @wraps(func)
             def decorated(data):
                 return value in data
 
             self[func.__name__] = decorated
-            return self[func.__name__]
+            return decorated
         else:
             self[func.__name__] = func
-            return self[func.__name__]
+            return func
 
     @property
     def no_aliases(self):
@@ -186,75 +199,150 @@ class Events(dict):
 
 events = Events()
 
-on = 'on_{name}'
-
 
 @events.alias('on_connect', 'connect')
 def friends(data):
+    """
+        Event triggered on connection to an userstream
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#friends-lists-friends
+    """  # noqa: E501
     return 'friends' in data or 'friends_str' in data
 
 
 @events.alias(on, 'on_dm')
 def direct_message():
-    pass
+    """
+        Event triggered when a direct message is received
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#direct-messages
+    """
 
 
 @events.alias(on)
-@events.priority(-1024)
+@events.priority(-1)
 def retweeted_status(data):
+    """
+        Event triggered when the data corresponds to a retweet
+
+    For more information:
+    https://dev.twitter.com/overview/api/tweets
+    """
     return tweet(data) and 'retweeted_status' in data
 
 
 @events.alias(on)
 def tweet(data):
+    """
+        Event triggered when the data corresponds to a tweet
+    If there is no handler for the :func:`retweeted_status` event
+    then the data could correspond to a retweet
+
+    For more information:
+    https://dev.twitter.com/overview/api/tweets
+    """
     return 'text' in data and 'event' not in data
 
 
 @events.alias(on, 'deleted_tweet')
 def delete():
-    pass
+    """
+        Event triggered when an user deletes a tweet
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#status-deletion-notices-delete
+    """  # noqa: E501
 
 
 @events.alias('location_deleted')
 def scrub_geo():
-    pass
+    """
+        Event triggered when an user deletes their location on a range of
+        tweets
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#location-deletion-notices-scrub-geo
+    """  # noqa: E501
 
 
 @events.event
 def limit():
-    pass
+    """
+        Event triggered when the data corresponds to a stream limit notice
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#limit-notices-limit
+    """  # noqa: E501
 
 
 @events.event
 def status_withheld():
-    pass
+    """
+        Event triggered upon receiving a status withheld notice
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#withheld-content-notices-status-withheld-user-withheld
+    """  # noqa: E501
 
 
 @events.event
 def user_withheld():
-    pass
+    """
+        Event triggered upon receiving a status withheld notice
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#user-withheld
+    """
 
 
 @events.alias(on)
 def disconnect():
-    pass
+    """
+        Event triggered upon receiving a disconnect notice
+    Note that the disconnect message may not be received when experiencing
+    network issues.
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#disconnect-messages-disconnect
+    """  # noqa: E501
 
 
 # warnings
 
 @events.alias(on)
 def warning():
-    pass
+    """
+        Event triggered when receiving a warning
+
+    For more information:
+
+    * https://dev.twitter.com/streaming/overview/messages-types#stall-warnings-warning
+    * https://dev.twitter.com/streaming/overview/messages-types#too-many-follows-warning
+    """  # noqa: E501
 
 
 @events.alias(on)
 def stall_warning(data):
+    """
+        Event triggered when receiving a stall warning
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#stall-warnings-warning
+    """  # noqa: E501
     return (warning(data) and
             data.get('warning').get('code') == "FALLING_BEHIND")
 
 
 @events.alias(on)
 def too_many_follows(data):
+    """
+        Event triggered when receiving a "too many follows" warning
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#too-many-follows-warning
+    """  # noqa: E501
     return (warning(data) and
             data.get('warning').get('code') == "FOLLOWS_OVER_LIMIT")
 
@@ -263,104 +351,185 @@ def too_many_follows(data):
 
 @events.event
 def access_revoked():
-    pass
+    """
+        Event triggered when the user is deauthorized
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def follow():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def unfollow():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def block():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def unblock():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def favorite():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def unfavorite():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def list_created():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def list_destroyed():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def list_updated():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def list_member_added():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def list_member_removed():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
-def list_user_subscribed():
-    pass
+def list_user_subscribed():  # noqa: E501
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
-def list_user_unsubscribed():
-    pass
+def list_user_unsubscribed():  # noqa: E501
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def quoted_tweet():
-    pass
+    """
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#events-event
+    """
 
 
 @events.event
 def user_update():
-    pass
+    """
+            Event triggered when an user updates their profile
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#user_update
+    """
 
 
 # Site stream control messages
 
 @events.alias('control_message')
 def control():
-    pass
+    """
+        Event triggered upon receiving a control message
+
+    For more information:
+    https://dev.twitter.com/streaming/overview/messages-types#control-messages-control
+    """  # noqa: E501
 
 
 # Internal peony events
 
 @events.alias(on, 'on_restart', 'restart')
 def stream_restart():
-    pass
+    """
+        Event triggered on stream restart
+    """
 
 
 @events.alias(on, 'reconnect', 'on_reconnect')
 def reconnecting_in():
-    pass
+    """
+        Event triggered when a stream restart is scheduled
+
+    the data contains the number of seconds to wait is seconds as its
+    ``'reconnecting_in'`` item.
+    """
 
 
 # matches any event that wasn't handled
 @events.priority(1024)
 def default(_):
+    """
+        Event triggered when the data didn't trigger any handled event
+    """
     return True

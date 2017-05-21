@@ -49,7 +49,7 @@ An iterator for endpoints using the `max_id` parameter
 
     async def get_tweets(user_id, n_tweets=1600, **additional_params):
         responses = client.api.statuses.user_timeline.get.iterator.with_max_id(
-            user_id=user,
+            user_id=user_id,
             count=200,
             **additional_params
         )

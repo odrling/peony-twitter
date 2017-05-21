@@ -19,7 +19,7 @@ class AbstractIterator(ABC):
         self.request = _request
         self.kwargs = kwargs
 
-    def __aiter__(self):
+    async def __aiter__(self):
         return self
 
     @abstractmethod

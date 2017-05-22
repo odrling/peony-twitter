@@ -42,6 +42,28 @@ async def test_since_id():
 
 
 @pytest.mark.asyncio
+async def test_since_id_force():
+    responses = iterators.with_since_id(MockIteratorRequest(), since_id=499,
+                                        count=10, _fill_gaps=False,
+                                        _force=True)
+
+    ids = set()
+    async for response in responses:
+        new_ids = {user['id'] for user in response}
+        size_before = len(ids)
+        ids |= new_ids
+
+        if len(new_ids) == 0:
+            break
+
+        if len(ids) != len(new_ids) + size_before or len(ids) > 10:
+            print(new_ids)
+            break
+
+    assert len(ids) == 10
+
+
+@pytest.mark.asyncio
 async def test_fill_gaps():
     responses = iterators.with_since_id(MockIteratorRequest(), since_id=499,
                                         _fill_gaps=True, _force=False)
@@ -52,6 +74,27 @@ async def test_fill_gaps():
         print("set %d" % len(new_ids))
         size_before = len(ids)
         ids |= new_ids
+
+        if len(ids) != len(new_ids) + size_before or len(ids) > 500:
+            break
+
+    assert len(ids) == 500
+
+
+@pytest.mark.asyncio
+async def test_fill_gaps_force():
+    responses = iterators.with_since_id(MockIteratorRequest(), since_id=499,
+                                        _fill_gaps=True, _force=True)
+
+    ids = set()
+    async for response in responses:
+        new_ids = {user['id'] for user in response}
+        print("set %d" % len(new_ids))
+        size_before = len(ids)
+        ids |= new_ids
+
+        if len(new_ids) == 0:
+            break
 
         if len(ids) != len(new_ids) + size_before or len(ids) > 500:
             break

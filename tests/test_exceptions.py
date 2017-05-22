@@ -74,3 +74,15 @@ async def test_peony_exception():
         # there is no error 0 this should raise a generic PeonyException
         response = MockResponse(error=0)
         await exceptions.throw(response)
+
+
+def test_get_error_not_dict():
+    assert exceptions.get_error({'error': 1}) is None
+
+
+def test_custom_peony_exception_message():
+
+    try:
+        exceptions.PeonyException(message=MockResponse.message)
+    except exceptions.PeonyException as e:
+        assert str(e) == MockResponse.message

@@ -119,6 +119,20 @@ def test_get_args():
     assert utils.get_args(test, skip=3) == tuple()
 
 
+def test_get_args_class():
+
+    class Test():
+
+        def __call__(self, a, b, c):
+            pass
+
+    test = Test()
+
+    assert utils.get_args(test) == ('self', 'a', 'b', 'c')
+    assert utils.get_args(test, skip=1) == ('a', 'b', 'c')
+    assert utils.get_args(test, skip=4) == tuple()
+
+
 def setup_logger(logger):
     warning = io.StringIO()
     h = logging.StreamHandler(stream=warning)

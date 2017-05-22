@@ -4,6 +4,19 @@ from time import time
 from . import data_processing
 
 
+def get_error(data):
+    """ return the error if there is a corresponding exception """
+    if isinstance(data, dict):
+        if 'errors' in data:
+            error = data['errors'][0]
+        else:
+            error = data.get('error', None)
+
+        if isinstance(error, dict):
+            if error.get('code') in errors:
+                return error
+
+
 async def throw(response, loads=None, encoding=None, **kwargs):
     """ Get the response data if possible and raise an exception """
     if loads is None:
@@ -12,18 +25,10 @@ async def throw(response, loads=None, encoding=None, **kwargs):
     data = await data_processing.read(response, loads=loads,
                                       encoding=encoding)
 
-    if isinstance(data, dict):
-        if 'errors' in data:
-            error = data['errors'][0]
-        else:
-            error = data.get('error', None)
-
-        if isinstance(error, dict):
-            code = error.get('code')
-            if code in errors:
-                exception = errors[code]
-                raise exception(response=response, error=error,
-                                data=data, **kwargs)
+    error = get_error(data)
+    if error is not None:
+        exception = errors[error['code']]
+        raise exception(response=response, error=error, data=data, **kwargs)
 
     if response.status in statuses:
         exception = statuses[response.status]

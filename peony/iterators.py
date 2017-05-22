@@ -39,19 +39,16 @@ class IdIterator(AbstractIterator):
         Main request
     _parameter : str
         Parameter to change for each request
-    _i : int
-        Index of the value for the next request
     _force : bool
         Keep the iterator after empty responses
     kwargs:
         Request parameters
     """
 
-    def __init__(self, _request, _parameter, _i, _force=False, **kwargs):
+    def __init__(self, _request, _parameter, _force=False, **kwargs):
         """ Keep all the arguments as class attributes """
         self.param = _parameter
         self.force = _force
-        self.i = _i
         super().__init__(_request, **kwargs)
 
     async def __anext__(self):
@@ -85,7 +82,6 @@ class MaxIdIterator(IdIterator):
     def __init__(self, _request, **kwargs):
         super().__init__(_request,
                          _parameter="max_id",
-                         _i=-1,
                          _force=False,
                          **kwargs)
 
@@ -93,7 +89,7 @@ class MaxIdIterator(IdIterator):
         """
             The parameter is set to the id of the tweet at index i - 1
         """
-        self.kwargs[self.param] = response[self.i]['id'] - 1
+        self.kwargs[self.param] = response[-1]['id'] - 1
         return response
 
 
@@ -116,7 +112,6 @@ class SinceIdIterator(IdIterator):
     def __init__(self, _request, _force=True, _fill_gaps=True, **kwargs):
         super().__init__(_request,
                          _parameter="since_id",
-                         _i=0,
                          _force=_force,
                          **kwargs)
 
@@ -124,11 +119,13 @@ class SinceIdIterator(IdIterator):
         self.last_id = None
 
     async def set_param(self, response):
-        if self.fill_gaps:
-            self.kwargs[self.param] = response[self.i]['id'] - 1
-            self.last_id = response[self.i]['id']
-        else:
-            self.kwargs[self.param] = response[self.i]['id']
+        if response:
+            if self.fill_gaps:
+                self.kwargs[self.param] = response[0]['id'] - 1
+                print(self.kwargs)
+                self.last_id = response[0]['id']
+            else:
+                self.kwargs[self.param] = response[0]['id']
 
     async def call_on_response(self, response):
         """
@@ -146,7 +143,7 @@ class SinceIdIterator(IdIterator):
             if response[-1]['id'] != since_id:
                 responses = with_max_id(
                     _request=self.request,
-                    max_id=response[-1]['id'] - 1,
+                    max_id=response[0]['id'] - 1,
                     **self.kwargs
                 )
 
@@ -160,6 +157,7 @@ class SinceIdIterator(IdIterator):
                     raise StopAsyncIteration
 
         await self.set_param(response)
+
         return response
 
 

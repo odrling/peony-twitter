@@ -437,9 +437,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
     def run(self):
         """ Run the tasks attached to the instance """
-        self.loop.create_task(self.run_tasks())
         try:
-            self.loop.run_forever()
+            self.loop.run_until_complete(self.run_tasks())
         except KeyboardInterrupt:
             self.close()
 

@@ -431,8 +431,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
     async def run_tasks(self):
         """ Run the tasks attached to the instance """
         await self.setup()
-        self._gathered_tasks = asyncio.gather(*self.get_tasks(), loop=self.loop)
-        await asyncio.wait(self.get_tasks())
+        tasks = self.get_tasks()
+        self._gathered_tasks = asyncio.gather(*tasks, loop=self.loop)
+        await asyncio.wait(tasks)
 
     def run(self):
         """ Run the tasks attached to the instance """

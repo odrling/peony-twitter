@@ -178,10 +178,10 @@ class Events(dict):
                 return value in data
 
             self[func.__name__] = decorated
-            return decorated
         else:
             self[func.__name__] = func
-            return func
+
+        return self[func.__name__]
 
     @property
     def no_aliases(self):

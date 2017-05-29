@@ -440,6 +440,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         try:
             self.loop.run_until_complete(self.run_tasks())
         except KeyboardInterrupt:
+            pass
+        finally:
             self.close()
 
     def close(self):

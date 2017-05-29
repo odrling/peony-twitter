@@ -178,6 +178,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                         'early': asyncio.Event(),
                         'state': False}
 
+        self._gathered_tasks = None
+
     def init_tasks(self):
         """ tasks executed on initialization """
         return self._get_tasks(kind=init_task)
@@ -301,13 +303,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
     __getattr__ = __getitem__
 
     def __del__(self):
-        # close the session only if it was created by peony
-        if not self._user_session:
-            # close is None for Python 3.5 here (?)
-            try:
-                self._session.close()
-            except (TypeError, AttributeError):
-                pass
+        self.close()
 
     async def request(self, method, url,
                       headers=None,
@@ -435,6 +431,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
     async def run_tasks(self):
         """ Run the tasks attached to the instance """
         await self.setup()
+        self._gathered_tasks = asyncio.gather(*self.get_tasks(), loop=self.loop)
         await asyncio.wait(self.get_tasks())
 
     def run(self):
@@ -443,15 +440,28 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         try:
             self.loop.run_forever()
         except KeyboardInterrupt:
-            pending = asyncio.Task.all_tasks(loop=self.loop)
-            gathered = asyncio.gather(*pending, loop=self.loop)
+            self.close()
+
+    def close(self):
+        """ properly close the client """
+        # close the session only if it was created by peony
+        if not self._user_session:
+            # close is None for Python 3.5 here (?)
             try:
-                gathered.cancel()
-                self.loop.run_until_complete(gathered)
+                self._session.close()
+                self._session = None
+            except (TypeError, AttributeError):
+                pass
+
+        # close currently running tasks
+        if self._gathered is not None:
+            try:
+                self._gathered_tasks.cancel()
+                self.loop.run_until_complete(self._gathered)
 
                 # we want to retrieve any exceptions to make sure that
                 # they don't nag us about it being un-retrieved.
-                gathered.exception()
+                self._gathered.exception()
             except:
                 pass
 

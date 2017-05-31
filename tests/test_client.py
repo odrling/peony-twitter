@@ -243,6 +243,23 @@ async def test_setup_init_tasks_list():
     assert client.b == "321"
 
 
+def test_client_error():
+    with pytest.raises(TypeError):
+        BasePeonyClient()
+
+
+def test_client_encoding_loads():
+    text = bytes([194, 161])
+    data = b"{\"hello\": \"%s\"}" % text
+
+    client = BasePeonyClient("", "", encoding='utf-8')
+    assert client._loads(data)['hello'] == text.decode('utf-8')
+
+    client = BasePeonyClient("", "", encoding='ascii')
+    with pytest.raises(UnicodeDecodeError):
+        client._loads(data)
+
+
 @pytest.fixture
 def oauth2_client(event_loop):
     if oauth2:

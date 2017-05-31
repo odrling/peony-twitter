@@ -90,7 +90,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         is called
     """
 
-    def __init__(self, consumer_key, consumer_secret,
+    def __init__(self,
+                 consumer_key=None,
+                 consumer_secret=None,
                  access_token=None,
                  access_token_secret=None,
                  bearer_token=None,
@@ -151,6 +153,10 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         self._session = session
         self._user_session = session is not None
+
+        if consumer_key is None or consumer_secret is None:
+            raise TypeError("missing 2 required arguments: 'consumer_key' "
+                            "and 'consumer_secret'")
 
         # all the possible args required by headers in :mod:`peony.oauth`
         kwargs = {
@@ -269,7 +275,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         api.BaseAPIPath
             To access an API endpoint
         """
-        defaults = (None, self.api_version, self._suffix, self.base_url)
+        defaults = None, self.api_version, self._suffix, self.base_url
         keys = ['api', 'version', 'suffix', 'base_url']
 
         if isinstance(values, dict):

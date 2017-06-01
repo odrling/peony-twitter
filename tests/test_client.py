@@ -279,6 +279,40 @@ async def test_oauth2_request(client):
     await client.api.search.tweets.get(q="@twitter hello :)")
 
 
+@pytest.mark.asyncio
+async def test_close(event_loop):
+    client = BasePeonyClient("", "", loop=event_loop)
+    await client.setup()
+
+    def dummy_func(*args, **kwargs):
+        pass
+
+    client._gathered_tasks = asyncio.gather(dummy())
+    with patch.object(client.loop, 'run_until_complete',
+                      side_effect=dummy_func) as run:
+        with patch.object(client._gathered_tasks, 'cancel') as cancel:
+            with patch.object(client._gathered_tasks, 'exception') as exc:
+                with patch.object(client._session, 'close') as close:
+                    client.close()
+                    run.assert_called_once_with(client._gathered_tasks)
+                    cancel.assert_called_once_with()
+                    close.assert_called_once_with()
+                    exc.assert_called_once_with()
+                    assert client._session is None
+
+
+def test_close_no_session():
+    client = BasePeonyClient("", "")
+    assert client._session is None
+    client.close()
+
+
+def test_close_no_tasks():
+    client = BasePeonyClient("", "")
+    assert client._gathered_tasks is None
+    client.close()
+
+
 @oauth2_decorator
 async def test_oauth2_invalidate_token(client):
     await client.headers.sign()  # make sure there is a token

@@ -65,9 +65,9 @@ def dummy_error_handler(request):
 
 
 def test_request_without_error_handler(request):
-    with patch.object(request.api._client, 'request') as client_request:
-        with patch.object(request.api._client,
-                          'error_handler') as error_handler:
+    client = request.api._client
+    with patch.object(client, 'request') as client_request:
+        with patch.object(client, 'error_handler') as error_handler:
             request(_error_handling=False, test=1, _test=2)
             assert client_request.called_with(method='get',
                                               url=url,

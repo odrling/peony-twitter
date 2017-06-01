@@ -154,6 +154,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         self._session = session
         self._user_session = session is not None
 
+        self._gathered_tasks = None
+
         if consumer_key is None or consumer_secret is None:
             raise TypeError("missing 2 required arguments: 'consumer_key' "
                             "and 'consumer_secret'")
@@ -183,8 +185,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         self.__setup = {'done': asyncio.Event(),
                         'early': asyncio.Event(),
                         'state': False}
-
-        self._gathered_tasks = None
 
     def init_tasks(self):
         """ tasks executed on initialization """
@@ -461,14 +461,15 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 pass
 
         # close currently running tasks
-        if self._gathered is not None:
+        if self._gathered_tasks is not None:
             try:
                 self._gathered_tasks.cancel()
-                self.loop.run_until_complete(self._gathered)
+                if not self.loop.is_closed():
+                    self.loop.run_until_complete(self._gathered_tasks)
 
                 # we want to retrieve any exceptions to make sure that
                 # they don't nag us about it being un-retrieved.
-                self._gathered.exception()
+                self._gathered_tasks.exception()
             except:
                 pass
 

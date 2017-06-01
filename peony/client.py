@@ -202,10 +202,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
             self.__setup['early'].set()
 
-            if callable(self.init_tasks):
-                init_tasks = self.init_tasks()
-            else:
-                init_tasks = self.init_tasks
+            init_tasks = self.init_tasks
+            if callable(init_tasks):
+                init_tasks = init_tasks()
 
             if init_tasks:
                 await asyncio.wait(init_tasks)

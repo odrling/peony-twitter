@@ -1,5 +1,4 @@
 
-import asyncio
 import io
 from unittest.mock import patch
 
@@ -66,18 +65,16 @@ def dummy_error_handler(request):
 
 
 def test_request_without_error_handler(request):
-    with patch.object(request.api._client, 'request',
-                      side_effect=dummy) as client_request:
-        with patch.object(request.api._client, 'error_handler',
-                          side_effect=dummy_error_handler) as error_handler:
-            r = request(_error_handling=False, test=1, _test=2)
+    with patch.object(request.api._client, 'request') as client_request:
+        with patch.object(request.api._client,
+                          'error_handler') as error_handler:
+            request(_error_handling=False, test=1, _test=2)
             assert client_request.called_with(method='get',
                                               url=url,
                                               skip_params=False,
                                               test=2,
                                               params={'test': 1})
             assert not error_handler.called
-            assert asyncio.iscoroutine(r)
 
 
 @pytest.mark.asyncio

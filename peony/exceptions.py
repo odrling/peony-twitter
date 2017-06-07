@@ -137,7 +137,7 @@ class RateLimitExceeded(PeonyException):
         int
             Time when the limit will be reset
         """
-        return int(self.response.headers['X-Rate-Limit-Reset'])
+        return int(self.response.headers.get('X-Rate-Limit-Reset', 0))
 
     @property
     def reset_in(self):
@@ -149,7 +149,7 @@ class RateLimitExceeded(PeonyException):
         int
             Time in seconds until the limit will be reset
         """
-        return self.reset - time()
+        return max(self.reset - time(), 0)
 
 
 @errors.code(92)

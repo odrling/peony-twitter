@@ -2,12 +2,15 @@ language: python
 python:
   - "3.5"
   - "3.6"
+os:
+  - linux
+  - osx
 install:
   - pip install --upgrade pip wheel
   - pip install -r tests_requirements.txt
+cache: pip
 script:
   - flake8
   - py.test tests --cov=peony
-cache: pip
 after_success:
   - codecov

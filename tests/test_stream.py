@@ -1,4 +1,5 @@
 
+import asyncio
 import json
 from unittest.mock import patch
 
@@ -265,6 +266,33 @@ async def test_stream_context_response_already_closed(event_loop):
                 stream.response.close()
 
         assert context.response.closed
+
+
+@pytest.mark.asyncio
+async def test_stream_cancel(event_loop):
+    async def cancel(task):
+        await asyncio.sleep(0.01)
+        task.cancel()
+
+    async def test_stream_iterations(stream):
+        while True:
+            await test_stream_iteration(stream)
+
+    with aiohttp.ClientSession(loop=event_loop) as session:
+        client = peony.client.BasePeonyClient("", "", session=session)
+        context = peony.stream.StreamResponse(method='GET',
+                                              url="http://whatever.com",
+                                              client=client)
+
+        with context as stream:
+            with patch.object(stream, 'connect',
+                              side_effect=stream_content):
+                coro = test_stream_iterations(stream)
+                task = event_loop.create_task(coro)
+                cancel_task = event_loop.create_task(cancel(task))
+
+                with aiohttp.Timeout(1):
+                    await asyncio.wait([task, cancel_task])
 
 
 @pytest.mark.asyncio

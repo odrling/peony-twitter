@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 """ load the module at the root of the repository """
 
+import asyncio
 import inspect
 import json
 import os.path
@@ -132,9 +133,18 @@ class MockResponse:
                 line = self.data
                 self.data = ""
 
+            # needed to test the cancellation of the task
+            await asyncio.sleep(0.001)
+
             return line
 
         raise StopAsyncIteration
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self):
+        pass
 
     async def release(self):
         pass
@@ -155,23 +165,38 @@ class MockResponse:
 
 
 class MockIteratorRequest:
+    ids = range(1000)
+    kwargs = {}
 
-    def __init__(self, ids=range(1000)):
-        self.ids = ids
+    def __init__(self, since_id=None,
+                 max_id=None,
+                 cursor=None,
+                 count=10):
+        self.since_id = since_id
+        self.max_id = max_id
+        self.cursor = cursor
+        self.count = count
 
-    async def __call__(self,
-                       since_id=None,
-                       max_id=None,
-                       cursor=None,
-                       count=10):
+    def __await__(self):
+        return self.request().__await__()
+
+    def __call__(self, **kwargs):
+        return MockIteratorRequest(**kwargs)
+
+    async def request(self):
+        since_id = self.since_id
+        max_id = self.max_id
+        cursor = self.cursor
+        count = self.count
+
         if max_id is not None:
             if max_id < 0:
                 return []
 
             max_id = min(max_id, len(self.ids) - 1)
 
-            end = max_id - count
-            if since_id is not None and end < since_id:
+            end = max_id - self.count
+            if since_id is not None and end < self.since_id:
                 end = since_id
 
             if end < 0:
@@ -191,7 +216,8 @@ class MockIteratorRequest:
                     'next_cursor': next_cursor}
 
         else:
-            if since_id is None or since_id < len(self.ids) - count:
+            last_chunk_start = len(self.ids) - count
+            if since_id is None or since_id < last_chunk_start:
                 return [{'id': i} for i in
                         self.ids[:len(self.ids) - count - 1:-1]]
             else:

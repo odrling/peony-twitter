@@ -2,6 +2,7 @@
 
 import asyncio
 import sys
+from concurrent.futures import CancelledError
 
 import aiohttp
 
@@ -150,6 +151,9 @@ class StreamResponse:
             self.state = DISCONNECTION
             return await self.init_restart()
 
+        except CancelledError:
+            raise
+
         except Exception as e:
             self.state = ERROR
             return await self.init_restart(error=e)
@@ -174,6 +178,7 @@ class StreamResponse:
         """
 
         if error:
+            print(error.__class__)
             utils.log_error()
 
         if self.state == DISCONNECTION:

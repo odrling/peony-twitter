@@ -335,6 +335,7 @@ async def test_oauth2_request(client):
     await client.api.search.tweets.get(q="@twitter hello :)")
 
 
+@pytest.mark.invalidate_token
 @oauth2_decorator
 async def test_oauth2_invalidate_token(client):
     await client.headers.sign()  # make sure there is a token

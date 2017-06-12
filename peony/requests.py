@@ -3,12 +3,12 @@
 from abc import ABC, abstractmethod
 from types import GeneratorType
 
-from . import iterators
+from . import iterators, utils
 
 iterable = (list, set, tuple, GeneratorType)
 
 
-class Endpoint():
+class Endpoint:
     """
         A class representing an endpoint
 
@@ -20,9 +20,13 @@ class Endpoint():
         HTTP method to be used by the request
     """
 
-    def __init__(self, api, method):
-        self.api = api
-        self.method = method
+    def __init__(self, *request):
+        if len(request) == 1:
+            request = request[0]
+            self.api = request.api
+            self.method = request.method
+        else:
+            self.api, self.method = request
 
 
 class AbstractRequest(ABC, Endpoint):
@@ -116,17 +120,33 @@ class Iterators(Endpoint):
     request object
     """
 
+    def __init__(self, request):
+        super().__init__(request)
+        self.request = request
+
     def __getattr__(self, key):
         iterator = getattr(iterators, key)
-        request = getattr(self.api, self.method)
 
-        def iterate(**kwargs):
-            return iterator(request, **kwargs)
+        if isinstance(self.request, Request):
+            def iterate(**kwargs):
+                return iterator(self.request, **kwargs)
+        else:
+            keys = utils.get_args(iterator.__init__)
+
+            def iterate(**kwargs):
+                iterator_kwargs = {}
+                for key in keys:
+                    if '_' + key in kwargs:
+                        iterator_kwargs[key] = kwargs.pop('_' + key)
+
+                request = self.request(**kwargs)
+
+                return iterator(request, **iterator_kwargs)
 
         return iterate
 
 
-class Request(AbstractRequest):
+class RequestFactory(Endpoint):
     """
         Requests to REST APIs
 
@@ -140,20 +160,36 @@ class Request(AbstractRequest):
 
     def __init__(self, api, method):
         super().__init__(api, method)
-        self.iterator = Iterators(api, method)
+        self.iterator = Iterators(self)
 
-    def __call__(self, _skip_params=None, _error_handling=True, **kwargs):
-        kwargs, skip_params, url = self._get_params(**kwargs)
+    def __call__(self, **kwargs):
+        return Request(self.api, self.method, **kwargs)
 
-        skip_params = skip_params if _skip_params is None else _skip_params
+
+class Request(RequestFactory, AbstractRequest):
+
+    def __init__(self, api, method, **kwargs):
+        super().__init__(api, method)
+        self.iterator = Iterators(self)
+        self.kwargs = kwargs
+
+    def __await__(self):
+        kwargs, skip_params, url = self._get_params(**self.kwargs)
+
+        # if user explicitly wants to skip parameters in the oauth signature
+        if '_skip_params' in self.kwargs:
+            skip_params = self.kwargs.pop('_skip_params')
+
+        error_handling = self.kwargs.pop('_error_handling', True)
+
         kwargs.update(method=self.method, url=url, skip_params=skip_params)
 
         client_request = self.api._client.request
 
-        if self.api._client.error_handler and _error_handling:
+        if self.api._client.error_handler and error_handling:
             client_request = self.api._client.error_handler(client_request)
 
-        return client_request(**kwargs)
+        return client_request(**kwargs).__await__()
 
 
 class StreamingRequest(AbstractRequest):

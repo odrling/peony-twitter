@@ -43,6 +43,34 @@ def test_sanitize_params_skip(request):
     assert skip_params is True
 
 
+@pytest.mark.asyncio
+async def test_skip_params(api_path):
+    request = requests.Request(api_path, 'get', _skip_params=False)
+    with patch.object(request.api._client, 'request',
+                      side_effect=dummy) as client_request:
+        await request
+        client_request.assert_called_with(method='get', skip_params=False,
+                                          url=api_path.url())
+
+    request = requests.Request(api_path, 'get', _skip_params=True)
+    with patch.object(request.api._client, 'request',
+                      side_effect=dummy) as client_request:
+        await request
+        client_request.assert_called_with(method='get', skip_params=True,
+                                          url=api_path.url())
+
+
+@pytest.mark.asyncio
+async def test_error_handling(api_path):
+    request = requests.Request(api_path, 'get', _error_handling=False)
+    client = request.api._client
+    with patch.object(client, 'request', side_effect=dummy):
+        with patch.object(client, 'error_handler',
+                          side_effect=dummy_error_handler) as error_handler:
+            await request
+            assert not error_handler.called
+
+
 def test_get_params(request):
     kwargs, skip_params, req_url = request._get_params(_test=1, test=2)
 
@@ -51,8 +79,29 @@ def test_get_params(request):
     assert url == req_url
 
 
-def test_iterator(request):
-    assert isinstance(request.iterator.with_cursor(), iterators.CursorIterator)
+def test_get_iterator(request):
+    assert isinstance(request.iterator.with_cursor(),
+                      iterators.CursorIterator)
+    assert isinstance(request.iterator.with_max_id(),
+                      iterators.MaxIdIterator)
+    assert isinstance(request.iterator.with_since_id(),
+                      iterators.SinceIdIterator)
+
+
+def test_get_iterator_from_factory(api_path):
+    factory = requests.RequestFactory(api_path, 'get')
+    assert isinstance(factory.iterator.with_cursor(), iterators.CursorIterator)
+    assert isinstance(factory.iterator.with_max_id(), iterators.MaxIdIterator)
+
+
+def test_iterator_params_from_factory(api_path):
+    factory = requests.RequestFactory(api_path, 'get')
+    iterator = factory.iterator.with_since_id(_force=False)
+    assert isinstance(iterator, iterators.SinceIdIterator)
+    assert iterator.force is False
+    iterator = factory.iterator.with_since_id(_force=True)
+    assert isinstance(iterator, iterators.SinceIdIterator)
+    assert iterator.force is True
 
 
 def test_iterator_unknown_iterator(request):

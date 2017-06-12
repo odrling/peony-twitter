@@ -13,7 +13,7 @@ except (SystemError, ImportError):
 def print_data(func):
 
     def decorated(self, tweet):
-        if self.last_tweet_id < tweet.id:
+        if self.last_id < tweet.id:
             print(func(self, tweet) + "\n" + "-" * 10)
 
     return decorated
@@ -24,7 +24,7 @@ class Home(peony.PeonyClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.last_tweet_id = 1
+        self.last_id = 1
 
     @print_data
     def print_rt(self, tweet):
@@ -41,10 +41,9 @@ class Home(peony.PeonyClient):
 
     @peony.task
     async def get_timeline(self):
-        responses = self.api.statuses.home_timeline.get.iterator.with_since_id(
-            count=200,
-            since_id=self.last_tweet_id
-        )
+        request = self.api.statuses.home_timeline.get(count=200,
+                                                      since_id=self.last_id)
+        responses = request.iterator.with_since_id(fill_gaps=True)
 
         async for tweets in responses:
             for tweet in reversed(tweets):

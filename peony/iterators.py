@@ -15,9 +15,9 @@ class AbstractIterator(ABC):
         Parameters of the request
     """
 
-    def __init__(self, _request, **kwargs):
-        self.request = _request
-        self.kwargs = kwargs
+    def __init__(self, request):
+        self.request = request
+        self.kwargs = request.kwargs.copy()
 
     async def __aiter__(self):
         return self
@@ -45,16 +45,16 @@ class IdIterator(AbstractIterator):
         Request parameters
     """
 
-    def __init__(self, _request, _parameter, _force=False, **kwargs):
+    def __init__(self, request, parameter, force=False):
         """ Keep all the arguments as class attributes """
-        self.param = _parameter
-        self.force = _force
-        super().__init__(_request, **kwargs)
+        self.param = parameter
+        self.force = force
+        super().__init__(request)
 
     async def __anext__(self):
         """ return each response until getting an empty data """
-        response = await self.request(**self.kwargs)
-
+        request = self.request(**self.kwargs)
+        response = await request
         if response:
             response = await self.call_on_response(response)
         elif not self.force:
@@ -79,11 +79,10 @@ class MaxIdIterator(IdIterator):
         Parameters of the request
     """
 
-    def __init__(self, _request, **kwargs):
-        super().__init__(_request,
-                         _parameter="max_id",
-                         _force=False,
-                         **kwargs)
+    def __init__(self, request):
+        super().__init__(request,
+                         parameter="max_id",
+                         force=False)
 
     async def call_on_response(self, response):
         """
@@ -109,20 +108,18 @@ class SinceIdIterator(IdIterator):
         Parameters of the request
     """
 
-    def __init__(self, _request, _force=True, _fill_gaps=True, **kwargs):
-        super().__init__(_request,
-                         _parameter="since_id",
-                         _force=_force,
-                         **kwargs)
+    def __init__(self, request, force=True, fill_gaps=False):
+        super().__init__(request,
+                         parameter="since_id",
+                         force=force)
 
-        self.fill_gaps = _fill_gaps
+        self.fill_gaps = fill_gaps
         self.last_id = None
 
     async def set_param(self, response):
         if response:
             if self.fill_gaps:
                 self.kwargs[self.param] = response[0]['id'] - 1
-                print(self.kwargs)
                 self.last_id = response[0]['id']
             else:
                 self.kwargs[self.param] = response[0]['id']
@@ -141,11 +138,9 @@ class SinceIdIterator(IdIterator):
 
         if self.fill_gaps:
             if response[-1]['id'] != since_id:
-                responses = with_max_id(
-                    _request=self.request,
-                    max_id=response[0]['id'] - 1,
-                    **self.kwargs
-                )
+                max_id = response[-1]['id'] - 1
+                responses = with_max_id(self.request(**self.kwargs,
+                                                     max_id=max_id))
 
                 async for tweets in responses:
                     response.extend(tweets)

@@ -8,7 +8,7 @@ import aiohttp
 import peony
 import peony.api
 import pytest
-from peony import BasePeonyClient, data_processing, oauth
+from peony import BasePeonyClient, data_processing, exceptions, oauth
 from peony.general import twitter_api_version, twitter_base_api_url
 
 from . import Data, MockResponse, dummy
@@ -16,7 +16,7 @@ from . import Data, MockResponse, dummy
 oauth2_keys = 'PEONY_CONSUMER_KEY', 'PEONY_CONSUMER_SECRET'
 oauth2 = all(key in os.environ for key in oauth2_keys)
 
-creds_keys = 'consumer_key', 'consumer_secret'
+oauth2_creds = 'consumer_key', 'consumer_secret'
 token = None
 
 
@@ -77,8 +77,15 @@ def test_create_api_path(dummy_client):
 
 class MockSessionRequest:
 
-    async def __aenter__(self):
-        return MockResponse(data=MockResponse.message)
+    def __init__(self, status=200, data=MockResponse.message,
+                 content_type="plain/text"):
+        self.status = status
+        self.data = data
+        self.ctype = content_type
+
+    async def __aenter__(self, *args, **kwargs):
+        return MockResponse(status=self.status, data=self.data,
+                            content_type=self.ctype)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -89,8 +96,11 @@ class MockSessionRequest:
 
 class MockSession:
 
-    def __init__(self):
-        self.request = MockSessionRequest()
+    def __init__(self, request=None):
+        if request is None:
+            self.request = MockSessionRequest()
+        else:
+            self.request = request
 
 
 class SetupClientTest(BasePeonyClient):
@@ -146,7 +156,7 @@ def oauth2_decorator(func):
 
 
 def get_oauth2_client(**kwargs):
-    creds = {creds_keys[i]: os.environ[oauth2_keys[i]] for i in range(2)}
+    creds = {oauth2_creds[i]: os.environ[oauth2_keys[i]] for i in range(2)}
     return BasePeonyClient(auth=oauth.OAuth2Headers, loop=False,
                            **creds, **kwargs)
 
@@ -260,25 +270,6 @@ def test_client_encoding_loads():
         client._loads(data)
 
 
-@pytest.fixture
-def oauth2_client(event_loop):
-    if oauth2:
-        return get_oauth2_client(loop=event_loop)
-
-
-@oauth2_decorator
-async def test_oauth2_get_token(client):
-    if 'Authorization' in client.headers:
-        del client.headers['Authorization']
-
-    await client.headers.sign()
-
-
-@oauth2_decorator
-async def test_oauth2_request(client):
-    await client.api.search.tweets.get(q="@twitter hello :)")
-
-
 @pytest.mark.asyncio
 async def test_close(event_loop):
     client = BasePeonyClient("", "", loop=event_loop)
@@ -311,6 +302,37 @@ def test_close_no_tasks():
     client = BasePeonyClient("", "")
     assert client._gathered_tasks is None
     client.close()
+
+
+@pytest.mark.asyncio
+async def test_bad_request(dummy_client):
+    async def prepare_dummy(*args, **kwargs):
+        return kwargs
+
+    dummy_client._session = MockSession(MockSessionRequest(status=404))
+    with patch.object(dummy_client.headers, 'prepare_request',
+                      side_effect=prepare_dummy):
+        with pytest.raises(exceptions.NotFound):
+            await dummy_client.request('get', "http://google.com/404")
+
+
+@pytest.fixture
+def oauth2_client(event_loop):
+    if oauth2:
+        return get_oauth2_client(loop=event_loop)
+
+
+@oauth2_decorator
+async def test_oauth2_get_token(client):
+    if 'Authorization' in client.headers:
+        del client.headers['Authorization']
+
+    await client.headers.sign()
+
+
+@oauth2_decorator
+async def test_oauth2_request(client):
+    await client.api.search.tweets.get(q="@twitter hello :)")
 
 
 @oauth2_decorator

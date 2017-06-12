@@ -42,10 +42,11 @@ class Home(peony.PeonyClient):
         return fmt.format(user=tweet.user, text=text)
 
     async def get_timeline(self):
-        responses = self.api.statuses.home_timeline.get.iterator.with_since_id(
+        request = self.api.statuses.home_timeline.get(
             count=200,
             since_id=self.last_tweet_id
         )
+        responses = request.iterator.with_since_id()
 
         async for tweets in responses:
             for tweet in reversed(tweets):

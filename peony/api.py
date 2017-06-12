@@ -115,7 +115,7 @@ class APIPath(AbstractAPIPath):
     """ Class to make requests to a REST API """
 
     def _request(self, method):
-        return requests.Request(self, method)
+        return requests.RequestFactory(self, method)
 
 
 class StreamingAPIPath(AbstractAPIPath):

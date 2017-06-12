@@ -14,10 +14,8 @@ client = peony.PeonyClient(**api.keys)
 
 
 async def get_home(**params):
-    responses = client.api.statuses.home_timeline.get.iterator.with_since_id(
-        count=200,
-        **params
-    )
+    req = client.api.statuses.home_timeline.get(count=200, **params)
+    responses = req.iterator.with_since_id()
 
     home = []
     async for tweets in responses:

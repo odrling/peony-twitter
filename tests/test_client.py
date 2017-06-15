@@ -2,13 +2,13 @@
 
 import asyncio
 import os
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import aiohttp
 import peony
 import peony.api
 import pytest
-from peony import BasePeonyClient, data_processing, exceptions, oauth
+from peony import BasePeonyClient, data_processing, exceptions, oauth, stream
 from peony.general import twitter_api_version, twitter_base_api_url
 
 from . import Data, MockResponse, dummy
@@ -65,6 +65,16 @@ def test_create_endpoint_tuple(dummy_client):
 
     endpoint = "http://google.com/test"
     assert dummy_client['', '', '', custom_base_url].test.url() == endpoint
+
+
+def test_create_endpoint_no_api_or_version(dummy_client):
+    base_url = "http://google.com"
+    assert dummy_client['', '', '', base_url].test.url() == base_url + '/test'
+
+
+def test_create_endpoint_type_error(dummy_client):
+    with pytest.raises(TypeError):
+        dummy_client[object()]
 
 
 def test_create_streaming_path(dummy_client):
@@ -314,6 +324,188 @@ async def test_bad_request(dummy_client):
                       side_effect=prepare_dummy):
         with pytest.raises(exceptions.NotFound):
             await dummy_client.request('get', "http://google.com/404")
+
+
+def test_stream_request(dummy_client):
+    # streams are tested in test_stream
+    assert isinstance(dummy_client.stream.get(), stream.StreamResponse)
+
+
+@pytest.mark.asyncio
+async def test_request_proxy(dummy_client):
+    class RaiseProxy:
+
+        def __init__(self, *args, proxy=None, **kwargs):
+            raise RuntimeError(proxy)
+
+    async with aiohttp.ClientSession() as session:
+        with patch.object(session, 'request', side_effect=RaiseProxy):
+            try:
+                await dummy_client.request(method='get',
+                                           url="http://hello.com",
+                                           proxy="http://some.proxy.com",
+                                           session=session)
+            except RuntimeError as e:
+                assert str(e) == "http://some.proxy.com"
+
+
+@pytest.mark.asyncio
+async def test_request_encoding(dummy_client):
+    class DummyCTX:
+
+        def __init__(self, **kwargs):
+            self.status = 200
+
+        def __getattr__(self, item):
+            return None
+
+        def __aiter__(self):
+            return self
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def raise_encoding(*args, encoding=None, **kwargs):
+        raise RuntimeError(encoding)
+
+    async with aiohttp.ClientSession() as session:
+        with patch.object(session, 'request', side_effect=DummyCTX):
+            with patch.object(data_processing, 'read', side_effect=dummy):
+                with patch.object(data_processing, 'PeonyResponse'):
+                    try:
+                        await dummy_client.request(method='get',
+                                                   url="http://hello.com",
+                                                   encoding="best encoding",
+                                                   session=session)
+                    except RuntimeError as e:
+                        assert str(e) == "best encoding"
+
+
+def test_run_keyboard_interrupt(event_loop):
+    client = BasePeonyClient("", "", loop=event_loop)
+    with patch.object(client, 'run_tasks', side_effect=KeyboardInterrupt):
+        client.run()
+
+
+def test_run_exceptions_raise(event_loop):
+    client = BasePeonyClient("", "", loop=event_loop)
+    for exc in (Exception, RuntimeError, peony.exceptions.PeonyException):
+        with patch.object(client, 'run_tasks', side_effect=exc):
+            with pytest.raises(exc):
+                client.run()
+
+
+def test_close_session(dummy_client):
+    with patch.object(dummy_client, '_session') as session:
+        dummy_client.close()
+        assert session.close.called
+        assert dummy_client._session is None
+
+
+def test_close_user_session():
+    client = BasePeonyClient("", "", session=Mock())
+
+    client.close()
+    assert not client._session.close.called
+
+
+class Client(peony.BasePeonyClient):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.t1, self.t2 = False, False
+
+    @peony.task
+    def _t1(self):
+        self.t1 = True
+
+    @peony.init_task
+    def _t2(self):
+        self.t2 = True
+
+
+def test_get_tasks(event_loop):
+    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
+
+    client._get_tasks(kind=peony.task)
+
+    assert client.t1 is True
+    assert client.t2 is False
+
+
+def test_get_init_tasks(event_loop):
+    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
+    client._get_tasks(kind=peony.init_task)
+
+    assert client.t1 is False
+    assert client.t2 is True
+
+
+def test_get_tasks_runtime_exception(event_loop):
+    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
+
+    with pytest.raises(RuntimeError):
+        client._get_tasks(kind="")
+
+
+class SubClient(Client, dict):
+    # dict to test inheritance without _task attribute
+
+    @peony.task
+    def t3(self):
+        pass
+
+
+def test_tasks_inheritance():
+    assert SubClient.t3 in SubClient._tasks['tasks']
+    assert Client._t1 in SubClient._tasks['tasks']
+
+
+class ClientCancelTasks(BasePeonyClient):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cancelled = True
+
+    @peony.task
+    async def cancel_tasks(self):
+        await asyncio.sleep(0.001)
+        self.close()
+
+    @peony.task
+    async def sleep(self):
+        await asyncio.sleep(1)
+        self.cancelled = False
+
+
+@pytest.mark.asyncio
+async def test_close_cancel_tasks(event_loop):
+    client = ClientCancelTasks("", "", loop=event_loop)
+    await client.run_tasks()
+    assert client.cancelled
+
+
+def test_close_loop_closed(event_loop):
+    client = ClientCancelTasks("", "", loop=Mock())
+    client.loop.is_closed.return_value = True
+    with patch.object(client, '_gathered_tasks') as tasks:
+        client.close()
+        assert tasks.cancel.called
+        assert not client.loop.run_until_complete.called
+
+
+def test_add_event_stream():
+
+    class ClientTest(BasePeonyClient):
+        pass
+
+    assert peony.commands.EventStream not in ClientTest._streams
+
+    ClientTest.event_stream(peony.commands.EventStream)
+    assert peony.commands.EventStream in ClientTest._streams
 
 
 @pytest.fixture

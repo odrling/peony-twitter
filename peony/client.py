@@ -90,6 +90,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         is called
     """
 
+    _streams = EventStreams()
+
     def __init__(self,
                  consumer_key=None,
                  consumer_secret=None,
@@ -129,9 +131,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         if auth is None:
             auth = OAuth1Headers
-
-        if headers is None:
-            headers = {}
 
         self.proxy = proxy
 
@@ -286,7 +285,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                             'please use a dict, a tuple or a list instead')
         elif isinstance(values, str):
             values = [values, *defaults[1:]]
-        elif values:
+        elif isinstance(values, tuple):
             if len(values) < len(keys):
                 padding = (None,) * (len(keys) - len(values))
                 values += padding
@@ -294,6 +293,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             values = [default if value is None else value
                       for value, default in zip(values, defaults)
                       if (value, default) != (None, None)]
+        else:
+            raise TypeError("Could not create an endpoint from an object of "
+                            "type " + values.__class__.__name__)
 
         api, version, suffix, base_url = values
 
@@ -401,9 +403,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
     @classmethod
     def event_stream(cls, event_stream):
         """ Decorator to attach an event stream to the class """
-        if getattr(cls, '_streams', None) is None:
-            cls._streams = EventStreams()
-
         cls._streams.append(event_stream)
         return event_stream
 
@@ -415,7 +414,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         else:
             raise RuntimeError("Cannot get tasks of kind %s" % kind)
 
-        return [t(self) for t in self._tasks[key]]
+        return [task(self) for task in self._tasks[key]]
 
     def get_tasks(self):
         """
@@ -428,8 +427,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         """
         tasks = self._get_tasks()
 
-        if isinstance(self._streams, EventStreams):
-            tasks.extend(self._streams.get_tasks(self))
+        tasks.extend(self._streams.get_tasks(self))
 
         return tasks
 

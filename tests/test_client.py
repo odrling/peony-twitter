@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import os
+import random
 from unittest.mock import Mock, patch
 
 import aiohttp
@@ -12,12 +12,6 @@ from peony import BasePeonyClient, data_processing, exceptions, oauth, stream
 from peony.general import twitter_api_version, twitter_base_api_url
 
 from . import Data, MockResponse, dummy
-
-oauth2_keys = 'PEONY_CONSUMER_KEY', 'PEONY_CONSUMER_SECRET'
-oauth2 = all(key in os.environ for key in oauth2_keys)
-
-oauth2_creds = 'consumer_key', 'consumer_secret'
-token = None
 
 
 @pytest.fixture
@@ -147,28 +141,6 @@ async def test_setup(event_loop):
         assert client.c.data == {'hello': "world"}
 
     await asyncio.gather(test(), test())
-
-
-def oauth2_decorator(func):
-
-    @pytest.mark.asyncio
-    @pytest.mark.skipif(not oauth2, reason="no credentials found")
-    async def decorator():
-        global token
-
-        client = get_oauth2_client(bearer_token=token)
-        await func(client)
-
-        # keep the token for the next test
-        token = client.headers.token
-
-    return decorator
-
-
-def get_oauth2_client(**kwargs):
-    creds = {oauth2_creds[i]: os.environ[oauth2_keys[i]] for i in range(2)}
-    return BasePeonyClient(auth=oauth.OAuth2Headers, loop=False,
-                           **creds, **kwargs)
 
 
 class TasksClientTest(SetupClientTest):
@@ -497,6 +469,67 @@ def test_close_loop_closed(event_loop):
         assert not client.loop.run_until_complete.called
 
 
+@pytest.fixture
+def peony_client(event_loop):
+    return peony.PeonyClient("", "", loop=event_loop)
+
+
+def request_test(expected_url, expected_method):
+
+    async def request(*args, url=None, method=None, **kwargs):
+        assert url == expected_url
+        assert method == expected_method
+        return True
+
+    return request
+
+
+@pytest.mark.asyncio
+async def test_peony_client_get_user(peony_client):
+    url = peony_client.api.account.verify_credentials.url()
+    request = request_test(url, 'get')
+
+    with patch.object(peony_client, 'request', side_effect=request) as req:
+        await peony_client._PeonyClient__get_user()
+        assert req.called
+        assert peony_client.user
+
+
+@pytest.mark.asyncio
+async def test_peony_client_get_twitter_configuration(peony_client):
+    request = request_test(peony_client.api.help.configuration.url(), 'get')
+
+    with patch.object(peony_client, 'request', side_effect=request) as req:
+        task = peony_client._PeonyClient__get_twitter_configuration
+        await task(peony_client)
+        assert req.called
+        assert peony_client.twitter_configuration
+
+
+def test_peony_client_init_tasks(peony_client, event_loop):
+    conf_n = random.randrange(1 << 16)
+    user_n = random.randrange(1 << 16)
+    with patch.object(peony.BasePeonyClient, 'init_tasks',
+                      return_value=[conf_n]):
+        with patch.object(peony_client, '_PeonyClient__get_user',
+                          return_value=user_n):
+            tasks = peony_client.init_tasks()
+            assert conf_n in tasks
+            assert user_n in tasks
+            assert len(tasks) == 2
+
+
+def test_peony_client_init_tasks_oauth2(event_loop):
+    client = peony.PeonyClient("", "", loop=event_loop,
+                               auth=oauth.OAuth2Headers)
+    conf_n = random.randrange(1 << 16)
+    with patch.object(peony.BasePeonyClient, 'init_tasks',
+                      return_value=[conf_n]):
+        tasks = client.init_tasks()
+        assert conf_n in tasks
+        assert len(tasks) == 1
+
+
 def test_add_event_stream():
 
     class ClientTest(BasePeonyClient):
@@ -506,40 +539,3 @@ def test_add_event_stream():
 
     ClientTest.event_stream(peony.commands.EventStream)
     assert peony.commands.EventStream in ClientTest._streams
-
-
-@pytest.fixture
-def oauth2_client(event_loop):
-    if oauth2:
-        return get_oauth2_client(loop=event_loop)
-
-
-@oauth2_decorator
-async def test_oauth2_get_token(client):
-    if 'Authorization' in client.headers:
-        del client.headers['Authorization']
-
-    await client.headers.sign()
-
-
-@oauth2_decorator
-async def test_oauth2_request(client):
-    await client.api.search.tweets.get(q="@twitter hello :)")
-
-
-@pytest.mark.invalidate_token
-@oauth2_decorator
-async def test_oauth2_invalidate_token(client):
-    await client.headers.sign()  # make sure there is a token
-    await client.headers.invalidate_token()
-    assert client.headers.token is None
-
-
-@oauth2_decorator
-async def test_oauth2_bearer_token(client):
-    await client.headers.sign()
-
-    token = client.headers.token
-
-    client2 = get_oauth2_client(bearer_token=token)
-    assert client2.headers.token == client.headers.token

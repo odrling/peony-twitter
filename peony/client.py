@@ -563,16 +563,16 @@ class PeonyClient(BasePeonyClient):
             await self.upload.media.upload.post(command="APPEND",
                                                 media_id=media_id,
                                                 media=chunk,
-                                                segment_index=i,
-                                                _json=None)
+                                                segment_index=i)
 
         status = await self.upload.media.upload.post(command="FINALIZE",
                                                      media_id=media_id)
 
         if 'processing_info' in status:
-            while status['processing_info']['state'] != "succeeded":
-                if status['processing_info'].get('state', "") == "failed":
-                    error = status['processing_info'].get('error', {})
+            while status['processing_info'].get('state') != "succeeded":
+                processing_info = status['processing_info']
+                if processing_info.get('state') == "failed":
+                    error = processing_info.get('error', {})
 
                     message = error.get('message', str(status))
 
@@ -580,8 +580,9 @@ class PeonyClient(BasePeonyClient):
                                                           message=message,
                                                           **params)
 
-                delay = status['processing_info']['check_after_secs']
+                delay = processing_info['check_after_secs']
                 await asyncio.sleep(delay)
+
                 status = await self.upload.media.upload.get(
                     command="STATUS",
                     media_id=media_id,
@@ -622,7 +623,8 @@ class PeonyClient(BasePeonyClient):
         data.PeonyResponse
             Response of the request
         """
-        formats = formats or general.formats
+        if formats is None:
+            formats = general.formats
 
         media_metadata = await utils.get_media_metadata(file_)
         media_type, media_category, is_image, file_ = media_metadata

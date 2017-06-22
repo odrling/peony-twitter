@@ -275,7 +275,9 @@ class OAuth2Headers(PeonyHeaders):
             self.token = bearer_token
 
     async def sign(self, url=None, *args, headers=None, **kwargs):
-        if 'Authorization' not in self and url != self._invalidate_token.url():
+        if url == self._invalidate_token.url():
+            del self.token
+        elif 'Authorization' not in self:
             await self.refresh_token()
 
         return self._user_headers(headers)
@@ -312,7 +314,6 @@ class OAuth2Headers(PeonyHeaders):
             raise RuntimeError('There is no token to invalidate')
 
         token = self.token
-        del self.token
 
         try:
             request = self._invalidate_token.post

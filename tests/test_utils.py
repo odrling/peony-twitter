@@ -56,7 +56,7 @@ def executor():
 def session(event_loop):
     session = aiohttp.ClientSession(loop=event_loop)
     yield session
-    event_loop.run_until_complete(session.close())
+    session.close()
 
 
 @pytest.mark.asyncio

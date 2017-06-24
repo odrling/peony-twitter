@@ -9,7 +9,7 @@ except (SystemError, ImportError):
     import api
 
 loop = asyncio.get_event_loop()
-client = peony.BasePeonyClient(**api.keys, loop=loop)
+client = peony.PeonyClient(**api.keys, loop=loop)
 
 
 async def search_test():

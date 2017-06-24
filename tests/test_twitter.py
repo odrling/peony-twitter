@@ -22,6 +22,7 @@ def oauth2_decorator(func):
 
     @pytest.mark.asyncio
     @pytest.mark.twitter
+    @pytest.mark.oauth2
     @pytest.mark.skipif(not oauth2, reason="no credentials found")
     async def decorator():
         global token
@@ -41,6 +42,7 @@ def oauth1_decorator(func):
 
     @pytest.mark.asyncio
     @pytest.mark.twitter
+    @pytest.mark.oauth1
     @pytest.mark.skipif(not oauth1, reason="no credentials found")
     async def decorator():
         client = get_oauth1_client()
@@ -133,4 +135,11 @@ async def test_home_timeline(client):
 async def test_upload_media(client):
     async with aiohttp.ClientSession() as session:
         media = await medias['lady_peony'].download(session=session)
-        await client.upload_media(media)
+        assert 'media_id' in await client.upload_media(media)
+
+
+@oauth1_decorator
+async def tets_upload_video(client):
+    async with aiohttp.ClientSession() as session:
+        media = await medias['video'].download(session=session)
+        assert 'media_id' in await client.upload_media(media)

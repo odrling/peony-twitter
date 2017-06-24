@@ -14,8 +14,7 @@ from unittest.mock import patch
 
 import aiohttp
 import pytest
-from peony import data_processing, exceptions, general, utils
-from PIL import Image
+from peony import data_processing, exceptions, utils
 
 from . import MockResponse, medias
 
@@ -279,71 +278,6 @@ def get_size(f):
 
 
 @pytest.mark.asyncio
-async def test_convert(event_loop, session, executor):
-
-    async def test(media):
-        data = await media.download(session)
-
-        f = io.BytesIO(data)
-
-        img = Image.open(f)
-
-        conv = await event_loop.run_in_executor(executor, utils.convert,
-                                                img, general.formats)
-        results = await event_loop.run_in_executor(executor, convert,
-                                                   img, general.formats)
-        smallest = min([get_size(f) for f in results])
-        assert smallest == get_size(conv)
-
-    tasks = [test(media) for key, media in medias.items()
-             if key in ('lady_peony', 'seismic_waves')]
-    await asyncio.gather(*tasks)
-
-
-@pytest.mark.asyncio
-async def test_optimize_media(event_loop, session, executor):
-    async def test(media):
-        data = await media.download(session)
-
-        f = io.BytesIO(data)
-        media = await event_loop.run_in_executor(
-            executor, utils.optimize_media, f, (1024, 512), general.formats
-        )
-        img = Image.open(media)
-        assert img.size[0] <= 1024 and img.size[1] <= 512
-
-        media = await event_loop.run_in_executor(
-            executor, utils.optimize_media, f, (512, 1024), general.formats
-        )
-        img = Image.open(media)
-        assert img.size[0] <= 512 and img.size[1] <= 1024
-
-    tasks = [test(media) for key, media in medias.items()
-             if key in ('lady_peony', 'seismic_waves', 'pink_queen')]
-    await asyncio.gather(*tasks)
-
-
-def test_optimize_media_exception():
-    with patch.object(utils, 'PIL', return_value=None) as mocked:
-        mocked.__bool__.return_value = False
-        with pytest.raises(RuntimeError):
-            utils.optimize_media(io.BytesIO(), (100, 100), [])
-
-
-@pytest.mark.asyncio
-async def test_optimize_media_with_filename(session):
-    with tempfile.NamedTemporaryFile('w+b') as tmp:
-        data = await medias['lady_peony'].download(session)
-        tmp.write(data)
-
-        media1 = utils.optimize_media(tmp.name, (100, 100), general.formats)
-        media2 = utils.optimize_media(tmp, (100, 100), general.formats)
-
-        assert not tmp.closed
-        assert get_size(media1) == get_size(media2)
-
-
-@pytest.mark.asyncio
 async def test_get_media_metadata(session):
     async def test(media):
         data = await media.download(session, 1024)
@@ -367,7 +301,8 @@ async def test_get_media_metadata_filename(session):
         file2_metadata = await utils.get_media_metadata(tmp)
 
         assert all(file1_metadata[i] == file2_metadata[i] for i in range(3))
-        assert file1_metadata[3] == tmp.name
+        assert await utils.execute(file1_metadata[3].read()) == data
+        assert file2_metadata[3] == tmp
 
 
 @pytest.mark.asyncio
@@ -382,7 +317,8 @@ async def test_get_media_metadata_path(session):
         file2_metadata = await utils.get_media_metadata(tmp)
 
         assert all(file1_metadata[i] == file2_metadata[i] for i in range(3))
-        assert file1_metadata[3] == tmp.name
+        assert await utils.execute(file1_metadata[3].read()) == data
+        assert file2_metadata[3] == tmp
 
 
 @pytest.mark.asyncio

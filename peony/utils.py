@@ -12,11 +12,6 @@ from urllib.parse import urlparse
 from . import exceptions
 
 try:
-    import PIL.Image
-except ImportError:  # pragma: no cover
-    PIL = None
-
-try:
     from aiofiles import open
 except ImportError:  # pragma: no cover
     pass
@@ -107,90 +102,6 @@ def log_error(msg=None, logger=None, **kwargs):
         logger.debug(msg, exc_info=True)
 
 
-def convert(img, formats):
-    """
-        Convert the image to all the formats specified
-
-    Parameters
-    ----------
-    img : PIL.Image.Image
-        The image to convert
-    formats : list
-        List of all the formats to use
-
-    Returns
-    -------
-    io.BytesIO
-        A file object containing the converted image
-    """
-    media = None
-    min_size = 0
-
-    for kwargs in formats:
-        f = io.BytesIO()
-        img.save(f, **kwargs)
-        size = f.tell()
-
-        if media is None or size < min_size:
-            if media is not None:
-                media.close()
-
-            media = f
-            min_size = size
-        else:
-            f.close()
-
-    return media
-
-
-def optimize_media(file_, max_size, formats):
-    """
-        Optimize an image
-
-    Resize the picture to the ``max_size``, defaulting to the large
-    photo size of Twitter in :meth:`PeonyClient.upload_media` when
-    used with the ``optimize_media`` argument.
-
-    Parameters
-    ----------
-    file_ : file object
-        the file object of an image
-    max_size : :obj:`tuple` or :obj:`list` of :obj:`int`
-        a tuple in the format (width, height) which is maximum size of
-        the picture returned by this function
-    formats : :obj`list` or :obj:`tuple` of :obj:`dict`
-        a list of all the formats to convert the picture to
-
-    Returns
-    -------
-    file
-        The smallest file created in this function
-    """
-    if not PIL:
-        msg = ("Pillow must be installed to optimize a media\n"
-               "(pip3 install peony[Pillow])")
-        raise RuntimeError(msg)
-
-    img = PIL.Image.open(file_)
-
-    # resize the picture (defaults to the 'large' photo size of Twitter
-    # in peony.PeonyClient.upload_media)
-    ratio = max(hw / max_hw for hw, max_hw in zip(img.size, max_size))
-
-    if ratio > 1:
-        size = tuple(int(hw // ratio) for hw in img.size)
-        img = img.resize(size, PIL.Image.ANTIALIAS)
-
-    media = convert(img, formats)
-
-    # do not close a file opened by the user
-    # only close if a filename was given
-    if not hasattr(file_, 'read'):
-        img.close()
-
-    return media
-
-
 def reset_io(func):
     """
     A decorator to set the pointer of the file to beginning
@@ -237,11 +148,10 @@ async def get_media_metadata(file_):
         file_ = str(file_)
 
     if isinstance(file_, str):
-        file_ = urlparse(file_).path.strip(" \"'")
+        path = urlparse(file_).path.strip(" \"'")
 
-        original = await execute(open(file_, 'rb'))
-        media_type, media_category = await get_type(original, file_)
-        await execute(original.close())
+        file_ = await execute(open(path, 'rb'))
+        media_type, media_category = await get_type(file_, path)
 
     elif hasattr(file_, 'read'):
         media_type, media_category = await get_type(file_)
@@ -251,7 +161,7 @@ async def get_media_metadata(file_):
         media_type, media_category = await get_type(file_)
 
     else:
-        raise TypeError("upload_media input must be a file object or a"
+        raise TypeError("upload_media input must be a file object or a "
                         "filename or binary data")
 
     is_image = media_type.startswith('image')

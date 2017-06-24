@@ -8,7 +8,6 @@ the Twitter APIs, with a method to upload a media
 """
 
 import asyncio
-import io
 import itertools
 from concurrent.futures import ProcessPoolExecutor
 
@@ -19,11 +18,6 @@ from .api import APIPath, StreamingAPIPath
 from .commands import EventStreams, init_task, task
 from .oauth import OAuth1Headers
 from .stream import StreamResponse
-
-try:
-    from aiofiles import open
-except ImportError:  # pragma: no cover
-    pass
 
 
 class MetaPeonyClient(type):
@@ -591,11 +585,21 @@ class PeonyClient(BasePeonyClient):
 
         return response
 
+    async def _size_test(self, media, size_limit):
+        if size_limit is None:
+            if isinstance(self.twitter_configuration, APIPath):
+                return False
+            else:
+                try:
+                    size_limit = self.twitter_configuration['photo_size_limit']
+                except KeyError:
+                    return False
+
+        return await utils.get_size(media) > size_limit
+
     async def upload_media(self, file_,
-                           auto_convert=False,
                            formats=None,
-                           max_size=None,
-                           chunked=False,
+                           chunked=None,
                            size_limit=None,
                            **params):
         """
@@ -605,60 +609,30 @@ class PeonyClient(BasePeonyClient):
         ----------
         file_ : :obj:`str` or :class:`pathlib.Path` or file
             Path to the file or file object
-        auto_convert : :obj:`bool`, optional
-            If set to True the media will be optimized by calling
-            :func:`utils.optimize_media`
-        formats : :obj:`list`, optional
-            A list of all the formats to try to optimize the media
-        max_size : :obj:`tuple`, optional
-            Max size of the picture in the (width, height) format
         chunked : :obj:`bool`, optional
             If True, force the use of the chunked upload for the media
         size_limit : :obj:`int`, optional
             If set, the media will be sent using a multipart upload if
             its size is over ``sizelimit`` bytes
+        params : dict
+            parameters used when making the request
 
         Returns
         -------
         data.PeonyResponse
             Response of the request
         """
-        if formats is None:
-            formats = general.formats
-
         media_metadata = await utils.get_media_metadata(file_)
-        media_type, media_category, is_image, file_ = media_metadata
+        media_type, media_category, is_image, media = media_metadata
 
-        if hasattr(file_, 'read'):
-            media = file_
-        else:
-            media = await utils.execute(open(str(file_), 'rb'))
+        size_test = await self._size_test(media, size_limit)
 
-        if is_image and auto_convert:
-            if not max_size:
-                photo_sizes = self.twitter_configuration['photo_sizes']
-                large_sizes = photo_sizes['large']
-                max_size = large_sizes['w'], large_sizes['h']
-
-            data = io.BytesIO(await utils.execute(media.read()))
-
-            media = await self.loop.run_in_executor(
-                self.executor, utils.optimize_media, data, max_size, formats
-            )
-
-        if not isinstance(self.twitter_configuration, APIPath) or size_limit:
-            if size_limit is None:
-                size_limit = self.twitter_configuration['photo_size_limit']
-            size_test = await utils.get_size(media) > size_limit
-        else:
-            size_test = False
-
-        if size_test or chunked:
+        if (size_test and chunked is None) or chunked:
             args = media, file_, media_type, media_category
             response = await self._chunked_upload(*args, **params)
         else:
-            params['media'] = media
-            response = await self.upload.media.upload.post(**params)
+            response = await self.upload.media.upload.post(media=media,
+                                                           **params)
 
         if not hasattr(file_, 'read') and not media.closed:
             media.close()

@@ -7,6 +7,8 @@ import json
 import os.path
 import sys
 
+import aiohttp
+
 file_ = os.path.abspath(inspect.getfile(inspect.currentframe()))
 test_dir = os.path.dirname(file_)
 
@@ -24,7 +26,12 @@ class Media:
         self._accept_bytes_range = None
         self._cache = b""
 
-    async def download(self, session, chunk=-1):
+    async def download(self, session=None, chunk=-1):
+
+        if session is None:
+            async with aiohttp.ClientSession() as session:
+                return await self.download(session)
+
         if self._accept_bytes_range is None:
             async with session.head(self.url) as response:
                 accept = response.headers.get('Accept-Ranges', "")

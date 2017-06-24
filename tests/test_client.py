@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import io
 import random
 from unittest.mock import Mock, patch
 
@@ -8,10 +9,11 @@ import aiohttp
 import peony
 import peony.api
 import pytest
-from peony import BasePeonyClient, data_processing, exceptions, oauth, stream
+from peony import (BasePeonyClient, data_processing, exceptions, oauth, stream,
+                   utils)
 from peony.general import twitter_api_version, twitter_base_api_url
 
-from . import Data, MockResponse, dummy
+from . import Data, MockResponse, dummy, medias
 
 
 @pytest.fixture
@@ -539,3 +541,81 @@ def test_add_event_stream():
 
     ClientTest.event_stream(peony.commands.EventStream)
     assert peony.commands.EventStream in ClientTest._streams
+
+
+@pytest.fixture
+def dummy_peony_client(event_loop):
+    client = peony.PeonyClient("", "", loop=event_loop)
+    with patch.object(client, 'init_tasks', return_value=[]):
+        yield client
+
+
+@pytest.mark.asyncio
+async def test_size_test(dummy_peony_client):
+    data = io.BytesIO(b"a" * 5)
+    assert await dummy_peony_client._size_test(data, 5) is False
+
+    data = io.BytesIO(b"a" * 6)
+    assert await dummy_peony_client._size_test(data, 5) is True
+
+
+@pytest.mark.asyncio
+async def test_size_test_config(dummy_peony_client):
+    dummy_peony_client.twitter_configuration = {
+        'photo_size_limit': 5
+    }
+
+    data = io.BytesIO(b"a" * 5)
+    assert await dummy_peony_client._size_test(data, None) is False
+
+    data = io.BytesIO(b"a" * 6)
+    assert await dummy_peony_client._size_test(data, None) is True
+
+
+@pytest.mark.asyncio
+async def test_size_test_config_and_limit(dummy_peony_client):
+    dummy_peony_client.twitter_configuration = {
+        'photo_size_limit': 5
+    }
+
+    data = io.BytesIO(b"a" * 10)
+    assert await dummy_peony_client._size_test(data, 10) is False
+
+    data = io.BytesIO(b"a" * 11)
+    assert await dummy_peony_client._size_test(data, 10) is True
+
+
+@pytest.mark.asyncio
+async def test_size_test_no_limit_no_config(dummy_peony_client):
+    assert await dummy_peony_client._size_test(io.BytesIO(), None) is False
+    dummy_peony_client.twitter_configuration = {}
+    assert await dummy_peony_client._size_test(io.BytesIO(), None) is False
+
+
+@pytest.mark.asyncio
+async def test_upload_media(dummy_peony_client):
+    media = await medias['lady_peony'].download()
+
+    async def dummy_upload(url, method, data, skip_params):
+        assert url == dummy_peony_client.upload.media.upload.url()
+        assert method == 'post'
+        assert await utils.execute(data['media'].read()) == media
+        assert skip_params is True
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_upload) as req:
+        await dummy_peony_client.upload_media(media)
+        assert req.called
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_upload) as req:
+        await dummy_peony_client.upload_media(media, size_limit=3 * 1024**2)
+        assert req.called
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_upload) as req:
+        dummy_peony_client.twitter_configuration = {
+            'photo_size_limit': 3 * 1024**2
+        }
+        await dummy_peony_client.upload_media(media)
+        assert req.called

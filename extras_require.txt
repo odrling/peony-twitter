@@ -4,12 +4,8 @@ python-magic
 # aiofiles: read a file without blocking the loop (while uploading media)
 aiofiles
 
-# pil: upload optimized medias using the auto_convert option
-Pillow
-
 # media: libraries recommended for uploading media
 aiofiles
-Pillow
 python-magic
 
 # aiohttp: optional libraries for aiohttp
@@ -23,5 +19,4 @@ pytest
 aiodns
 aiofiles
 cchardet
-Pillow
 python-magic

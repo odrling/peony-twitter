@@ -30,7 +30,7 @@ class Media:
 
         if session is None:
             async with aiohttp.ClientSession() as session:
-                return await self.download(session)
+                return await self.download(session, chunk=chunk)
 
         if self._accept_bytes_range is None:
             async with session.head(self.url) as response:
@@ -46,6 +46,7 @@ class Media:
                 chunk=chunk if chunk > -1 else self.content_length
             )
             headers = {'Range': byte_range}
+            print(session)
 
             async with session.get(self.url, headers=headers) as response:
                 self._cache += await response.read()

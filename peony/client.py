@@ -8,8 +8,10 @@ the Twitter APIs, with a method to upload a media
 """
 
 import asyncio
+import io
 import itertools
 from concurrent.futures import ProcessPoolExecutor
+from urllib.parse import urlparse
 
 import aiohttp
 
@@ -536,8 +538,10 @@ class PeonyClient(BasePeonyClient):
         """
         media_size = await utils.get_size(media)
 
-        if media_type is None or media_category is None:
-            media_type, media_category = utils.get_type(media, path)
+        if media_type is None:
+            media_type, media_category = utils.get_media_metadata(media, path)
+        elif media_category is None:
+            media_category = utils.get_category(media_type)
 
         response = await self.upload.media.upload.post(
             command="INIT",
@@ -598,7 +602,8 @@ class PeonyClient(BasePeonyClient):
         return await utils.get_size(media) > size_limit
 
     async def upload_media(self, file_,
-                           formats=None,
+                           media_type=None,
+                           media_category=None,
                            chunked=None,
                            size_limit=None,
                            **params):
@@ -609,6 +614,11 @@ class PeonyClient(BasePeonyClient):
         ----------
         file_ : :obj:`str` or :class:`pathlib.Path` or file
             Path to the file or file object
+        media_type : :obj:`str`, optional
+            mime type of the media
+        media_category : :obj:`str`, optional
+            Twitter's media category of the media, must be used with
+            ``media_type``
         chunked : :obj:`bool`, optional
             If True, force the use of the chunked upload for the media
         size_limit : :obj:`int`, optional
@@ -622,8 +632,16 @@ class PeonyClient(BasePeonyClient):
         data.PeonyResponse
             Response of the request
         """
-        media_metadata = await utils.get_media_metadata(file_)
-        media_type, media_category, is_image, media = media_metadata
+        if isinstance(file_, str):
+            path = urlparse(file_).path.strip(" \"'")
+            media = await utils.execute(open(path, 'rb'))
+        elif hasattr(file_, 'read'):
+            media = file_
+        elif isinstance(file_, bytes):
+            media = io.BytesIO(file_)
+        else:
+            raise TypeError("upload_media input must be a file object or a "
+                            "filename or binary data")
 
         size_test = await self._size_test(media, size_limit)
 

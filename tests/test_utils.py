@@ -22,13 +22,13 @@ from . import MockResponse, medias
 def builtin_mimetypes(func):
 
     @wraps(func)
-    async def decorated(session):
+    async def decorated():
         with patch.object(utils, 'magic') as magic:
             magic.__bool__.return_value = False
             with patch.object(utils, 'mime') as mime:
                 mime.guess_type.side_effect = mimetypes.MimeTypes().guess_type
 
-                await func(session)
+                await func()
 
     return decorated
 
@@ -53,9 +53,8 @@ def executor():
 
 @pytest.yield_fixture
 def session(event_loop):
-    session = aiohttp.ClientSession(loop=event_loop)
-    yield session
-    session.close()
+    with aiohttp.ClientSession(loop=event_loop):
+        yield session
 
 
 @pytest.mark.asyncio
@@ -204,12 +203,11 @@ async def test_reset_io():
 
 
 @pytest.mark.asyncio
-async def test_get_type(session):
+async def test_get_type():
     async def test(media, chunk_size=1024):
-        f = io.BytesIO(await media.download(session, chunk_size))
-        media_type, media_category = await utils.get_type(f)
+        f = io.BytesIO(await media.download(chunk=chunk_size))
+        media_type = await utils.get_type(f)
         assert media_type == media.type
-        assert media_category == media.category
 
     tasks = [test(media) for media in medias.values()]
     await asyncio.gather(*tasks)
@@ -217,18 +215,17 @@ async def test_get_type(session):
 
 @pytest.mark.asyncio
 async def test_get_type_exception():
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         await utils.get_type(io.BytesIO())
 
 
 @pytest.mark.asyncio
 @builtin_mimetypes
-async def test_get_type_builtin(session):
+async def test_get_type_builtin():
     async def test(media, chunk_size=1024):
-        f = io.BytesIO(await media.download(session, chunk_size))
-        media_type, media_category = await utils.get_type(f, media.filename)
+        f = io.BytesIO(await media.download(chunk=chunk_size))
+        media_type = await utils.get_type(f, media.filename)
         assert media_type == media.type
-        assert media_category == media.category
 
     tasks = [test(media) for media in medias.values()]
     await asyncio.gather(*tasks)
@@ -236,11 +233,22 @@ async def test_get_type_builtin(session):
 
 @pytest.mark.asyncio
 @builtin_mimetypes
-async def test_get_type_builtin_exception(session):
+async def test_get_type_builtin_exception():
     media = medias['lady_peony']
-    f = io.BytesIO(await media.download(session, 1024))
+    f = io.BytesIO(await media.download(chunk=1024))
     with pytest.raises(RuntimeError):
         await utils.get_type(f)
+
+
+def test_get_category():
+    assert utils.get_category("image/png") == "tweet_image"
+    assert utils.get_category("image/gif") == "tweet_gif"
+    assert utils.get_category("video/mp4") == "tweet_video"
+
+
+def test_get_category_exception():
+    with pytest.raises(RuntimeError):
+        utils.get_category("")
 
 
 @pytest.mark.asyncio
@@ -278,60 +286,57 @@ def get_size(f):
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata(session):
+async def test_get_media_metadata():
     async def test(media):
-        data = await media.download(session, 1024)
+        data = await media.download(chunk=1024)
         f = io.BytesIO(data)
         media_metadata = await utils.get_media_metadata(f)
-        assert media_metadata == (media.type, media.category,
-                                  media.type.startswith('image'), f)
+        assert media_metadata == (media.type, media.category)
 
     tasks = [test(media) for media in medias.values()]
     await asyncio.gather(*tasks)
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata_filename(session):
+async def test_get_media_metadata_filename():
     media = medias['lady_peony']
     with tempfile.NamedTemporaryFile('w+b') as tmp:
-        data = await media.download(session)
+        data = await media.download()
         tmp.write(data)
 
         file1_metadata = await utils.get_media_metadata(tmp.name)
         file2_metadata = await utils.get_media_metadata(tmp)
 
-        assert all(file1_metadata[i] == file2_metadata[i] for i in range(3))
-        assert await utils.execute(file1_metadata[3].read()) == data
-        assert file2_metadata[3] == tmp
+        assert all(file1_metadata[i] == file2_metadata[i] for i in range(2))
+        assert file1_metadata[0] == media.type
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata_path(session):
+async def test_get_media_metadata_path():
     media = medias['lady_peony']
     with tempfile.NamedTemporaryFile('w+b') as tmp:
-        data = await media.download(session)
+        data = await media.download()
         tmp.write(data)
 
         path = pathlib.Path(tmp.name)
         file1_metadata = await utils.get_media_metadata(path)
         file2_metadata = await utils.get_media_metadata(tmp)
 
-        assert all(file1_metadata[i] == file2_metadata[i] for i in range(3))
-        assert await utils.execute(file1_metadata[3].read()) == data
-        assert file2_metadata[3] == tmp
+        assert all(file1_metadata[i] == file2_metadata[i] for i in range(2))
+        assert file1_metadata[0] == media.type
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata_bytes(session):
+async def test_get_media_metadata_bytes():
     media = medias['lady_peony']
-    data = await media.download(session)
+    data = await media.download()
     f = io.BytesIO(data)
 
     file1_metadata = await utils.get_media_metadata(data)
     file2_metadata = await utils.get_media_metadata(f)
 
-    assert all(file1_metadata[i] == file2_metadata[i] for i in range(3))
-    assert isinstance(file1_metadata[3], io.BytesIO)
+    assert all(file1_metadata[i] == file2_metadata[i] for i in range(2))
+    assert file1_metadata[0] == media.type
 
 
 @pytest.mark.asyncio

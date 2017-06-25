@@ -122,7 +122,7 @@ def reset_io(func):
     return decorated
 
 
-async def get_media_metadata(file_):
+async def get_media_metadata(file_, path=None):
     """
         Get all the file's metadata and read any kind of file object
 
@@ -151,22 +151,22 @@ async def get_media_metadata(file_):
         path = urlparse(file_).path.strip(" \"'")
 
         file_ = await execute(open(path, 'rb'))
-        media_type, media_category = await get_type(file_, path)
+        media_type = await get_type(file_, path)
 
     elif hasattr(file_, 'read'):
-        media_type, media_category = await get_type(file_)
+        media_type = await get_type(file_, path)
 
     elif isinstance(file_, bytes):
         file_ = io.BytesIO(file_)
-        media_type, media_category = await get_type(file_)
+        media_type = await get_type(file_, path)
 
     else:
-        raise TypeError("upload_media input must be a file object or a "
+        raise TypeError("get_metadata input must be a file object or a "
                         "filename or binary data")
 
-    is_image = media_type.startswith('image')
+    media_category = get_category(media_type)
 
-    return media_type, media_category, is_image, file_
+    return media_type, media_category
 
 
 async def get_size(media):
@@ -208,6 +208,8 @@ async def get_type(media, path=None):
     """
     if magic:
         media_type = mime.from_buffer(await execute(media.read(1024)))
+        if media_type == 'application/x-empty':
+            raise TypeError("No data in media")
     else:
         media_type = None
         if path:
@@ -220,17 +222,19 @@ async def get_type(media, path=None):
                    "(pip3 install peony-twitter[magic])")
             raise RuntimeError(msg)
 
+    return media_type
+
+
+def get_category(media_type):
     if media_type.startswith('video'):
-        media_category = "tweet_video"
+        return "tweet_video"
     elif media_type.endswith('gif'):
-        media_category = "tweet_gif"
+        return "tweet_gif"
     elif media_type.startswith('image'):
-        media_category = "tweet_image"
+        return "tweet_image"
     else:
         raise RuntimeError("The provided media cannot be handled.\n"
                            "mimetype: %s" % media_type)
-
-    return media_type, media_category
 
 
 async def execute(coro):

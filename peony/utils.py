@@ -6,7 +6,6 @@ import io
 import logging
 import os
 import pathlib
-import sys
 from urllib.parse import urlparse
 
 from . import exceptions
@@ -43,12 +42,12 @@ def error_handler(request):
             except exceptions.RateLimitExceeded as e:
                 delay = int(e.reset_in) + 1
                 fmt = "Sleeping for {}s (rate limit exceeded on endpoint {})"
-                print(fmt.format(delay, url), file=sys.stderr)
+                logging.warning(fmt.format(delay, url))
                 await asyncio.sleep(delay)
 
             except asyncio.TimeoutError:
                 fmt = "Request to {url} timed out, retrying"
-                print(fmt.format(url=url), file=sys.stderr)
+                logging.info(fmt.format(url=url))
 
             except:
                 raise
@@ -213,7 +212,6 @@ async def get_type(media, path=None):
     else:
         media_type = None
         if path:
-            print("path:", str(path))
             media_type = mime.guess_type(path)[0]
 
         if media_type is None:

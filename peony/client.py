@@ -525,7 +525,7 @@ class PeonyClient(BasePeonyClient):
         media_type : :obj:`str`, optional
             mime type of the media
         media_category : :obj:`str`, optional
-            twitter media category
+            twitter media category, must be used with ``media_type``
         chunk_size : :obj:`int`, optional
             size of a chunk in bytes
         params : :obj:`dict`, optional

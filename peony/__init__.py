@@ -8,9 +8,6 @@
 
 """
 
-import logging
-logging.getLogger(__name__).addHandler(logging.NullHandler())
-
 __author__ = "Florian Badie"
 __author_email__ = "florianbadie@gmail.com"
 __url__ = "https://github.com/odrling/peony-twitter"

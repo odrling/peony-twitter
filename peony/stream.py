@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import sys
+import logging
 from concurrent.futures import CancelledError
 
 import aiohttp
@@ -176,9 +176,10 @@ class StreamResponse:
         error : :obj:`bool`, optional
             Whether to print the error or not
         """
+        logger = logging.getLogger(__name__)
 
         if error:
-            print(error.__class__)
+            logger.error(error.__class__)
             utils.log_error()
 
         if self.state == DISCONNECTION:
@@ -197,15 +198,15 @@ class StreamResponse:
             else:
                 self._error_timeout *= 2
 
-            print("Enhance Your Calm response received from Twitter. "
-                  "If you didn't restart your program frenetically "
-                  "then there is probably something wrong with it. "
-                  "Make sure you are not opening too many connections to "
-                  "the endpoint you are currently using by checking "
-                  "Twitter's Streaming API documentation out: "
-                  "https://dev.twitter.com/streaming/overview\n"
-                  "The stream will restart in %ss." % self._error_timeout,
-                  file=sys.stderr)
+            logger.warning("Enhance Your Calm response received from Twitter. "
+                           "If you didn't restart your program frenetically "
+                           "then there is probably something wrong with it. "
+                           "Make sure you are not opening too many connections"
+                           " to the endpoint you are currently using by "
+                           "checking Twitter's Streaming API documentation "
+                           "out: https://dev.twitter.com/streaming/overview\n"
+                           "The stream will restart in %ss."
+                           % self._error_timeout)
         else:
             raise RuntimeError("Incorrect state: %d" % self.state)
 

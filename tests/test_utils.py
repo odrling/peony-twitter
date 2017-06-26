@@ -299,44 +299,26 @@ async def test_get_media_metadata():
 
 @pytest.mark.asyncio
 async def test_get_media_metadata_filename():
-    media = medias['lady_peony']
     with tempfile.NamedTemporaryFile('w+b') as tmp:
-        data = await media.download()
-        tmp.write(data)
-
-        file1_metadata = await utils.get_media_metadata(tmp.name)
-        file2_metadata = await utils.get_media_metadata(tmp)
-
-        assert all(file1_metadata[i] == file2_metadata[i] for i in range(2))
-        assert file1_metadata[0] == media.type
+        with pytest.raises(TypeError):
+            await utils.get_media_metadata(tmp.name)
 
 
 @pytest.mark.asyncio
 async def test_get_media_metadata_path():
-    media = medias['lady_peony']
     with tempfile.NamedTemporaryFile('w+b') as tmp:
-        data = await media.download()
-        tmp.write(data)
-
         path = pathlib.Path(tmp.name)
-        file1_metadata = await utils.get_media_metadata(path)
-        file2_metadata = await utils.get_media_metadata(tmp)
-
-        assert all(file1_metadata[i] == file2_metadata[i] for i in range(2))
-        assert file1_metadata[0] == media.type
+        with pytest.raises(TypeError):
+            await utils.get_media_metadata(path)
 
 
 @pytest.mark.asyncio
 async def test_get_media_metadata_bytes():
     media = medias['lady_peony']
     data = await media.download()
-    f = io.BytesIO(data)
 
-    file1_metadata = await utils.get_media_metadata(data)
-    file2_metadata = await utils.get_media_metadata(f)
-
-    assert all(file1_metadata[i] == file2_metadata[i] for i in range(2))
-    assert file1_metadata[0] == media.type
+    with pytest.raises(TypeError):
+        await utils.get_media_metadata(data)
 
 
 @pytest.mark.asyncio

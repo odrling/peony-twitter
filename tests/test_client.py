@@ -7,13 +7,13 @@ import tempfile
 from unittest.mock import Mock, patch
 
 import aiohttp
+import pytest
+
 import peony
 import peony.api
-import pytest
-from peony import (BasePeonyClient, data_processing, exceptions, oauth, stream,
-                   utils)
+from peony import (BasePeonyClient, PeonyClient, data_processing, exceptions,
+                   oauth, stream, utils)
 from peony.general import twitter_api_version, twitter_base_api_url
-
 from . import Data, MockResponse, dummy, medias
 
 
@@ -474,7 +474,7 @@ def test_close_loop_closed(event_loop):
 
 @pytest.fixture
 def peony_client(event_loop):
-    return peony.PeonyClient("", "", loop=event_loop)
+    return PeonyClient("", "", loop=event_loop)
 
 
 def request_test(expected_url, expected_method):
@@ -523,8 +523,7 @@ def test_peony_client_init_tasks(peony_client, event_loop):
 
 
 def test_peony_client_init_tasks_oauth2(event_loop):
-    client = peony.PeonyClient("", "", loop=event_loop,
-                               auth=oauth.OAuth2Headers)
+    client = PeonyClient("", "", loop=event_loop, auth=oauth.OAuth2Headers)
     conf_n = random.randrange(1 << 16)
     with patch.object(peony.BasePeonyClient, 'init_tasks',
                       return_value=[conf_n]):
@@ -546,7 +545,7 @@ def test_add_event_stream():
 
 @pytest.fixture
 def dummy_peony_client(event_loop):
-    client = peony.PeonyClient("", "", loop=event_loop)
+    client = PeonyClient("", "", loop=event_loop)
     with patch.object(client, 'init_tasks', return_value=[]):
         yield client
 
@@ -672,5 +671,121 @@ async def test_upload_media_size_limit(dummy_peony_client):
 
     with patch.object(dummy_peony_client, '_chunked_upload',
                       side_effect=dummy_upload) as upload:
-        await dummy_peony_client.upload_media(media_data, size_limit=3*1024**2)
+        await dummy_peony_client.upload_media(media_data,
+                                              size_limit=3 * 1024**2)
         assert upload.called
+
+
+class DummyRequest:
+
+    def __init__(self, client, media, chunk_size=1024**2, fail=False):
+        self.i = -1
+        self.client = client
+        self.media = media
+        self.media_data = None
+        self.chunk_size = chunk_size
+        self.media_id = random.randrange(1 << 16)
+        self.fail = fail
+
+    async def __call__(self, url, method,
+                       data=None, skip_params=None, params=None):
+        assert url == self.client.upload.media.upload.url()
+
+        response = {'media_id': self.media_id}
+
+        append = range(self.media.content_length // self.chunk_size + 1)
+
+        if self.i <= append[-1] + 1:
+            assert method == "post"
+        else:
+            assert method == "get"
+
+        if self.i == -1:
+            self.media_data = io.BytesIO(await self.media.download())
+            assert data == {'command': 'INIT',
+                            'media_category': self.media.category,
+                            'media_type': self.media.type,
+                            'total_bytes': str(self.media.content_length)}
+        elif self.i in append:
+            assert data == {'command': 'APPEND',
+                            'media': self.media_data.read(self.chunk_size),
+                            'media_id': str(self.media_id),
+                            'segment_index': str(self.i)}
+        elif self.i == append[-1] + 1:
+            if self.media.category != 'tweet_image':
+                check_after_secs = 5 if 'video' in self.media.category else 1
+                response['processing_info'] = {
+                    'state': 'pending',
+                    'check_after_secs': check_after_secs
+                }
+
+            assert data == {'command': 'FINALIZE',
+                            'media_id': str(self.media_id)}
+        else:
+            if self.fail:
+                response['processing_info'] = {'state': "failed",
+                                               'error': {'message': "test"}}
+            else:
+                response['processing_info'] = {'state': 'succeeded'}
+
+            assert params == {'command': 'STATUS',
+                              'media_id': str(self.media_id)}
+
+        assert skip_params is (self.i in append)
+
+        self.i += 1
+        return response
+
+    def reset(self):
+        self.i = -1
+        self.media_id = random.randrange(1 << 16)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('media', medias.values())
+async def test_chunked_upload(dummy_peony_client, media):
+    media_data = await media.download()
+    media_file = io.BytesIO(media_data)
+
+    chunk_size = 1024**2
+
+    dummy_request = DummyRequest(dummy_peony_client, media, chunk_size)
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_request):
+        await dummy_peony_client._chunked_upload(media_file,
+                                                 chunk_size=chunk_size)
+
+        dummy_request.reset()
+        with patch.object(utils, 'get_media_metadata') as metadata:
+            with patch.object(utils, 'get_category') as category:
+                await dummy_peony_client._chunked_upload(
+                    media_file, chunk_size=chunk_size,
+                    media_category=media.category, media_type=media.type
+                )
+                assert not metadata.called
+                assert not category.called
+
+        dummy_request.reset()
+        with patch.object(utils, 'get_media_metadata') as metadata:
+            await dummy_peony_client._chunked_upload(
+                media_file, chunk_size=chunk_size, media_type=media.type
+            )
+            assert not metadata.called
+
+
+@pytest.mark.asyncio
+async def test_chunked_upload_fail(dummy_peony_client):
+    media = medias['video']
+    media_data = await media.download()
+    media_file = io.BytesIO(media_data)
+
+    chunk_size = 1024**2
+
+    dummy_request = DummyRequest(dummy_peony_client, media, chunk_size, True)
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_request):
+        with pytest.raises(peony.exceptions.MediaProcessingError):
+            await dummy_peony_client._chunked_upload(media_file,
+                                                     chunk_size=chunk_size)

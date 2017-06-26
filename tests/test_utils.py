@@ -325,3 +325,14 @@ async def test_get_media_metadata_bytes():
 async def test_get_media_metadata_exception():
     with pytest.raises(TypeError):
         await utils.get_media_metadata([])
+
+
+@pytest.mark.asyncio
+async def test_chunks():
+    media_data = await medias['lady_peony'].download()
+    media = io.BytesIO(media_data)
+    i_expected = 0
+    async for i, chunk in utils.chunks(io.BytesIO(media_data), 1024):
+        assert i_expected == i
+        assert chunk == await utils.execute(media.read(1024))
+        i_expected += 1

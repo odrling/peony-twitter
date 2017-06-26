@@ -9,7 +9,6 @@ the Twitter APIs, with a method to upload a media
 
 import asyncio
 import io
-import itertools
 from concurrent.futures import ProcessPoolExecutor
 from urllib.parse import urlparse
 
@@ -554,11 +553,7 @@ class PeonyClient(BasePeonyClient):
 
         media_id = response['media_id']
 
-        for i in itertools.count():
-            chunk = await utils.execute(media.read(chunk_size))
-            if not chunk:
-                break
-
+        async for i, chunk in utils.chunks(media, chunk_size):
             await self.upload.media.upload.post(command="APPEND",
                                                 media_id=media_id,
                                                 media=chunk,

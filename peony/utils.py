@@ -222,3 +222,23 @@ async def execute(coro):
         return await coro
     else:
         return coro
+
+
+class chunks:  # noqa
+
+    def __init__(self, media, chunk_size):
+        self.media = media
+        self.chunk_size = chunk_size
+        self.i = -1
+
+    async def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        self.i += 1
+
+        chunk = await execute(self.media.read(self.chunk_size))
+        if not chunk:
+            raise StopAsyncIteration()
+
+        return self.i, chunk

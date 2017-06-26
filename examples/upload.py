@@ -102,7 +102,7 @@ def optimize_media(file_, max_size, formats):
 
 
 async def process_media(media, path):
-    mime_type, _ = await utils.get_type(media, path)
+    mime_type = await utils.get_type(media, path)
     if not mime_type.startswith('image'):
         return media
 

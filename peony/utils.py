@@ -2,18 +2,10 @@
 
 import asyncio
 import functools
-import io
 import logging
 import os
-import pathlib
-from urllib.parse import urlparse
 
 from . import exceptions
-
-try:
-    from aiofiles import open
-except ImportError:  # pragma: no cover
-    pass
 
 try:
     import magic
@@ -127,9 +119,10 @@ async def get_media_metadata(file_, path=None):
 
     Parameters
     ----------
-    file_ : :obj:`str`, :obj:`bytes` or file object
-        A filename, binary data or file object corresponding to
-        the media
+    file_ : file object
+        file object corresponding to the media
+    path : :obj:`str`, optional
+        path to the file
 
     Returns
     -------
@@ -137,31 +130,13 @@ async def get_media_metadata(file_, path=None):
         The mimetype of the media
     str
         The category of the media on Twitter
-    bool
-        Tell whether this file is an image or a video
-    :obj:`str` or file object
-        Path to the file
     """
     # try to get the path no matter what the input is
-    if isinstance(file_, pathlib.Path):
-        file_ = str(file_)
-
-    if isinstance(file_, str):
-        path = urlparse(file_).path.strip(" \"'")
-
-        file_ = await execute(open(path, 'rb'))
-        media_type = await get_type(file_, path)
-
-    elif hasattr(file_, 'read'):
-        media_type = await get_type(file_, path)
-
-    elif isinstance(file_, bytes):
-        file_ = io.BytesIO(file_)
+    if hasattr(file_, 'read'):
         media_type = await get_type(file_, path)
 
     else:
-        raise TypeError("get_metadata input must be a file object or a "
-                        "filename or binary data")
+        raise TypeError("get_metadata input must be a file object")
 
     media_category = get_category(media_type)
 

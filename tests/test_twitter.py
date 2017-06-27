@@ -2,7 +2,6 @@
 import os
 import time
 
-import aiohttp
 import pytest
 
 from peony import PeonyClient, oauth
@@ -134,9 +133,10 @@ async def test_home_timeline(client):
 
 @oauth1_decorator
 async def test_upload_media(client):
-    async with aiohttp.ClientSession() as session:
-        media = await medias['lady_peony'].download(session=session)
-        assert 'media_id' in await client.upload_media(media)
+    media = await medias['lady_peony'].download()
+    media = await client.upload_media(media)
+
+    await client.api.statuses.update.post(status="", media_ids=media.media_id)
 
 
 @oauth1_decorator
@@ -154,7 +154,7 @@ async def test_upload_tweet_with_media(client):
 
 @oauth1_decorator
 async def test_upload_tweet_with_media_chunked(client):
-    for media in medias.values():
+    for media in (medias[key] for key in ('pink_queen', 'bloom', 'video')):
         media = await client.upload_media(await media.download(), chunked=True)
 
         await client.api.statuses.update.post(status="",

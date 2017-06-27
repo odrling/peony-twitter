@@ -177,7 +177,9 @@ class OAuth1Headers(PeonyHeaders):
                 default = self._default_content_type(skip_params)
                 headers['Content-Type'] = default
 
-            params = data
+            params = data.copy()
+        elif params:
+            params = params.copy()
 
         oauth = {
             'oauth_consumer_key': self.consumer_key,

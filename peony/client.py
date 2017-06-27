@@ -588,13 +588,11 @@ class PeonyClient(BasePeonyClient):
     async def _size_test(self, media, size_limit):
         if size_limit is None:
             if isinstance(self.twitter_configuration, APIPath):
-                print("here")
                 return False
             else:
                 try:
                     size_limit = self.twitter_configuration['photo_size_limit']
                 except KeyError:
-                    print("there")
                     return False
 
         return await utils.get_size(media) > size_limit

@@ -1,10 +1,11 @@
 
 import os
+import time
 
 import aiohttp
 import pytest
-from peony import PeonyClient, oauth
 
+from peony import PeonyClient, oauth
 from . import medias
 
 oauth2_keys = 'PEONY_CONSUMER_KEY', 'PEONY_CONSUMER_SECRET'
@@ -139,7 +140,50 @@ async def test_upload_media(client):
 
 
 @oauth1_decorator
-async def tets_upload_video(client):
-    async with aiohttp.ClientSession() as session:
-        media = await medias['video'].download(session=session)
-        assert 'media_id' in await client.upload_media(media)
+async def test_upload_tweet(client):
+    status = "%d Living in the limelight the universal dream " \
+             "for those who wish to seem" % time.time()
+    await client.api.statuses.update.post(status=status)
+
+
+@oauth1_decorator
+async def test_upload_tweet_with_media(client):
+    media = await client.upload_media(await medias['seismic_waves'].download())
+    await client.api.statuses.update.post(status="", media_ids=media.media_id)
+
+
+@oauth1_decorator
+async def test_upload_tweet_with_media_chunked(client):
+    for media in medias.values():
+        media = await client.upload_media(await media.download(), chunked=True)
+
+        await client.api.statuses.update.post(status="",
+                                              media_ids=media.media_id)
+
+
+@oauth1_decorator
+async def test_direct_message(client):
+    await client.setup()  # needed to get the user
+    message = {
+        'event': {
+            'type': "message_create",
+            'message_create': {
+                'target': {'recipient_id': client.user.id},
+                'message_data': {
+                    'text': "test %d" % time.time(),
+                    'quick_reply': {
+                        'type': "options",
+                        'options': [
+                            {'label': "Hello",
+                             'description': "Hello",
+                             'metadata': "foo"},
+                            {'label': "World",
+                             'description': "World",
+                             'metadata': "bar"}
+                        ]
+                    }
+                }
+            }
+        }
+    }
+    await client.api.direct_messages.events.new.post(_json=message)

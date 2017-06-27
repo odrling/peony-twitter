@@ -14,6 +14,7 @@ import peony.api
 from peony import (BasePeonyClient, PeonyClient, data_processing, exceptions,
                    oauth, stream, utils)
 from peony.general import twitter_api_version, twitter_base_api_url
+
 from . import Data, MockResponse, dummy, medias
 
 

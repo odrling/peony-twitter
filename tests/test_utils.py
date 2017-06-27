@@ -14,6 +14,7 @@ from unittest.mock import patch
 
 import aiohttp
 import pytest
+
 from peony import data_processing, exceptions, utils
 
 from . import MockResponse, medias

@@ -2,56 +2,23 @@
 import os
 import time
 
+import aiohttp
 import pytest
 
 from peony import PeonyClient, oauth
+
 from . import medias
 
 oauth2_keys = 'PEONY_CONSUMER_KEY', 'PEONY_CONSUMER_SECRET'
-oauth2 = all(key in os.environ for key in oauth2_keys)
 
 oauth1_keys = *oauth2_keys, 'PEONY_ACCESS_TOKEN', 'PEONY_ACCESS_TOKEN_SECRET'
-oauth1 = all(key in os.environ for key in oauth1_keys)
+
+# test if the keys are in the environment variables
+test_oauth = {1: all(key in os.environ for key in oauth1_keys),
+              2: all(key in os.environ for key in oauth2_keys)}
 
 oauth2_creds = 'consumer_key', 'consumer_secret'
 oauth1_creds = *oauth2_creds, 'access_token', 'access_token_secret'
-token = None
-
-
-def oauth2_decorator(func):
-
-    @pytest.mark.asyncio
-    @pytest.mark.twitter
-    @pytest.mark.oauth2
-    @pytest.mark.skipif(not oauth2, reason="no credentials found")
-    async def decorator():
-        global token
-
-        client = get_oauth2_client(bearer_token=token)
-        try:
-            await func(client)
-            # keep the token for the next test
-            token = client.headers.token
-        finally:
-            client.close()
-
-    return decorator
-
-
-def oauth1_decorator(func):
-
-    @pytest.mark.asyncio
-    @pytest.mark.twitter
-    @pytest.mark.oauth1
-    @pytest.mark.skipif(not oauth1, reason="no credentials found")
-    async def decorator():
-        client = get_oauth1_client()
-        try:
-            await func(client)
-        finally:
-            client.close()
-
-    return decorator
 
 
 def get_oauth2_client(**kwargs):
@@ -66,10 +33,32 @@ def get_oauth1_client(**kwargs):
                        **creds, **kwargs)
 
 
-@pytest.fixture
-def oauth2_client(event_loop):
-    if oauth2:
-        return get_oauth2_client(loop=event_loop)
+get_client_oauth = {1: get_oauth1_client, 2: get_oauth2_client}
+
+
+def decorator_oauth(key):
+    client = get_client_oauth[key](session=None)
+
+    def oauth_decorator(func):
+
+        @pytest.mark.asyncio
+        @pytest.mark.twitter
+        @pytest.mark.skipif(not test_oauth[key], reason="no credentials found")
+        async def decorator():
+            client._session = aiohttp.ClientSession()
+
+            try:
+                await func(client)
+            finally:
+                client.close()
+
+        return decorator
+
+    return oauth_decorator
+
+
+oauth1_decorator = decorator_oauth(1)
+oauth2_decorator = decorator_oauth(2)
 
 
 @oauth2_decorator

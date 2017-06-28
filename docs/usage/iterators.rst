@@ -102,3 +102,9 @@ An iterator for endpoints using the ``since_id`` parameter
     .. code-block:: python
 
         responses = request.iterator.with_since_id(fill_gaps=True)
+
+.. note::
+    Both :func:`~peony.iterators.with_since_id` and
+    :func:`~peony.iterators.with_max_id` have a ``force`` parameter that can
+    be used in case you need to keep making requests after a request returned
+    no content. Set ``force`` to ``True`` if this is the case.

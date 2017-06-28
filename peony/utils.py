@@ -55,7 +55,7 @@ def get_args(func, skip=0):
     ----------
     func : callable
         Function to get the arguments from
-    skip : :obj:`int`, optional
+    skip : int, optional
         Arguments to skip, defaults to 0 set it to 1 to skip the
         ``self`` argument of a method.
 
@@ -78,7 +78,7 @@ def log_error(msg=None, logger=None, **kwargs):
 
     Parameters
     ----------
-    msg : :obj:`str`, optional
+    msg : str, optional
         A message to add to the error
     logger : logging.Logger
         the logger to use
@@ -121,7 +121,7 @@ async def get_media_metadata(file_, path=None):
     ----------
     file_ : file object
         file object corresponding to the media
-    path : :obj:`str`, optional
+    path : str, optional
         path to the file
 
     Returns
@@ -216,7 +216,7 @@ async def execute(coro):
 
     Parameters
     ----------
-    coro : coroutine or function
+    coro : asyncio.coroutine or function
     """
     if asyncio.iscoroutine(coro):
         return await coro

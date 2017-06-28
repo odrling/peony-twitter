@@ -24,7 +24,7 @@ from .stream import StreamResponse
 class MetaPeonyClient(type):
 
     def __new__(cls, name, bases, attrs, **kwargs):
-        """ put the :class:`BaseTask`s in the right place """
+        """ put the :class:`~peony.commands.tasks.Task`s in the right place """
         tasks = {'init_tasks': set(), 'tasks': set()}
 
         for base in bases:
@@ -60,25 +60,25 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
     ----------
     streaming_apis : iterable, optional
         Iterable containing the streaming APIs subdomains
-    base_url : :obj:`str`, optional
+    base_url : str, optional
         Format of the url for all the requests
-    api_version : :obj:`str`, optional
+    api_version : str, optional
         Default API version
-    suffix : :obj:`str`, optional
+    suffix : str, optional
         Default suffix of API endpoints
-    loads : :obj:`function`, optional
+    loads : function, optional
         Function used to load JSON data
-    error_handler : :obj:`function`, optional
+    error_handler : function, optional
         Requests decorator
-    session : :obj:`asyncio.ClientSession`, optional
+    session : aiohttp.ClientSession, optional
         Session to use to make requests
     proxy : str
         Proxy used with every request
-    compression : :obj:`bool`, optional
+    compression : bool, optional
         Activate data compression on every requests, defaults to True
-    user_agent : :obj:`str`, optional
+    user_agent : str, optional
         Set a custom user agent header
-    encoding : :obj:`str`, optional
+    encoding : str, optional
         text encoding of the response from the server
     loop : event loop, optional
         An event loop, if not specified :func:`asyncio.get_event_loop`
@@ -265,7 +265,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         Returns
         -------
-        api.BaseAPIPath
+        .api.BaseAPIPath
             To access an API endpoint
         """
         defaults = None, self.api_version, self._suffix, self.base_url
@@ -320,10 +320,10 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         method : str
             Method to be used by the request
         url : str
-            URL of the ressource
-        headers : peony.oauth.PeonyHeaders
+            URL of the resource
+        headers : .oauth.PeonyHeaders
             Custom headers (doesn't overwrite `Authorization` headers)
-        session : :obj:`aiohttp.ClientSession`, optional
+        session : aiohttp.ClientSession, optional
             Client session used to make the request
 
         Returns
@@ -374,16 +374,16 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         method : str
             Method to be used by the request
         url : str
-            URL of the ressource
+            URL of the resource
         headers : dict
             Custom headers (doesn't overwrite `Authorization` headers)
-        _session : :obj:`aiohttp.ClientSession`, optional
+        _session : aiohttp.ClientSession, optional
             The session to use for this specific request, the session
             given as argument of :meth:`__init__` is used by default
 
         Returns
         -------
-        stream.StreamContext
+        .stream.StreamResponse
             Stream context for the request
         """
         return StreamResponse(
@@ -519,20 +519,20 @@ class PeonyClient(BasePeonyClient):
         ----------
         media : file object
             a file object of the media
-        path : :obj:`str`, optional
+        path : str, optional
             filename of the media
-        media_type : :obj:`str`, optional
+        media_type : str, optional
             mime type of the media
-        media_category : :obj:`str`, optional
+        media_category : str, optional
             twitter media category, must be used with ``media_type``
-        chunk_size : :obj:`int`, optional
+        chunk_size : int, optional
             size of a chunk in bytes
-        params : :obj:`dict`, optional
+        params : dict, optional
             additional parameters of the request
 
         Returns
         -------
-        data.PeonyResponse
+        .data_processing.PeonyResponse
             Response of the request
         """
         media_size = await utils.get_size(media)
@@ -608,24 +608,24 @@ class PeonyClient(BasePeonyClient):
 
         Parameters
         ----------
-        file_ : :obj:`str` or :class:`pathlib.Path` or file
+        file_ : str or pathlib.Path or file
             Path to the file or file object
-        media_type : :obj:`str`, optional
+        media_type : str, optional
             mime type of the media
-        media_category : :obj:`str`, optional
+        media_category : str, optional
             Twitter's media category of the media, must be used with
             ``media_type``
-        chunked : :obj:`bool`, optional
+        chunked : bool, optional
             If True, force the use of the chunked upload for the media
-        size_limit : :obj:`int`, optional
+        size_limit : int, optional
             If set, the media will be sent using a multipart upload if
-            its size is over ``sizelimit`` bytes
+            its size is over ``size_limit`` bytes
         params : dict
             parameters used when making the request
 
         Returns
         -------
-        data.PeonyResponse
+        .data_processing.PeonyResponse
             Response of the request
         """
         if isinstance(file_, str):

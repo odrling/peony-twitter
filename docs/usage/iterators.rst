@@ -23,11 +23,9 @@ coroutine function that will make the request.
     client = PeonyClient(**creds)
 
     async def get_followers(user_id, **additional_params):
-        followers_ids = client.api.followers.ids.get.iterator.with_cursor(
-            id=user_id,
-            count=5000,
-            **additional_params
-        )
+        request = client.api.followers.ids.get(id=user_id, count=5000,
+                                               **additional_params)
+        followers_ids = request.iterator.with_cursor()
 
         followers = []
         async for data in followers_ids:
@@ -48,11 +46,10 @@ An iterator for endpoints using the `max_id` parameter
     client = PeonyClient(**creds)
 
     async def get_tweets(user_id, n_tweets=1600, **additional_params):
-        responses = client.api.statuses.user_timeline.get.iterator.with_max_id(
-            user_id=user_id,
-            count=200,
-            **additional_params
-        )
+        request = client.api.statuses.user_timeline.get(user_id=user_id,
+                                                        count=200,
+                                                        **additional_params)
+        responses = request.iterator.with_max_id()
 
         user_tweets = []
 
@@ -68,8 +65,8 @@ An iterator for endpoints using the `max_id` parameter
 Since_id iterators
 ------------------
 
-An iterator for endpoints using the `since_id` parameter
-(e.g. statuses/home_timeline.json):
+An iterator for endpoints using the ``since_id`` parameter
+(e.g. `GET statuses/home_timeline.json <https://dev.twitter.com/rest/reference/get/statuses/home_timeline>`_):
 
 .. code-block:: python
 
@@ -81,11 +78,8 @@ An iterator for endpoints using the `since_id` parameter
     client = peony.PeonyClient(**creds)
 
     async def get_home(since_id=None, **params):
-        request = client.api.statuses.home_timeline.get
-        responses = request.iterator.with_since_id(
-            count=200,
-            **params
-        )
+        request = client.api.statuses.home_timeline.get(count=200, **params)
+        responses = request.iterator.with_since_id()
 
         home = []
         async for tweets in responses:
@@ -98,3 +92,13 @@ An iterator for endpoints using the `since_id` parameter
             await asyncio.sleep(120)
 
         return sorted(home, key=lambda tweet: tweet.id)
+
+
+.. note::
+    :func:`~peony.iterators.with_since_id` has a fill_gaps parameter that will
+    try to find all the tweets that were sent between 2 iterations if it cannot
+    be found in a single request (more than 200 tweets were sent)
+
+    .. code-block:: python
+
+        responses = request.iterator.with_since_id(fill_gaps=True)

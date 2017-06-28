@@ -3,8 +3,8 @@
 ================================
 
 If you use aiohttp to make requests on other websites you can pass on the
-:class:`aiohttp.ClientSession` object to the :class:`PeonyClient` on initialisation
-as the `session` argument.
+:class:`aiohttp.ClientSession` object to the :class:`~peony.client.PeonyClient`
+on initialisation as the `session` argument.
 
 .. code-block:: python
 
@@ -22,11 +22,3 @@ as the `session` argument.
     if __name__ == '__main__':
         loop = asyncio.get_event_loop()
         loop.run_until_complete(client_with_session())
-
-
-.. warning::
-
-    Don't delete the :class:`PeonyClient` instance if you need to use the
-    session later in your program, as doing so would close the session.
-
-

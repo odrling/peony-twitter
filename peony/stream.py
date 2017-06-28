@@ -35,17 +35,17 @@ class StreamResponse:
 
     Parameters
     ----------
-    *args : optional
-        Positional arguments
-    client : peony.BasePeonyClient
+    *args : list, optional
+        Positional arguments of the request
+    client : .client.BasePeonyClient
         client used to make the request
-    session : :obj:`aiohttp.Session`, optional
+    session : aiohttp.ClientSession, optional
         Session used by the request
     loads : function, optional
         function used to decode the JSON data received
-    timeout : :obj:`int`, optional
+    timeout : int, optional
         Timeout on connection
-    **kwargs
+    kwargs : dict, optional
         Keyword parameters of the request
     """
 
@@ -173,7 +173,7 @@ class StreamResponse:
 
         Parameters
         ----------
-        error : :obj:`bool`, optional
+        error : bool, optional
             Whether to print the error or not
         """
         logger = logging.getLogger(__name__)

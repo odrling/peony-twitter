@@ -9,9 +9,9 @@ class AbstractIterator(ABC):
 
     Parameters
     ----------
-    _request
+    _request : .requests.Request
         Main request
-    **kwargs
+    **kwargs : dict
         Parameters of the request
     """
 
@@ -35,13 +35,13 @@ class IdIterator(AbstractIterator):
 
     Parameters
     ----------
-    _request :
+    _request : .requests.Request
         Main request
     _parameter : str
         Parameter to change for each request
     _force : bool
         Keep the iterator after empty responses
-    kwargs:
+    kwargs : dict
         Request parameters
     """
 
@@ -73,9 +73,9 @@ class MaxIdIterator(IdIterator):
 
     Parameters
     ----------
-    _request:
+    _request : .requests.Request
         Main request
-    kwargs:
+    kwargs : dict
         Parameters of the request
     """
 
@@ -98,13 +98,13 @@ class SinceIdIterator(IdIterator):
 
     Parameters
     ----------
-    _request
+    _request : .requests.Request
         Main request
     _force : bool
         Keep the iterator after empty responses
     _fill_gaps : bool
         Fill the gaps (if there are more than ``count`` tweets to get)
-    **kwargs
+    **kwargs : dict
         Parameters of the request
     """
 
@@ -162,9 +162,9 @@ class CursorIterator(AbstractIterator):
 
     Parameters
     ----------
-    _request
+    _request : .requests.Request
         Main request
-    **kwargs
+    **kwargs : dict
         Parameters of the request
     """
 

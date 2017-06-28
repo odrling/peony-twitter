@@ -28,11 +28,11 @@ class PeonyHeaders(ABC, dict):
 
     Parameters
     ----------
-    compression : :obj:`bool`, optional
+    compression : bool, optional
         If set to True the client will be able to receive compressed
         responses else it should not happen unless you provide the
         corresponding header when you make a request. Defaults to True.
-    user_agent : :obj:`str`, optional
+    user_agent : str, optional
         The user agent set in the headers. Defaults to
         "peony v{version number}"
     headers : dict
@@ -71,7 +71,7 @@ class PeonyHeaders(ABC, dict):
             HTTP method used by the request
         url : str
             The url to request
-        headers : :obj:`dict`, optional
+        headers : dict, optional
             Additionnal headers
         skip_params : bool
             Don't use the parameters to sign the request
@@ -127,8 +127,6 @@ class PeonyHeaders(ABC, dict):
 class OAuth1Headers(PeonyHeaders):
     """
         Dynamic headers implementing OAuth1
-
-    :meth:`sign` is called before each request
 
     Parameters
     ----------
@@ -253,7 +251,7 @@ class OAuth2Headers(PeonyHeaders):
         Your consumer key
     consumer_secret : str
         Your consumer secret
-    client : peony.BasePeonyClient
+    client : .client.BasePeonyClient
         The client to authenticate
     bearer_token : :obj:`str`, optional
         Your bearer_token

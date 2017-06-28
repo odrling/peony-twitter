@@ -42,7 +42,7 @@ This should open a browser to get a pin to authorize your application.
 Getting started
 ---------------
 
-You can easily create a client using the class `PeonyClient`.
+You can easily create a client using the class ``PeonyClient``.
 Make sure to get your api keys and access tokens from
 `Twitter's application management page`_ and/or to `Authorize your client`_
 
@@ -93,3 +93,14 @@ Documentation
 Read `Peony's documentation`_.
 
 .. _Peony's documentation: https://peony-twitter.readthedocs.io
+
+Contributing
+------------
+
+Every kind of contribution is appreciated.
+
+If you find a bug please start an issue and if you're very motivated you can
+create a pull request.
+
+If you have a suggestion you can also start an issue and create a pull
+request if you managed to make it work.

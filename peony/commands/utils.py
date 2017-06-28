@@ -42,7 +42,7 @@ def permission_check(data, command_permissions,
         with these permissions as values
     command : function
         the command that is run
-    permissions : :obj:`tuple`, :obj:`list`
+    permissions : tuple or list
         a list of permissions for the command
 
     Returns

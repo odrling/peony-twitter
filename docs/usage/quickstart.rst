@@ -33,7 +33,7 @@ This should open a browser to get a pin to authorize your application.
 Getting started
 ---------------
 
-You can easily create a client using the class `PeonyClient`.
+You can easily create a client using :class:`~peony.client.PeonyClient`.
 Make sure to get your api keys and access tokens from
 `Twitter's application management page`_ and/or to :ref:`auth`
 

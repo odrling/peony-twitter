@@ -31,20 +31,38 @@ or GIFs from a file path that would not be recognized by the ``mimetypes``
 module (shipped with Python) or from a file object.
 
 
-Pillow
-------
+aiofiles
+--------
 
 You can install it by running::
 
-    $ pip3 install peony-twitter[pil]
+    $ pip3 install peony-twitter[aiofiles]
 
-or (if peony is already installed)::
+or directly::
 
-    $ pip3 install Pillow
+    $ pip3 install aiofiles
 
-``Pillow`` is used when setting the ``auto_convert`` parameter of
-:meth:`PeonyClient.upload_media` to ``True`` to resize the picture and use
-the better suited format for the media.
+
+When this is installed every file will be opened using aiofiles, thus every
+read operation will not block the event loop.
+
+.. note::
+    magic and aiofiles can be installed using the ``media`` extra requirement::
+
+        $ pip3 install peony-twitter[media]
+
+aiohttp
+-------
+
+This command will install some optional dependencies of aiohttp::
+
+    $ pip3 install peony-twitter[aiohttp]
+
+or again directly::
+
+    $ pip3 install cchardet aiodns
+
+This will install cchardet and aiodns, which could speed up aiohttp.
 
 
 Minimal installation

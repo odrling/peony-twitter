@@ -7,7 +7,7 @@ By default :class:`peony.exceptions.RateLimitExceeded` is handled by sleeping un
 the rate limit resets and the requests are resent on :class:`asyncio.TimeoutError`.
 If you would handle these exceptions another way or want to handle other
 exceptions differently you can use the ``error_handler`` argument of
-PeonyClient.
+:class:`~peony.client.PeonyClient`.
 
 .. code-block:: python
 
@@ -51,10 +51,11 @@ PeonyClient.
 
         return decorated_request
 
-
     client = PeonyClient(**creds, error_handler=error_handler)
 
-You can also choose to not use an error handler and disable the default one by
-setting the ``error_handler`` argument to ``None``.
-If you want to disable the global error handling for a specific request pass a
-``_error_handling`` argument to this request with a value of ``False``.
+.. note::
+    You can also choose to not use an error handler and disable the default one
+    by setting the ``error_handler`` argument to ``None``.
+    If you want to disable the global error handling for a specific request
+    pass a ``_error_handling`` argument to this request with a value of
+    ``False``.

@@ -13,14 +13,15 @@ So I tried to make it easier to create such a program.
 Init tasks
 ----------
 
-By default the :class:`PeonyClient` makes 2 requests on initialization that
-are kept as attributes of the client:
-* account/verify_credentials.json (kept as self.user)
-* help/twitter_configuration.json (kept as self.twitter_configuration)
+By default the :class:`~peony.client.PeonyClient` makes 2 requests after being
+started:
+
+* account/verify_credentials.json (kept as ``self.user``)
+* help/twitter_configuration.json (kept as ``self.twitter_configuration``)
 
 If you need to have more informations during the initialization of a client you
-should use the :func:`init_tasks` decorator. The methods decorated with this
-decorator will be started on setup.
+should use the :func:`~peony.commands.tasks.init_task` decorator.
+The methods decorated with this decorator will be started on setup.
 
 .. code-block:: python
 
@@ -51,7 +52,8 @@ decorator will be started on setup.
 The ``task`` decorator
 ----------------------
 
-First you will need to create a subclass of PeonyClient and add a :func:`task`
+First you will need to create a subclass of PeonyClient and add a
+:func:`~peony.commands.tasks.task`
 decorator to the methods that you want to run.
 
 .. code-block:: python
@@ -100,8 +102,19 @@ decorator to the methods that you want to run.
             loop=loop
         )
 
-        awesome_client.run()
+        awesome_client.run()  # you can also use the run_tasks()
+                              # coroutine if you need it
 
 
     if __name__ == '__main__':
         main()
+
+
+.. note::
+
+    The :meth:`~peony.client.BasePeonyClient.run_tasks` method can be used
+    instead of :meth:`~peony.client.BasePeonyClient.run` to start the tasks.
+    Just keep in mind that :meth:`~peony.client.BasePeonyClient.run` is a
+    wrapper around :meth:`~peony.client.BasePeonyClient.run_tasks` with some
+    basic features such as handling :exc:`KeyboardInterrupt` and run
+    :meth:`~peony.client.BasePeonyClient.close` when all the tasks are complete.

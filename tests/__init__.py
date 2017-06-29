@@ -7,6 +7,8 @@ import json
 import os.path
 import sys
 
+import aiohttp
+
 file_ = os.path.abspath(inspect.getfile(inspect.currentframe()))
 test_dir = os.path.dirname(file_)
 
@@ -20,34 +22,23 @@ class Media:
         self.url = "http://static.odrling.xyz/peony/tests/" + filename
         self.type = mimetype
         self.category = category
-        self.content_length = content_length
-        self._accept_bytes_range = None
         self._cache = b""
+        self.content_length = content_length
 
-    async def download(self, session, chunk=-1):
-        if self._accept_bytes_range is None:
-            async with session.head(self.url) as response:
-                accept = response.headers.get('Accept-Ranges', "")
-                self._accept_bytes_range = "bytes" in accept
-
-        if 0 <= chunk <= len(self._cache):
-            return self._cache[:chunk]
-
-        elif self._accept_bytes_range and self._cache:
-            byte_range = "bytes={cached}-{chunk}".format(
-                cached=len(self._cache),
-                chunk=chunk if chunk > -1 else self.content_length
-            )
-            headers = {'Range': byte_range}
-
-            async with session.get(self.url, headers=headers) as response:
-                self._cache += await response.read()
+    async def download(self, session=None, chunk=-1):
+        if self._cache:
+            if chunk < 0:
                 return self._cache
-
+            else:
+                return self._cache[:chunk]
         else:
-            async with session.get(self.url) as response:
-                self._cache = await response.content.read(chunk)
-                return self._cache
+            if session is None:
+                async with aiohttp.ClientSession() as session:
+                    return await self.download(session, chunk)
+            else:
+                async with session.get(self.url) as response:
+                    self._cache = await response.read()
+                    return await self.download(chunk=chunk)
 
 
 medias = {

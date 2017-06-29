@@ -43,7 +43,7 @@ class Handler:
         ----------
         prefix : str
             the prefix of the command
-        strict : :obj:`bool`, optional
+        strict : bool, optional
             If set to True the command must be at the beginning
             of the message. Defaults to False.
 

@@ -1,6 +1,7 @@
-========================================================
- Change the loads function used when decoding responses
-========================================================
+=================================================
+ The loads function used when decoding responses
+=================================================
+.. highlight:: python
 
 The responses sent by the Twitter API are commonly JSON data.
 By default the data is loaded using the `peony.utils.loads` so that each JSON
@@ -15,6 +16,27 @@ Which means that::
 returns the same as::
 
     response['data']
+
+Also when a tweet has a ``text`` and a ``full_text`` items it will return the
+value of the ``full_text`` item when getting ``text``.
+
+.. code-block:: python
+
+    response.text == response.full_text
+
+and in case the text is in the ``extended_tweet`` item this should also work.
+
+.. code-block:: python
+
+    response.text == response.extended_tweet.full_text
+
+:tldr:
+
+    You should not have to care about how to retrieve the full text of a tweet
+    if you're using peony out of the box. It should find it by itself.
+
+I don't like this, how can I change this
+----------------------------------------
 
 To change this behavior, PeonyClient has a `loads` argument which is the
 function used when loading the data. So if you don't want to use the syntax

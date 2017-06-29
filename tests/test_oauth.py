@@ -6,6 +6,7 @@ from time import time
 from unittest.mock import patch
 
 import pytest
+
 from peony import exceptions, oauth
 
 from . import dummy
@@ -273,7 +274,8 @@ async def test_oauth2_sign(oauth2_headers):
 
 @pytest.mark.asyncio
 async def test_oauth2_sign_url_invalidate(oauth2_headers):
-    await oauth2_headers.sign(url="")
+    oauth2_headers.token = "test"
+    await oauth2_headers.sign(url=oauth2_headers._invalidate_token.url())
     assert oauth2_headers.token is None
 
 
@@ -297,13 +299,6 @@ def test_raw_form_data():
                                      quote_fields=False)
         data = formdata._gen_form_urlencoded()
         assert data == b"access_token=a%20bc%25&access_token_secret=cba"
-
-
-@pytest.mark.asyncio
-async def test_oauth2_invalidate_token(oauth2_headers):
-    oauth2_headers.token = "abc"
-    await oauth2_headers.invalidate_token()
-    assert oauth2_headers.token is None
 
 
 @pytest.mark.asyncio

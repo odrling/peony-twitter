@@ -17,7 +17,7 @@ async def get_oauth_token(consumer_key, consumer_secret, callback_uri="oob"):
         Your consumer key
     consumer_secret : str
         Your consumer secret
-    callback_uri : :obj:`str`, optional
+    callback_uri : str, optional
         Callback uri, defaults to 'oob'
 
     Returns
@@ -184,7 +184,7 @@ def oauth_dance(consumer_key, consumer_secret,
         Your consumer secret
     oauth_callback : str
         Callback uri, defaults to 'oob'
-    loop
+    loop : event loop
         asyncio event loop
 
     Returns
@@ -208,7 +208,7 @@ def oauth2_dance(consumer_key, consumer_secret, loop=None):
         Your consumer key
     consumer_secret : str
         Your consumer secret
-    loop : :class:`asyncio.EventLoop`, optional
+    loop : event loop, optional
         event loop to use
 
     Returns

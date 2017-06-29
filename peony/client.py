@@ -9,8 +9,8 @@ the Twitter APIs, with a method to upload a media
 
 import asyncio
 import io
-import itertools
 from concurrent.futures import ProcessPoolExecutor
+from urllib.parse import urlparse
 
 import aiohttp
 
@@ -20,16 +20,11 @@ from .commands import EventStreams, init_task, task
 from .oauth import OAuth1Headers
 from .stream import StreamResponse
 
-try:
-    from aiofiles import open
-except ImportError:  # pragma: no cover
-    pass
-
 
 class MetaPeonyClient(type):
 
     def __new__(cls, name, bases, attrs, **kwargs):
-        """ put the :class:`BaseTask`s in the right place """
+        """ put the :class:`~peony.commands.tasks.Task`s in the right place """
         tasks = {'init_tasks': set(), 'tasks': set()}
 
         for base in bases:
@@ -65,30 +60,32 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
     ----------
     streaming_apis : iterable, optional
         Iterable containing the streaming APIs subdomains
-    base_url : :obj:`str`, optional
+    base_url : str, optional
         Format of the url for all the requests
-    api_version : :obj:`str`, optional
+    api_version : str, optional
         Default API version
-    suffix : :obj:`str`, optional
+    suffix : str, optional
         Default suffix of API endpoints
-    loads : :obj:`function`, optional
+    loads : function, optional
         Function used to load JSON data
-    error_handler : :obj:`function`, optional
+    error_handler : function, optional
         Requests decorator
-    session : :obj:`asyncio.ClientSession`, optional
+    session : aiohttp.ClientSession, optional
         Session to use to make requests
     proxy : str
         Proxy used with every request
-    compression : :obj:`bool`, optional
+    compression : bool, optional
         Activate data compression on every requests, defaults to True
-    user_agent : :obj:`str`, optional
+    user_agent : str, optional
         Set a custom user agent header
-    encoding : :obj:`str`, optional
+    encoding : str, optional
         text encoding of the response from the server
     loop : event loop, optional
         An event loop, if not specified :func:`asyncio.get_event_loop`
         is called
     """
+
+    _streams = EventStreams()
 
     def __init__(self,
                  consumer_key=None,
@@ -129,9 +126,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         if auth is None:
             auth = OAuth1Headers
-
-        if headers is None:
-            headers = {}
 
         self.proxy = proxy
 
@@ -271,7 +265,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         Returns
         -------
-        api.BaseAPIPath
+        .api.BaseAPIPath
             To access an API endpoint
         """
         defaults = None, self.api_version, self._suffix, self.base_url
@@ -286,7 +280,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                             'please use a dict, a tuple or a list instead')
         elif isinstance(values, str):
             values = [values, *defaults[1:]]
-        elif values:
+        elif isinstance(values, tuple):
             if len(values) < len(keys):
                 padding = (None,) * (len(keys) - len(values))
                 values += padding
@@ -294,6 +288,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             values = [default if value is None else value
                       for value, default in zip(values, defaults)
                       if (value, default) != (None, None)]
+        else:
+            raise TypeError("Could not create an endpoint from an object of "
+                            "type " + values.__class__.__name__)
 
         api, version, suffix, base_url = values
 
@@ -323,10 +320,10 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         method : str
             Method to be used by the request
         url : str
-            URL of the ressource
-        headers : peony.oauth.PeonyHeaders
+            URL of the resource
+        headers : .oauth.PeonyHeaders
             Custom headers (doesn't overwrite `Authorization` headers)
-        session : :obj:`aiohttp.ClientSession`, optional
+        session : aiohttp.ClientSession, optional
             Client session used to make the request
 
         Returns
@@ -377,16 +374,16 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         method : str
             Method to be used by the request
         url : str
-            URL of the ressource
+            URL of the resource
         headers : dict
             Custom headers (doesn't overwrite `Authorization` headers)
-        _session : :obj:`aiohttp.ClientSession`, optional
+        _session : aiohttp.ClientSession, optional
             The session to use for this specific request, the session
             given as argument of :meth:`__init__` is used by default
 
         Returns
         -------
-        stream.StreamContext
+        .stream.StreamResponse
             Stream context for the request
         """
         return StreamResponse(
@@ -401,9 +398,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
     @classmethod
     def event_stream(cls, event_stream):
         """ Decorator to attach an event stream to the class """
-        if getattr(cls, '_streams', None) is None:
-            cls._streams = EventStreams()
-
         cls._streams.append(event_stream)
         return event_stream
 
@@ -415,7 +409,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         else:
             raise RuntimeError("Cannot get tasks of kind %s" % kind)
 
-        return [t(self) for t in self._tasks[key]]
+        return [task(self) for task in self._tasks[key]]
 
     def get_tasks(self):
         """
@@ -428,8 +422,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         """
         tasks = self._get_tasks()
 
-        if isinstance(self._streams, EventStreams):
-            tasks.extend(self._streams.get_tasks(self))
+        tasks.extend(self._streams.get_tasks(self))
 
         return tasks
 
@@ -526,26 +519,29 @@ class PeonyClient(BasePeonyClient):
         ----------
         media : file object
             a file object of the media
-        path : :obj:`str`, optional
+        path : str, optional
             filename of the media
-        media_type : :obj:`str`, optional
+        media_type : str, optional
             mime type of the media
-        media_category : :obj:`str`, optional
-            twitter media category
-        chunk_size : :obj:`int`, optional
+        media_category : str, optional
+            twitter media category, must be used with ``media_type``
+        chunk_size : int, optional
             size of a chunk in bytes
-        params : :obj:`dict`, optional
+        params : dict, optional
             additional parameters of the request
 
         Returns
         -------
-        data.PeonyResponse
+        .data_processing.PeonyResponse
             Response of the request
         """
         media_size = await utils.get_size(media)
 
-        if media_type is None or media_category is None:
-            media_type, media_category = utils.get_type(media, path)
+        if media_type is None:
+            media_metadata = await utils.get_media_metadata(media, path)
+            media_type, media_category = media_metadata
+        elif media_category is None:
+            media_category = utils.get_category(media_type)
 
         response = await self.upload.media.upload.post(
             command="INIT",
@@ -557,24 +553,20 @@ class PeonyClient(BasePeonyClient):
 
         media_id = response['media_id']
 
-        for i in itertools.count():
-            chunk = await utils.execute(media.read(chunk_size))
-            if not chunk:
-                break
-
+        async for i, chunk in utils.chunks(media, chunk_size):
             await self.upload.media.upload.post(command="APPEND",
                                                 media_id=media_id,
                                                 media=chunk,
-                                                segment_index=i,
-                                                _json=None)
+                                                segment_index=i)
 
         status = await self.upload.media.upload.post(command="FINALIZE",
                                                      media_id=media_id)
 
         if 'processing_info' in status:
-            while status['processing_info']['state'] != "succeeded":
-                if status['processing_info'].get('state', "") == "failed":
-                    error = status['processing_info'].get('error', {})
+            while status['processing_info'].get('state') != "succeeded":
+                processing_info = status['processing_info']
+                if processing_info.get('state') == "failed":
+                    error = processing_info.get('error', {})
 
                     message = error.get('message', str(status))
 
@@ -582,8 +574,9 @@ class PeonyClient(BasePeonyClient):
                                                           message=message,
                                                           **params)
 
-                delay = status['processing_info']['check_after_secs']
+                delay = processing_info['check_after_secs']
                 await asyncio.sleep(delay)
+
                 status = await self.upload.media.upload.get(
                     command="STATUS",
                     media_id=media_id,
@@ -592,11 +585,22 @@ class PeonyClient(BasePeonyClient):
 
         return response
 
+    async def _size_test(self, media, size_limit):
+        if size_limit is None:
+            if isinstance(self.twitter_configuration, APIPath):
+                return False
+            else:
+                try:
+                    size_limit = self.twitter_configuration['photo_size_limit']
+                except KeyError:
+                    return False
+
+        return await utils.get_size(media) > size_limit
+
     async def upload_media(self, file_,
-                           auto_convert=False,
-                           formats=None,
-                           max_size=None,
-                           chunked=False,
+                           media_type=None,
+                           media_category=None,
+                           chunked=None,
                            size_limit=None,
                            **params):
         """
@@ -604,61 +608,45 @@ class PeonyClient(BasePeonyClient):
 
         Parameters
         ----------
-        file_ : :obj:`str` or :class:`pathlib.Path` or file
+        file_ : str or pathlib.Path or file
             Path to the file or file object
-        auto_convert : :obj:`bool`, optional
-            If set to True the media will be optimized by calling
-            :func:`utils.optimize_media`
-        formats : :obj:`list`, optional
-            A list of all the formats to try to optimize the media
-        max_size : :obj:`tuple`, optional
-            Max size of the picture in the (width, height) format
-        chunked : :obj:`bool`, optional
+        media_type : str, optional
+            mime type of the media
+        media_category : str, optional
+            Twitter's media category of the media, must be used with
+            ``media_type``
+        chunked : bool, optional
             If True, force the use of the chunked upload for the media
-        size_limit : :obj:`int`, optional
+        size_limit : int, optional
             If set, the media will be sent using a multipart upload if
-            its size is over ``sizelimit`` bytes
+            its size is over ``size_limit`` bytes
+        params : dict
+            parameters used when making the request
 
         Returns
         -------
-        data.PeonyResponse
+        .data_processing.PeonyResponse
             Response of the request
         """
-        formats = formats or general.formats
-
-        media_metadata = await utils.get_media_metadata(file_)
-        media_type, media_category, is_image, file_ = media_metadata
-
-        if hasattr(file_, 'read'):
+        if isinstance(file_, str):
+            path = urlparse(file_).path.strip(" \"'")
+            media = await utils.execute(open(path, 'rb'))
+        elif hasattr(file_, 'read'):
             media = file_
+        elif isinstance(file_, bytes):
+            media = io.BytesIO(file_)
         else:
-            media = await utils.execute(open(str(file_), 'rb'))
+            raise TypeError("upload_media input must be a file object or a "
+                            "filename or binary data")
 
-        if is_image and auto_convert:
-            if not max_size:
-                photo_sizes = self.twitter_configuration['photo_sizes']
-                large_sizes = photo_sizes['large']
-                max_size = large_sizes['w'], large_sizes['h']
+        size_test = await self._size_test(media, size_limit)
 
-            data = io.BytesIO(await utils.execute(media.read()))
-
-            media = await self.loop.run_in_executor(
-                self.executor, utils.optimize_media, data, max_size, formats
-            )
-
-        if not isinstance(self.twitter_configuration, APIPath) or size_limit:
-            if size_limit is None:
-                size_limit = self.twitter_configuration['photo_size_limit']
-            size_test = await utils.get_size(media) > size_limit
-        else:
-            size_test = False
-
-        if size_test or chunked:
+        if (size_test and chunked is None) or chunked:
             args = media, file_, media_type, media_category
             response = await self._chunked_upload(*args, **params)
         else:
-            params['media'] = media
-            response = await self.upload.media.upload.post(**params)
+            response = await self.upload.media.upload.post(media=media,
+                                                           **params)
 
         if not hasattr(file_, 'read') and not media.closed:
             media.close()

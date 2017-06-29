@@ -53,8 +53,7 @@ extensions = [
 rtd = "https://%s.readthedocs.io/en/stable"
 python_docs = "https://docs.python.org/3"
 intersphinx_mapping = {'python': (python_docs, None),
-                       'aiohttp': (rtd % "aiohttp", None),
-                       'Pillow': (rtd % "pillow", None)}
+                       'aiohttp': (rtd % "aiohttp", None)}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']

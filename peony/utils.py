@@ -2,24 +2,10 @@
 
 import asyncio
 import functools
-import io
 import logging
 import os
-import pathlib
-import sys
-from urllib.parse import urlparse
 
 from . import exceptions
-
-try:
-    import PIL.Image
-except ImportError:  # pragma: no cover
-    PIL = None
-
-try:
-    from aiofiles import open
-except ImportError:  # pragma: no cover
-    pass
 
 try:
     import magic
@@ -48,12 +34,12 @@ def error_handler(request):
             except exceptions.RateLimitExceeded as e:
                 delay = int(e.reset_in) + 1
                 fmt = "Sleeping for {}s (rate limit exceeded on endpoint {})"
-                print(fmt.format(delay, url), file=sys.stderr)
+                logging.warning(fmt.format(delay, url))
                 await asyncio.sleep(delay)
 
             except asyncio.TimeoutError:
                 fmt = "Request to {url} timed out, retrying"
-                print(fmt.format(url=url), file=sys.stderr)
+                logging.info(fmt.format(url=url))
 
             except:
                 raise
@@ -69,7 +55,7 @@ def get_args(func, skip=0):
     ----------
     func : callable
         Function to get the arguments from
-    skip : :obj:`int`, optional
+    skip : int, optional
         Arguments to skip, defaults to 0 set it to 1 to skip the
         ``self`` argument of a method.
 
@@ -92,7 +78,7 @@ def log_error(msg=None, logger=None, **kwargs):
 
     Parameters
     ----------
-    msg : :obj:`str`, optional
+    msg : str, optional
         A message to add to the error
     logger : logging.Logger
         the logger to use
@@ -105,90 +91,6 @@ def log_error(msg=None, logger=None, **kwargs):
                        "to see the full report.\n" + msg)
     else:
         logger.debug(msg, exc_info=True)
-
-
-def convert(img, formats):
-    """
-        Convert the image to all the formats specified
-
-    Parameters
-    ----------
-    img : PIL.Image.Image
-        The image to convert
-    formats : list
-        List of all the formats to use
-
-    Returns
-    -------
-    io.BytesIO
-        A file object containing the converted image
-    """
-    media = None
-    min_size = 0
-
-    for kwargs in formats:
-        f = io.BytesIO()
-        img.save(f, **kwargs)
-        size = f.tell()
-
-        if media is None or size < min_size:
-            if media is not None:
-                media.close()
-
-            media = f
-            min_size = size
-        else:
-            f.close()
-
-    return media
-
-
-def optimize_media(file_, max_size, formats):
-    """
-        Optimize an image
-
-    Resize the picture to the ``max_size``, defaulting to the large
-    photo size of Twitter in :meth:`PeonyClient.upload_media` when
-    used with the ``optimize_media`` argument.
-
-    Parameters
-    ----------
-    file_ : file object
-        the file object of an image
-    max_size : :obj:`tuple` or :obj:`list` of :obj:`int`
-        a tuple in the format (width, height) which is maximum size of
-        the picture returned by this function
-    formats : :obj`list` or :obj:`tuple` of :obj:`dict`
-        a list of all the formats to convert the picture to
-
-    Returns
-    -------
-    file
-        The smallest file created in this function
-    """
-    if not PIL:
-        msg = ("Pillow must be installed to optimize a media\n"
-               "(pip3 install peony[Pillow])")
-        raise RuntimeError(msg)
-
-    img = PIL.Image.open(file_)
-
-    # resize the picture (defaults to the 'large' photo size of Twitter
-    # in peony.PeonyClient.upload_media)
-    ratio = max(hw / max_hw for hw, max_hw in zip(img.size, max_size))
-
-    if ratio > 1:
-        size = tuple(int(hw // ratio) for hw in img.size)
-        img = img.resize(size, PIL.Image.ANTIALIAS)
-
-    media = convert(img, formats)
-
-    # do not close a file opened by the user
-    # only close if a filename was given
-    if not hasattr(file_, 'read'):
-        img.close()
-
-    return media
 
 
 def reset_io(func):
@@ -211,15 +113,16 @@ def reset_io(func):
     return decorated
 
 
-async def get_media_metadata(file_):
+async def get_media_metadata(file_, path=None):
     """
         Get all the file's metadata and read any kind of file object
 
     Parameters
     ----------
-    file_ : :obj:`str`, :obj:`bytes` or file object
-        A filename, binary data or file object corresponding to
-        the media
+    file_ : file object
+        file object corresponding to the media
+    path : str, optional
+        path to the file
 
     Returns
     -------
@@ -227,36 +130,17 @@ async def get_media_metadata(file_):
         The mimetype of the media
     str
         The category of the media on Twitter
-    bool
-        Tell whether this file is an image or a video
-    :obj:`str` or file object
-        Path to the file
     """
     # try to get the path no matter what the input is
-    if isinstance(file_, pathlib.Path):
-        file_ = str(file_)
-
-    if isinstance(file_, str):
-        file_ = urlparse(file_).path.strip(" \"'")
-
-        original = await execute(open(file_, 'rb'))
-        media_type, media_category = await get_type(original, file_)
-        await execute(original.close())
-
-    elif hasattr(file_, 'read'):
-        media_type, media_category = await get_type(file_)
-
-    elif isinstance(file_, bytes):
-        file_ = io.BytesIO(file_)
-        media_type, media_category = await get_type(file_)
+    if hasattr(file_, 'read'):
+        media_type = await get_type(file_, path)
 
     else:
-        raise TypeError("upload_media input must be a file object or a"
-                        "filename or binary data")
+        raise TypeError("get_metadata input must be a file object")
 
-    is_image = media_type.startswith('image')
+    media_category = get_category(media_type)
 
-    return media_type, media_category, is_image, file_
+    return media_type, media_category
 
 
 async def get_size(media):
@@ -298,10 +182,11 @@ async def get_type(media, path=None):
     """
     if magic:
         media_type = mime.from_buffer(await execute(media.read(1024)))
+        if media_type == 'application/x-empty':
+            raise TypeError("No data in media")
     else:
         media_type = None
         if path:
-            print("path:", str(path))
             media_type = mime.guess_type(path)[0]
 
         if media_type is None:
@@ -310,17 +195,19 @@ async def get_type(media, path=None):
                    "(pip3 install peony-twitter[magic])")
             raise RuntimeError(msg)
 
+    return media_type
+
+
+def get_category(media_type):
     if media_type.startswith('video'):
-        media_category = "tweet_video"
+        return "tweet_video"
     elif media_type.endswith('gif'):
-        media_category = "tweet_gif"
+        return "tweet_gif"
     elif media_type.startswith('image'):
-        media_category = "tweet_image"
+        return "tweet_image"
     else:
         raise RuntimeError("The provided media cannot be handled.\n"
                            "mimetype: %s" % media_type)
-
-    return media_type, media_category
 
 
 async def execute(coro):
@@ -329,9 +216,29 @@ async def execute(coro):
 
     Parameters
     ----------
-    coro : coroutine or function
+    coro : asyncio.coroutine or function
     """
     if asyncio.iscoroutine(coro):
         return await coro
     else:
         return coro
+
+
+class chunks:  # noqa
+
+    def __init__(self, media, chunk_size):
+        self.media = media
+        self.chunk_size = chunk_size
+        self.i = -1
+
+    async def __aiter__(self):
+        return self
+
+    async def __anext__(self):
+        self.i += 1
+
+        chunk = await execute(self.media.read(self.chunk_size))
+        if not chunk:
+            raise StopAsyncIteration()
+
+        return self.i, chunk

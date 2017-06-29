@@ -3,7 +3,7 @@
 =========
 
 If you need to access the Streaming API, the recommended way is to use an
-:class:`EventStream`.
+:class:`~peony.commands.event_handlers.EventStream`.
 
 
 .. code-block:: python
@@ -31,13 +31,6 @@ If you need to access the Streaming API, the recommended way is to use an
         def connection(self, data):
             print("Connected to stream!")
 
-        # the on_follow event is triggered when the user gets a new follower
-        # or the user follows someone
-        # https://dev.twitter.com/streaming/overview/messages-types#events-event
-        @events.on_follow.handler
-        def follow(self, data):
-            print("You have a new follower @%s" % data.source.screen_name)
-
         # the on_tweet event is triggered when a tweet seems to be sent on
         # the stream, by default retweets are included
         @events.on_tweet.handler
@@ -51,6 +44,13 @@ If you need to access the Streaming API, the recommended way is to use an
         @events.on_retweet.handler
         def retweet(self, data):
             pass
+
+        # the on_follow event is triggered when the user gets a new follower
+        # or the user follows someone
+        # https://dev.twitter.com/streaming/overview/messages-types#events-event
+        @events.on_follow.handler
+        def follow(self, data):
+            print("You have a new follower @%s" % data.source.screen_name)
 
         # the default event is the last event to be triggered
         # if no other event was triggered by the data then this one will be
@@ -72,12 +72,13 @@ Custom events
 -------------
 
 If you ever need to create your own events that can easily be done with
-the :func:`events`. The function decorated with this decorator must
-have at least 1 argument that corresponds to the data received and return
+the :func:`~peony.commands.event_types.events`.
+The function decorated with this decorator must have at least 1 argument that
+corresponds to the data received and return
 
 ``True`` if the data should trigger this event and ``False`` otherwise.
-It is recommended to use the :func:`events.priority` decorator so that your
-event will be processed before the ones provided in Peony.
+It is recommended to use the :func:`events.priority`
+decorator so that your event will be processed before the ones provided in Peony.
 
 .. code-block:: python
 
@@ -125,6 +126,38 @@ event will be processed before the ones provided in Peony.
         def followed(self, data):
             print("@%s followed you" % data.source.screen_name)
 
-        @on_tweet_with_media
+        @on_tweet_with_media.handler
         def tweet_with_media(self, data):
             print(data.text)
+
+Stream iterator
+---------------
+
+If all this sounded too complicated to integrate in your program you can just
+use the stream iterator:
+
+.. code-block:: python
+
+    from peony import PeonyClient, events
+
+    client = PeonyClient(**creds)
+
+    @events.priority(-10)
+    def on_tweet_with_media(data):
+        """
+            Event triggered when the data corresponds to a tweet with a media
+        """
+        return 'media' in data.get('entities', {})
+
+    async def stream():
+        async with self.userstream.user.get() as stream:
+            async for data in stream:
+                if events.on_connect(data):
+                    print("Connected to the stream")
+                elif events.on_follow(data):
+                    print("@%s followed you" % data.source.screen_name)
+                elif on_tweet_with_media(data):
+                    print(data.text)
+
+
+This is pretty much equivalent to the stream in the previous section.

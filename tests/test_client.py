@@ -1,23 +1,21 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import os
-from unittest.mock import patch
+import io
+import random
+import tempfile
+from unittest.mock import Mock, patch
 
 import aiohttp
+import pytest
+
 import peony
 import peony.api
-import pytest
-from peony import BasePeonyClient, data_processing, exceptions, oauth
+from peony import (BasePeonyClient, PeonyClient, data_processing, exceptions,
+                   oauth, stream, utils)
 from peony.general import twitter_api_version, twitter_base_api_url
 
-from . import Data, MockResponse, dummy
-
-oauth2_keys = 'PEONY_CONSUMER_KEY', 'PEONY_CONSUMER_SECRET'
-oauth2 = all(key in os.environ for key in oauth2_keys)
-
-oauth2_creds = 'consumer_key', 'consumer_secret'
-token = None
+from . import Data, MockResponse, dummy, medias
 
 
 @pytest.fixture
@@ -65,6 +63,16 @@ def test_create_endpoint_tuple(dummy_client):
 
     endpoint = "http://google.com/test"
     assert dummy_client['', '', '', custom_base_url].test.url() == endpoint
+
+
+def test_create_endpoint_no_api_or_version(dummy_client):
+    base_url = "http://google.com"
+    assert dummy_client['', '', '', base_url].test.url() == base_url + '/test'
+
+
+def test_create_endpoint_type_error(dummy_client):
+    with pytest.raises(TypeError):
+        dummy_client[object()]
 
 
 def test_create_streaming_path(dummy_client):
@@ -137,28 +145,6 @@ async def test_setup(event_loop):
         assert client.c.data == {'hello': "world"}
 
     await asyncio.gather(test(), test())
-
-
-def oauth2_decorator(func):
-
-    @pytest.mark.asyncio
-    @pytest.mark.skipif(not oauth2, reason="no credentials found")
-    async def decorator():
-        global token
-
-        client = get_oauth2_client(bearer_token=token)
-        await func(client)
-
-        # keep the token for the next test
-        token = client.headers.token
-
-    return decorator
-
-
-def get_oauth2_client(**kwargs):
-    creds = {oauth2_creds[i]: os.environ[oauth2_keys[i]] for i in range(2)}
-    return BasePeonyClient(auth=oauth.OAuth2Headers, loop=False,
-                           **creds, **kwargs)
 
 
 class TasksClientTest(SetupClientTest):
@@ -316,38 +302,491 @@ async def test_bad_request(dummy_client):
             await dummy_client.request('get', "http://google.com/404")
 
 
+def test_stream_request(dummy_client):
+    # streams are tested in test_stream
+    assert isinstance(dummy_client.stream.get(), stream.StreamResponse)
+
+
+@pytest.mark.asyncio
+async def test_request_proxy(dummy_client):
+    class RaiseProxy:
+
+        def __init__(self, *args, proxy=None, **kwargs):
+            raise RuntimeError(proxy)
+
+    async with aiohttp.ClientSession() as session:
+        with patch.object(session, 'request', side_effect=RaiseProxy):
+            try:
+                await dummy_client.request(method='get',
+                                           url="http://hello.com",
+                                           proxy="http://some.proxy.com",
+                                           session=session)
+            except RuntimeError as e:
+                assert str(e) == "http://some.proxy.com"
+
+
+@pytest.mark.asyncio
+async def test_request_encoding(dummy_client):
+    class DummyCTX:
+
+        def __init__(self, **kwargs):
+            self.status = 200
+
+        def __getattr__(self, item):
+            return None
+
+        def __aiter__(self):
+            return self
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, exc_type, exc_val, exc_tb):
+            pass
+
+    def raise_encoding(*args, encoding=None, **kwargs):
+        raise RuntimeError(encoding)
+
+    async with aiohttp.ClientSession() as session:
+        with patch.object(session, 'request', side_effect=DummyCTX):
+            with patch.object(data_processing, 'read', side_effect=dummy):
+                with patch.object(data_processing, 'PeonyResponse'):
+                    try:
+                        await dummy_client.request(method='get',
+                                                   url="http://hello.com",
+                                                   encoding="best encoding",
+                                                   session=session)
+                    except RuntimeError as e:
+                        assert str(e) == "best encoding"
+
+
+def test_run_keyboard_interrupt(event_loop):
+    client = BasePeonyClient("", "", loop=event_loop)
+    with patch.object(client, 'run_tasks', side_effect=KeyboardInterrupt):
+        client.run()
+
+
+def test_run_exceptions_raise(event_loop):
+    client = BasePeonyClient("", "", loop=event_loop)
+    for exc in (Exception, RuntimeError, peony.exceptions.PeonyException):
+        with patch.object(client, 'run_tasks', side_effect=exc):
+            with pytest.raises(exc):
+                client.run()
+
+
+def test_close_session(dummy_client):
+    with patch.object(dummy_client, '_session') as session:
+        dummy_client.close()
+        assert session.close.called
+        assert dummy_client._session is None
+
+
+def test_close_user_session():
+    client = BasePeonyClient("", "", session=Mock())
+
+    client.close()
+    assert not client._session.close.called
+
+
+class Client(peony.BasePeonyClient):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.t1, self.t2 = False, False
+
+    @peony.task
+    def _t1(self):
+        self.t1 = True
+
+    @peony.init_task
+    def _t2(self):
+        self.t2 = True
+
+
+def test_get_tasks(event_loop):
+    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
+
+    client._get_tasks(kind=peony.task)
+
+    assert client.t1 is True
+    assert client.t2 is False
+
+
+def test_get_init_tasks(event_loop):
+    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
+    client._get_tasks(kind=peony.init_task)
+
+    assert client.t1 is False
+    assert client.t2 is True
+
+
+def test_get_tasks_runtime_exception(event_loop):
+    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
+
+    with pytest.raises(RuntimeError):
+        client._get_tasks(kind="")
+
+
+class SubClient(Client, dict):
+    # dict to test inheritance without _task attribute
+
+    @peony.task
+    def t3(self):
+        pass
+
+
+def test_tasks_inheritance():
+    assert SubClient.t3 in SubClient._tasks['tasks']
+    assert Client._t1 in SubClient._tasks['tasks']
+
+
+class ClientCancelTasks(BasePeonyClient):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.cancelled = True
+
+    @peony.task
+    async def cancel_tasks(self):
+        await asyncio.sleep(0.001)
+        self.close()
+
+    @peony.task
+    async def sleep(self):
+        await asyncio.sleep(1)
+        self.cancelled = False
+
+
+@pytest.mark.asyncio
+async def test_close_cancel_tasks(event_loop):
+    client = ClientCancelTasks("", "", loop=event_loop)
+    await client.run_tasks()
+    assert client.cancelled
+
+
+def test_close_loop_closed(event_loop):
+    client = ClientCancelTasks("", "", loop=Mock())
+    client.loop.is_closed.return_value = True
+    with patch.object(client, '_gathered_tasks') as tasks:
+        client.close()
+        assert tasks.cancel.called
+        assert not client.loop.run_until_complete.called
+
+
 @pytest.fixture
-def oauth2_client(event_loop):
-    if oauth2:
-        return get_oauth2_client(loop=event_loop)
+def peony_client(event_loop):
+    return PeonyClient("", "", loop=event_loop)
 
 
-@oauth2_decorator
-async def test_oauth2_get_token(client):
-    if 'Authorization' in client.headers:
-        del client.headers['Authorization']
+def request_test(expected_url, expected_method):
 
-    await client.headers.sign()
+    async def request(*args, url=None, method=None, **kwargs):
+        assert url == expected_url
+        assert method == expected_method
+        return True
 
-
-@oauth2_decorator
-async def test_oauth2_request(client):
-    await client.api.search.tweets.get(q="@twitter hello :)")
+    return request
 
 
-@pytest.mark.invalidate_token
-@oauth2_decorator
-async def test_oauth2_invalidate_token(client):
-    await client.headers.sign()  # make sure there is a token
-    await client.headers.invalidate_token()
-    assert client.headers.token is None
+@pytest.mark.asyncio
+async def test_peony_client_get_user(peony_client):
+    url = peony_client.api.account.verify_credentials.url()
+    request = request_test(url, 'get')
+
+    with patch.object(peony_client, 'request', side_effect=request) as req:
+        await peony_client._PeonyClient__get_user()
+        assert req.called
+        assert peony_client.user
 
 
-@oauth2_decorator
-async def test_oauth2_bearer_token(client):
-    await client.headers.sign()
+@pytest.mark.asyncio
+async def test_peony_client_get_twitter_configuration(peony_client):
+    request = request_test(peony_client.api.help.configuration.url(), 'get')
 
-    token = client.headers.token
+    with patch.object(peony_client, 'request', side_effect=request) as req:
+        task = peony_client._PeonyClient__get_twitter_configuration
+        await task(peony_client)
+        assert req.called
+        assert peony_client.twitter_configuration
 
-    client2 = get_oauth2_client(bearer_token=token)
-    assert client2.headers.token == client.headers.token
+
+def test_peony_client_init_tasks(peony_client, event_loop):
+    conf_n = random.randrange(1 << 16)
+    user_n = random.randrange(1 << 16)
+    with patch.object(peony.BasePeonyClient, 'init_tasks',
+                      return_value=[conf_n]):
+        with patch.object(peony_client, '_PeonyClient__get_user',
+                          return_value=user_n):
+            tasks = peony_client.init_tasks()
+            assert conf_n in tasks
+            assert user_n in tasks
+            assert len(tasks) == 2
+
+
+def test_peony_client_init_tasks_oauth2(event_loop):
+    client = PeonyClient("", "", loop=event_loop, auth=oauth.OAuth2Headers)
+    conf_n = random.randrange(1 << 16)
+    with patch.object(peony.BasePeonyClient, 'init_tasks',
+                      return_value=[conf_n]):
+        tasks = client.init_tasks()
+        assert conf_n in tasks
+        assert len(tasks) == 1
+
+
+def test_add_event_stream():
+
+    class ClientTest(BasePeonyClient):
+        pass
+
+    assert peony.commands.EventStream not in ClientTest._streams
+
+    ClientTest.event_stream(peony.commands.EventStream)
+    assert peony.commands.EventStream in ClientTest._streams
+
+
+@pytest.fixture
+def dummy_peony_client(event_loop):
+    client = PeonyClient("", "", loop=event_loop)
+    with patch.object(client, 'init_tasks', return_value=[]):
+        yield client
+
+
+@pytest.mark.asyncio
+async def test_size_test(dummy_peony_client):
+    data = io.BytesIO(b"a" * 5)
+    assert await dummy_peony_client._size_test(data, 5) is False
+
+    data = io.BytesIO(b"a" * 6)
+    assert await dummy_peony_client._size_test(data, 5) is True
+
+
+@pytest.mark.asyncio
+async def test_size_test_config(dummy_peony_client):
+    dummy_peony_client.twitter_configuration = {
+        'photo_size_limit': 5
+    }
+
+    data = io.BytesIO(b"a" * 5)
+    assert await dummy_peony_client._size_test(data, None) is False
+
+    data = io.BytesIO(b"a" * 6)
+    assert await dummy_peony_client._size_test(data, None) is True
+
+
+@pytest.mark.asyncio
+async def test_size_test_config_and_limit(dummy_peony_client):
+    dummy_peony_client.twitter_configuration = {
+        'photo_size_limit': 5
+    }
+
+    data = io.BytesIO(b"a" * 10)
+    assert await dummy_peony_client._size_test(data, 10) is False
+
+    data = io.BytesIO(b"a" * 11)
+    assert await dummy_peony_client._size_test(data, 10) is True
+
+
+@pytest.mark.asyncio
+async def test_size_test_no_limit_no_config(dummy_peony_client):
+    assert await dummy_peony_client._size_test(io.BytesIO(), None) is False
+    dummy_peony_client.twitter_configuration = {}
+    assert await dummy_peony_client._size_test(io.BytesIO(), None) is False
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('input_type', ['bytes', 'file', 'path'])
+async def test_upload_media(dummy_peony_client, input_type):
+    media_data = await medias['lady_peony'].download()
+
+    if input_type == 'file':
+        media = io.BytesIO(media_data)
+    elif input_type == 'path':
+        media_file = tempfile.NamedTemporaryFile('w+b')
+        media_file.write(media_data)
+        media = media_file.name
+    else:
+        media = media_data
+
+    async def dummy_upload(url, method, data, skip_params):
+        assert url == dummy_peony_client.upload.media.upload.url()
+        assert method == 'post'
+        if input_type in 'file':
+            assert data['media'] == media
+        else:
+            assert await utils.execute(data['media'].read()) == media_data
+        assert skip_params is True
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_upload) as req:
+        await dummy_peony_client.upload_media(media)
+        assert req.called
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_upload) as req:
+        await dummy_peony_client.upload_media(media, size_limit=3 * 1024**2)
+        assert req.called
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_upload) as req:
+        dummy_peony_client.twitter_configuration = {
+            'photo_size_limit': 3 * 1024**2
+        }
+        await dummy_peony_client.upload_media(media)
+        assert req.called
+
+    if input_type == 'file':
+        media.close()
+    elif input_type == 'path':
+        media_file.close()
+
+
+@pytest.mark.asyncio
+async def test_upload_media_exception(dummy_peony_client):
+    with pytest.raises(TypeError):
+        await dummy_peony_client.upload_media([])
+
+
+@pytest.mark.asyncio
+async def test_upload_media_chunked(dummy_peony_client):
+    media_data = await medias['lady_peony'].download()
+    rand = random.randrange(1 << 16)
+
+    async def dummy_upload(_, media, *args, **kwargs):
+        assert media == media_data
+        return rand
+
+    with patch.object(dummy_peony_client, '_chunked_upload',
+                      side_effect=dummy_upload) as upload:
+        await dummy_peony_client.upload_media(media_data, chunked=True)
+        assert upload.called
+
+
+@pytest.mark.asyncio
+async def test_upload_media_size_limit(dummy_peony_client):
+    media_data = await medias['video'].download()
+    rand = random.randrange(1 << 16)
+
+    async def dummy_upload(_, media, *args, **kwargs):
+        assert media == media_data
+        return rand
+
+    with patch.object(dummy_peony_client, '_chunked_upload',
+                      side_effect=dummy_upload) as upload:
+        await dummy_peony_client.upload_media(media_data,
+                                              size_limit=3 * 1024**2)
+        assert upload.called
+
+
+class DummyRequest:
+
+    def __init__(self, client, media, chunk_size=1024**2, fail=False):
+        self.i = -1
+        self.client = client
+        self.media = media
+        self.media_data = None
+        self.chunk_size = chunk_size
+        self.media_id = random.randrange(1 << 16)
+        self.fail = fail
+
+    async def __call__(self, url, method,
+                       data=None, skip_params=None, params=None):
+        assert url == self.client.upload.media.upload.url()
+
+        response = {'media_id': self.media_id}
+
+        append = range(self.media.content_length // self.chunk_size + 1)
+
+        if self.i <= append[-1] + 1:
+            assert method == "post"
+        else:
+            assert method == "get"
+
+        if self.i == -1:
+            self.media_data = io.BytesIO(await self.media.download())
+            assert data == {'command': 'INIT',
+                            'media_category': self.media.category,
+                            'media_type': self.media.type,
+                            'total_bytes': str(self.media.content_length)}
+        elif self.i in append:
+            assert data == {'command': 'APPEND',
+                            'media': self.media_data.read(self.chunk_size),
+                            'media_id': str(self.media_id),
+                            'segment_index': str(self.i)}
+        elif self.i == append[-1] + 1:
+            if self.media.category != 'tweet_image':
+                check_after_secs = 5 if 'video' in self.media.category else 1
+                response['processing_info'] = {
+                    'state': 'pending',
+                    'check_after_secs': check_after_secs
+                }
+
+            assert data == {'command': 'FINALIZE',
+                            'media_id': str(self.media_id)}
+        else:
+            if self.fail:
+                response['processing_info'] = {'state': "failed",
+                                               'error': {'message': "test"}}
+            else:
+                response['processing_info'] = {'state': 'succeeded'}
+
+            assert params == {'command': 'STATUS',
+                              'media_id': str(self.media_id)}
+
+        assert skip_params is (self.i in append)
+
+        self.i += 1
+        return response
+
+    def reset(self):
+        self.i = -1
+        self.media_id = random.randrange(1 << 16)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize('media', medias.values())
+async def test_chunked_upload(dummy_peony_client, media):
+    media_data = await media.download()
+    media_file = io.BytesIO(media_data)
+
+    chunk_size = 1024**2
+
+    dummy_request = DummyRequest(dummy_peony_client, media, chunk_size)
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_request):
+        await dummy_peony_client._chunked_upload(media_file,
+                                                 chunk_size=chunk_size)
+
+        dummy_request.reset()
+        with patch.object(utils, 'get_media_metadata') as metadata:
+            with patch.object(utils, 'get_category') as category:
+                await dummy_peony_client._chunked_upload(
+                    media_file, chunk_size=chunk_size,
+                    media_category=media.category, media_type=media.type
+                )
+                assert not metadata.called
+                assert not category.called
+
+        dummy_request.reset()
+        with patch.object(utils, 'get_media_metadata') as metadata:
+            await dummy_peony_client._chunked_upload(
+                media_file, chunk_size=chunk_size, media_type=media.type
+            )
+            assert not metadata.called
+
+
+@pytest.mark.asyncio
+async def test_chunked_upload_fail(dummy_peony_client):
+    media = medias['video']
+    media_data = await media.download()
+    media_file = io.BytesIO(media_data)
+
+    chunk_size = 1024**2
+
+    dummy_request = DummyRequest(dummy_peony_client, media, chunk_size, True)
+
+    with patch.object(dummy_peony_client, 'request',
+                      side_effect=dummy_request):
+        with pytest.raises(peony.exceptions.MediaProcessingError):
+            await dummy_peony_client._chunked_upload(media_file,
+                                                     chunk_size=chunk_size)

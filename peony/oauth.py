@@ -28,11 +28,11 @@ class PeonyHeaders(ABC, dict):
 
     Parameters
     ----------
-    compression : :obj:`bool`, optional
+    compression : bool, optional
         If set to True the client will be able to receive compressed
         responses else it should not happen unless you provide the
         corresponding header when you make a request. Defaults to True.
-    user_agent : :obj:`str`, optional
+    user_agent : str, optional
         The user agent set in the headers. Defaults to
         "peony v{version number}"
     headers : dict
@@ -71,7 +71,7 @@ class PeonyHeaders(ABC, dict):
             HTTP method used by the request
         url : str
             The url to request
-        headers : :obj:`dict`, optional
+        headers : dict, optional
             Additionnal headers
         skip_params : bool
             Don't use the parameters to sign the request
@@ -128,8 +128,6 @@ class OAuth1Headers(PeonyHeaders):
     """
         Dynamic headers implementing OAuth1
 
-    :meth:`sign` is called before each request
-
     Parameters
     ----------
     consumer_key : str
@@ -177,7 +175,9 @@ class OAuth1Headers(PeonyHeaders):
                 default = self._default_content_type(skip_params)
                 headers['Content-Type'] = default
 
-            params = data
+            params = data.copy()
+        elif params:
+            params = params.copy()
 
         oauth = {
             'oauth_consumer_key': self.consumer_key,
@@ -251,7 +251,7 @@ class OAuth2Headers(PeonyHeaders):
         Your consumer key
     consumer_secret : str
         Your consumer secret
-    client : peony.BasePeonyClient
+    client : .client.BasePeonyClient
         The client to authenticate
     bearer_token : :obj:`str`, optional
         Your bearer_token
@@ -275,7 +275,9 @@ class OAuth2Headers(PeonyHeaders):
             self.token = bearer_token
 
     async def sign(self, url=None, *args, headers=None, **kwargs):
-        if 'Authorization' not in self and url != self._invalidate_token.url():
+        if url == self._invalidate_token.url():
+            del self.token
+        elif 'Authorization' not in self:
             await self.refresh_token()
 
         return self._user_headers(headers)
@@ -312,7 +314,6 @@ class OAuth2Headers(PeonyHeaders):
             raise RuntimeError('There is no token to invalidate')
 
         token = self.token
-        del self.token
 
         try:
             request = self._invalidate_token.post

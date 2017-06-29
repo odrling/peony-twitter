@@ -14,8 +14,8 @@ from unittest.mock import patch
 
 import aiohttp
 import pytest
-from peony import data_processing, exceptions, general, utils
-from PIL import Image
+
+from peony import data_processing, exceptions, utils
 
 from . import MockResponse, medias
 
@@ -23,13 +23,13 @@ from . import MockResponse, medias
 def builtin_mimetypes(func):
 
     @wraps(func)
-    async def decorated(session):
+    async def decorated():
         with patch.object(utils, 'magic') as magic:
             magic.__bool__.return_value = False
             with patch.object(utils, 'mime') as mime:
                 mime.guess_type.side_effect = mimetypes.MimeTypes().guess_type
 
-                await func(session)
+                await func()
 
     return decorated
 
@@ -54,9 +54,8 @@ def executor():
 
 @pytest.yield_fixture
 def session(event_loop):
-    session = aiohttp.ClientSession(loop=event_loop)
-    yield session
-    event_loop.run_until_complete(session.close())
+    with aiohttp.ClientSession(loop=event_loop):
+        yield session
 
 
 @pytest.mark.asyncio
@@ -205,12 +204,11 @@ async def test_reset_io():
 
 
 @pytest.mark.asyncio
-async def test_get_type(session):
+async def test_get_type():
     async def test(media, chunk_size=1024):
-        f = io.BytesIO(await media.download(session, chunk_size))
-        media_type, media_category = await utils.get_type(f)
+        f = io.BytesIO(await media.download(chunk=chunk_size))
+        media_type = await utils.get_type(f)
         assert media_type == media.type
-        assert media_category == media.category
 
     tasks = [test(media) for media in medias.values()]
     await asyncio.gather(*tasks)
@@ -218,18 +216,17 @@ async def test_get_type(session):
 
 @pytest.mark.asyncio
 async def test_get_type_exception():
-    with pytest.raises(RuntimeError):
+    with pytest.raises(TypeError):
         await utils.get_type(io.BytesIO())
 
 
 @pytest.mark.asyncio
 @builtin_mimetypes
-async def test_get_type_builtin(session):
+async def test_get_type_builtin():
     async def test(media, chunk_size=1024):
-        f = io.BytesIO(await media.download(session, chunk_size))
-        media_type, media_category = await utils.get_type(f, media.filename)
+        f = io.BytesIO(await media.download(chunk=chunk_size))
+        media_type = await utils.get_type(f, media.filename)
         assert media_type == media.type
-        assert media_category == media.category
 
     tasks = [test(media) for media in medias.values()]
     await asyncio.gather(*tasks)
@@ -237,11 +234,22 @@ async def test_get_type_builtin(session):
 
 @pytest.mark.asyncio
 @builtin_mimetypes
-async def test_get_type_builtin_exception(session):
+async def test_get_type_builtin_exception():
     media = medias['lady_peony']
-    f = io.BytesIO(await media.download(session, 1024))
+    f = io.BytesIO(await media.download(chunk=1024))
     with pytest.raises(RuntimeError):
         await utils.get_type(f)
+
+
+def test_get_category():
+    assert utils.get_category("image/png") == "tweet_image"
+    assert utils.get_category("image/gif") == "tweet_gif"
+    assert utils.get_category("video/mp4") == "tweet_video"
+
+
+def test_get_category_exception():
+    with pytest.raises(RuntimeError):
+        utils.get_category("")
 
 
 @pytest.mark.asyncio
@@ -279,126 +287,53 @@ def get_size(f):
 
 
 @pytest.mark.asyncio
-async def test_convert(event_loop, session, executor):
-
+async def test_get_media_metadata():
     async def test(media):
-        data = await media.download(session)
-
-        f = io.BytesIO(data)
-
-        img = Image.open(f)
-
-        conv = await event_loop.run_in_executor(executor, utils.convert,
-                                                img, general.formats)
-        results = await event_loop.run_in_executor(executor, convert,
-                                                   img, general.formats)
-        smallest = min([get_size(f) for f in results])
-        assert smallest == get_size(conv)
-
-    tasks = [test(media) for key, media in medias.items()
-             if key in ('lady_peony', 'seismic_waves')]
-    await asyncio.gather(*tasks)
-
-
-@pytest.mark.asyncio
-async def test_optimize_media(event_loop, session, executor):
-    async def test(media):
-        data = await media.download(session)
-
-        f = io.BytesIO(data)
-        media = await event_loop.run_in_executor(
-            executor, utils.optimize_media, f, (1024, 512), general.formats
-        )
-        img = Image.open(media)
-        assert img.size[0] <= 1024 and img.size[1] <= 512
-
-        media = await event_loop.run_in_executor(
-            executor, utils.optimize_media, f, (512, 1024), general.formats
-        )
-        img = Image.open(media)
-        assert img.size[0] <= 512 and img.size[1] <= 1024
-
-    tasks = [test(media) for key, media in medias.items()
-             if key in ('lady_peony', 'seismic_waves', 'pink_queen')]
-    await asyncio.gather(*tasks)
-
-
-def test_optimize_media_exception():
-    with patch.object(utils, 'PIL', return_value=None) as mocked:
-        mocked.__bool__.return_value = False
-        with pytest.raises(RuntimeError):
-            utils.optimize_media(io.BytesIO(), (100, 100), [])
-
-
-@pytest.mark.asyncio
-async def test_optimize_media_with_filename(session):
-    with tempfile.NamedTemporaryFile('w+b') as tmp:
-        data = await medias['lady_peony'].download(session)
-        tmp.write(data)
-
-        media1 = utils.optimize_media(tmp.name, (100, 100), general.formats)
-        media2 = utils.optimize_media(tmp, (100, 100), general.formats)
-
-        assert not tmp.closed
-        assert get_size(media1) == get_size(media2)
-
-
-@pytest.mark.asyncio
-async def test_get_media_metadata(session):
-    async def test(media):
-        data = await media.download(session, 1024)
+        data = await media.download(chunk=1024)
         f = io.BytesIO(data)
         media_metadata = await utils.get_media_metadata(f)
-        assert media_metadata == (media.type, media.category,
-                                  media.type.startswith('image'), f)
+        assert media_metadata == (media.type, media.category)
 
     tasks = [test(media) for media in medias.values()]
     await asyncio.gather(*tasks)
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata_filename(session):
-    media = medias['lady_peony']
+async def test_get_media_metadata_filename():
     with tempfile.NamedTemporaryFile('w+b') as tmp:
-        data = await media.download(session)
-        tmp.write(data)
-
-        file1_metadata = await utils.get_media_metadata(tmp.name)
-        file2_metadata = await utils.get_media_metadata(tmp)
-
-        assert all(file1_metadata[i] == file2_metadata[i] for i in range(3))
-        assert file1_metadata[3] == tmp.name
+        with pytest.raises(TypeError):
+            await utils.get_media_metadata(tmp.name)
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata_path(session):
-    media = medias['lady_peony']
+async def test_get_media_metadata_path():
     with tempfile.NamedTemporaryFile('w+b') as tmp:
-        data = await media.download(session)
-        tmp.write(data)
-
         path = pathlib.Path(tmp.name)
-        file1_metadata = await utils.get_media_metadata(path)
-        file2_metadata = await utils.get_media_metadata(tmp)
-
-        assert all(file1_metadata[i] == file2_metadata[i] for i in range(3))
-        assert file1_metadata[3] == tmp.name
+        with pytest.raises(TypeError):
+            await utils.get_media_metadata(path)
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata_bytes(session):
+async def test_get_media_metadata_bytes():
     media = medias['lady_peony']
-    data = await media.download(session)
-    f = io.BytesIO(data)
+    data = await media.download()
 
-    file1_metadata = await utils.get_media_metadata(data)
-    file2_metadata = await utils.get_media_metadata(f)
-
-    assert all(file1_metadata[i] == file2_metadata[i] for i in range(3))
-    assert isinstance(file1_metadata[3], io.BytesIO)
+    with pytest.raises(TypeError):
+        await utils.get_media_metadata(data)
 
 
 @pytest.mark.asyncio
 async def test_get_media_metadata_exception():
     with pytest.raises(TypeError):
         await utils.get_media_metadata([])
+
+
+@pytest.mark.asyncio
+async def test_chunks():
+    media_data = await medias['lady_peony'].download()
+    media = io.BytesIO(media_data)
+    i_expected = 0
+    async for i, chunk in utils.chunks(io.BytesIO(media_data), 1024):
+        assert i_expected == i
+        assert chunk == await utils.execute(media.read(1024))
+        i_expected += 1

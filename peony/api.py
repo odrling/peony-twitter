@@ -10,17 +10,29 @@ class AbstractAPIPath(ABC):
         The syntactic sugar factory
 
     Every time you get an attribute or an item from an instance of this
-    class this will be appended to its _path variable (that you should
-    not call) until you call a request method (like get or post)
+    class this will be appended to its ``_path`` until you call a request
+    method (like get or post)
 
     It makes it easy to call any endpoint of the api
 
-    ⚠ You must create a child class of AbstractAPIPath to perform
-    requests (you have to implement the _request method)
-
-    The _client given as an parameter during the creation of the
-    BaseAPIPath instance can be accessed as the "_client" attribute of
+    The ``client`` given as an parameter during the creation of the
+    BaseAPIPath instance can be accessed as the ``_client`` attribute of
     the instance.
+
+    .. warning::
+
+        You must create a child class of AbstractAPIPath to perform
+        requests (you have to implement the _request method)
+
+    Parameters
+    ----------
+    path : str
+        Value of ``_path``
+    suffix : str
+        suffix to append to the url
+    client : .client.BasePeonyClient
+        client used to perform the request
+
     """
 
     def __init__(self, path, suffix, client):
@@ -112,14 +124,36 @@ class AbstractAPIPath(ABC):
 
 
 class APIPath(AbstractAPIPath):
-    """ Class to make requests to a REST API """
+    """
+        Class to make requests to a REST API
+
+    Parameters
+    ----------
+    path : str
+        Value of ``_path``
+    suffix : str
+        suffix to append to the url
+    client : .client.BasePeonyClient
+        client used to perform the request
+    """
 
     def _request(self, method):
         return requests.RequestFactory(self, method)
 
 
 class StreamingAPIPath(AbstractAPIPath):
-    """ Class to make requests to a Streaming API """
+    """
+        Class to make requests to a Streaming API
+
+    Parameters
+    ----------
+    path : str
+        Value of ``_path``
+    suffix : str
+        suffix to append to the url
+    client : .client.BasePeonyClient
+        client used to perform the request
+    """
 
     def _request(self, method):
         return requests.StreamingRequest(self, method)

@@ -3,7 +3,25 @@
 =======================
 .. highlighting: python
 
-You can easily access any Twitter API endpoint:
+You can easily access any Twitter API endpoint.
+Just search for the endpoint that you need on `Twitter's documentation`_, then
+you can make a request to this endpoint as:
+
+.. code-block:: python
+
+    client.twitter_subdomain.path.to.endpoint.method()
+
+So to access
+`GET statuses/home_timeline <https://dev.twitter.com/rest/reference/get/statuses/home_timeline>`_:
+
+.. code-block:: python
+
+    client.api.status.statuses.home_timeline.get()
+
+.. _Twitter's documentation: https://dev.twitter.com/rest/reference
+
+
+For a more complete example:
 
 .. code-block:: python
 
@@ -38,6 +56,18 @@ You can easily access any Twitter API endpoint:
 see :ref:`adv_api` to access APIs that do not use the version '1.1'
 
 .. note::
+    Some endpoints require the use of characters that cannot be used as
+    attributes such as
+    `GET geo/id/:place_id <https://dev.twitter.com/rest/reference/get/geo/id/place_id>`_
+
+    You can use the brackets instead:
+
+    .. code-block:: python
+
+        id = 20  # any status id would work as long as it exists
+        client.api.statuses.show[id].get()
+
+.. note::
     Arguments with a leading underscore are arguments that are used to
     change the behavior of peony for the request (e.g. `_headers` to add some
     additional headers to the request).
@@ -46,8 +76,9 @@ see :ref:`adv_api` to access APIs that do not use the version '1.1'
 Access the response data of a REST API endpoint
 -----------------------------------------------
 
-A call to a REST API endpoint should return a PeonyResponse object if the
-request was successful.
+A call to a REST API endpoint should return a
+:class:`~peony.data_processing.PeonyResponse` object if the request was
+successful.
 
 .. code-block:: python
 
@@ -81,9 +112,12 @@ request was successful.
 
 .. note::
     If ``extended_tweet`` is present in the response, attributes that are
-    in ``tweet.extended_tweet`` can be retrieved right from ``tweet``.
-    e.g. ``tweet.display_text_range`` == ``tweet.extended_tweet.display_text_range``
-    if ``tweet.extended_tweet.display_range`` exists.
+    in ``tweet.extended_tweet`` can be retrieved right from ``tweet``:
+
+    .. code-block:: python
+
+        >>> tweet.display_text_range == tweet.extended_tweet.display_text_range
+        True # if tweet.extended_tweet.display_range exists.
 
 .. note::
     Getting the ``text`` attribute of the data should always retrieve the
@@ -98,17 +132,17 @@ request was successful.
 Access the response data of a Streaming API endpoint
 ----------------------------------------------------
 
-A call to a Streaming API endpoint should return a StreamContext object, that
-yields a StreamResponse object.
+A call to a Streaming API endpoint should return a
+:class:`~peony.stream.StreamResponse` object.
 
 .. code-block:: python
 
     async def track():
         ctx = client.stream.statuses.filter.post(track="uwu")
 
-        # ctx is an asynchronous context (StreamContext)
+        # ctx is an asynchronous context
         async with ctx as stream:
-            # stream is an asynchronous iterator (StreamResponse)
+            # stream is an asynchronous iterator
             async for tweet in stream:
                 # you can then access items as you would do with a
                 # `PeonyResponse` object

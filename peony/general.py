@@ -10,6 +10,3 @@ rate_limit_notices = [
     b"Exceeded connection limit for user",
     b"Easy there, Turbo. Too many requests recently. Enhance your calm."
 ]
-
-formats = [dict(format='PNG'),
-           dict(format='JPEG', quality=90, optimize=True)]

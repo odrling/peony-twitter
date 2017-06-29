@@ -274,6 +274,11 @@ class Gone(PeonyException):
     pass
 
 
+@statuses.code(415)
+class UnsupportedMediaType(PeonyException):
+    pass
+
+
 @statuses.code(420)
 class EnhanceYourCalm(PeonyException):
     pass

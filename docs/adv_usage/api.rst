@@ -57,3 +57,8 @@ You can also add more arguments to the tuple or dictionnary:
     # with a tuple
     ads = client['ads-api', '1', '', 'https://{api}.twitter.com/{version}']
     req = ads.accounts[id].reach_estimate.get(**kwargs)
+
+
+.. note::
+    Actually I never tried the ads API but this should work fine.
+    And this seemed easier to grasp to me than using a fake api.

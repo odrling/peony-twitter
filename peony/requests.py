@@ -81,10 +81,6 @@ class AbstractRequest(ABC, Endpoint):
             elif isinstance(value, bool):
                 params[key] = "true" if value else "false"
 
-            # integers conversion
-            elif isinstance(value, int):
-                params[key] = str(value)
-
             # iterables conversion
             elif isinstance(value, iterable):
                 params[key] = ",".join(map(str, value))
@@ -93,9 +89,10 @@ class AbstractRequest(ABC, Endpoint):
             elif value is None:
                 pass
 
-            # the rest is sent as is
+            # the rest is converted to str
+            # (make sure you don't send something wrong)
             else:
-                params[key] = value
+                params[key] = str(value)
 
         # dict with other items (+ strip "_" from keys)
         kwargs = {key[1:]: value for key, value in kwargs.items()

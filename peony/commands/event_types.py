@@ -200,7 +200,7 @@ class Events(dict):
 events = Events()
 
 
-@events.alias('on_connect', 'connect')
+@events
 def friends(data):
     """
         Event triggered on connection to an userstream
@@ -508,6 +508,13 @@ def control():
 
 
 # Internal peony events
+
+@events.alias(on, 'on_connect', 'connect')
+def connected():
+    """
+        event_triggered on connection to a stream
+    """
+
 
 @events.alias(on, 'on_restart', 'restart')
 def stream_restart():

@@ -67,6 +67,7 @@ class StreamResponse:
         self._reconnecting = False
         self._state = NORMAL
         self._error_timeout = 0
+        self._connected = False
 
     async def connect(self):
         """
@@ -132,6 +133,10 @@ class StreamResponse:
                     return await self.restart_stream()
                 else:
                     return await self.init_restart()
+
+            if not self._connected:
+                self._connected = True
+                return {'connected': True}
 
             while not line:
                 with aiohttp.Timeout(90):

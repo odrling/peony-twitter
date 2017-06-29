@@ -54,9 +54,14 @@ async def test_stream_iteration(stream):
 
     with patch.object(stream, 'init_restart', side_effect=stop):
         i = 0
+        connected = False
         async for line in stream:
-            assert line['text'] == MockResponse.message + " #%d" % i
-            i += 1
+            if connected is False:
+                connected = True
+                assert 'connected' in line
+            else:
+                assert line['text'] == MockResponse.message + " #%d" % i
+                i += 1
 
 
 async def response_disconnection():
@@ -167,6 +172,9 @@ async def test_stream_reconnection_stream_limit(stream):
         await stream.__aiter__()
         assert stream._state == NORMAL
         data = await stream.__anext__()
+        assert 'connected' in data
+
+        data = await stream.__anext__()
         assert stream.state == ERROR
         assert data['reconnecting_in'] == ERROR_TIMEOUT
         assert isinstance(data['error'], exceptions.StreamLimit)
@@ -207,6 +215,8 @@ async def test_stream_reconnection_handled_errors(stream):
         with patch.object(stream.response, 'readline',
                           side_effect=handled_error):
             data = await stream.__anext__()
+            assert 'connected' in data
+            data = await stream.__anext__()
             assert data == {'reconnecting_in': ERROR_TIMEOUT, 'error': None}
 
 
@@ -219,6 +229,8 @@ async def test_stream_reconnection_client_connection_error(stream):
         await stream.__aiter__()
         with patch.object(stream.response, 'readline',
                           side_effect=client_connection_error):
+            data = await stream.__anext__()
+            assert 'connected' in data
             data = await stream.__anext__()
             assert data == {'reconnecting_in': ERROR_TIMEOUT, 'error': None}
 

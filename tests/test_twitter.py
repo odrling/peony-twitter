@@ -37,7 +37,9 @@ get_client_oauth = {1: get_oauth1_client, 2: get_oauth2_client}
 
 
 def decorator_oauth(key):
-    client = get_client_oauth[key](session=None)
+
+    if test_oauth[key]:
+        client = get_client_oauth[key](session=None)
 
     def oauth_decorator(func):
 

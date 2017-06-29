@@ -69,7 +69,7 @@ class UserStream(peony.EventStream):
     def stream_request(self):
         return self.userstream.user.get(stall_warnings="true", replies="all")
 
-    @peony.events.on_connect.handler
+    @peony.events.on_connected.handler
     async def init_timeline(self):
         await self.get_timeline()
 

@@ -509,11 +509,20 @@ def control():
 
 # Internal peony events
 
-@events.alias(on, 'on_connect', 'connect')
+@events.alias(on, 'first_connection')
 def connected():
     """
-        event_triggered on connection to a stream
+        event_triggered on the first connection to a stream
     """
+
+
+@events.alias(on)
+@events.priority(1)
+def connect(data):
+    """
+        event triggered on connection or reconnection to a stream
+    """
+    return connected(data) or stream_restart(data)
 
 
 @events.alias(on, 'on_restart', 'restart')

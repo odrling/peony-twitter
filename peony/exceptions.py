@@ -261,7 +261,7 @@ class Forbidden(PeonyException):
 class NotFound(PeonyException):
 
     def get_message(self):
-        return super().get_message() + "\n(%s)" % self.url
+        return super().get_message() + "\nurl: %s" % self.url
 
 
 @statuses.code(406)

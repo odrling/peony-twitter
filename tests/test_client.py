@@ -754,25 +754,31 @@ async def test_chunked_upload(dummy_peony_client, media):
 
     with patch.object(dummy_peony_client, 'request',
                       side_effect=dummy_request):
-        await dummy_peony_client._chunked_upload(media_file,
-                                                 chunk_size=chunk_size)
+        with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
+            await dummy_peony_client._chunked_upload(media_file,
+                                                     chunk_size=chunk_size)
 
-        dummy_request.reset()
-        with patch.object(utils, 'get_media_metadata') as metadata:
-            with patch.object(utils, 'get_category') as category:
+            if media.filename == 'video':
+                sleep.assert_called_with(5)
+            elif media.filename == 'bloom':
+                sleep.assert_called_with(1)
+
+            dummy_request.reset()
+            with patch.object(utils, 'get_media_metadata') as metadata:
+                with patch.object(utils, 'get_category') as category:
+                    await dummy_peony_client._chunked_upload(
+                        media_file, chunk_size=chunk_size,
+                        media_category=media.category, media_type=media.type
+                    )
+                    assert not metadata.called
+                    assert not category.called
+
+            dummy_request.reset()
+            with patch.object(utils, 'get_media_metadata') as metadata:
                 await dummy_peony_client._chunked_upload(
-                    media_file, chunk_size=chunk_size,
-                    media_category=media.category, media_type=media.type
+                    media_file, chunk_size=chunk_size, media_type=media.type
                 )
                 assert not metadata.called
-                assert not category.called
-
-        dummy_request.reset()
-        with patch.object(utils, 'get_media_metadata') as metadata:
-            await dummy_peony_client._chunked_upload(
-                media_file, chunk_size=chunk_size, media_type=media.type
-            )
-            assert not metadata.called
 
 
 @pytest.mark.asyncio

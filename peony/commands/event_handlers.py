@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+import abc
+
 import peony.utils
 
 from . import utils
@@ -49,7 +51,7 @@ class EventHandler(task):
         return decorator
 
 
-class EventStream:
+class EventStream(abc.ABC):
 
     def __init__(self, client):
         self._client = client
@@ -64,11 +66,9 @@ class EventStream:
     def __getattr__(self, key):
         return getattr(self._client, key)
 
-    @property
+    @abc.abstractmethod
     def stream_request(self):
-        clsname = self.__class__.__name__
-        msg = "You must overload stream_request in " + clsname
-        raise RuntimeError(msg)
+        pass
 
     @utils.restart_on(Exception)
     async def start(self):

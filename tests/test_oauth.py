@@ -134,16 +134,24 @@ def test_oauth1_sign(oauth1_headers):
     assert expected == headers['Authorization']
 
 
-def _test_oauth1_sign_skip_params(oauth1_headers, headers=None):
+@pytest.mark.parametrize('headers,key', [
+    (None, 'data'),
+    (None, 'params'),
+    ({'Content-Type': "application/x-www-form-urlencoded"}, 'data')
+])
+def test_oauth1_sign_skip_params(oauth1_headers, headers, key):
     t = time()
 
     with patch.object(oauth.time, 'time', return_value=t):
         random.seed(0)
-        headers = oauth1_headers.sign(method='POST',
-                                      url='http://whatever.com',
-                                      data={'hello': "world"},
-                                      skip_params=True,
-                                      headers=headers)
+        kwargs = {
+            'method': 'POST',
+            'url': "http://whatever.com",
+            key: {'hello': "world"},
+            'skip_params':  True,
+            'headers': headers
+        }
+        headers = oauth1_headers.sign(**kwargs)
 
     random.seed(0)
     nonce = oauth1_headers.gen_nonce()
@@ -173,15 +181,6 @@ def _test_oauth1_sign_skip_params(oauth1_headers, headers=None):
                                              time=int(t)))
 
     assert expected == headers['Authorization']
-
-
-def test_oauth1_sign_skip_params(oauth1_headers):
-    _test_oauth1_sign_skip_params(oauth1_headers)
-
-
-def test_oauth1_sign_skip_params_with_content_type(oauth1_headers):
-    headers = {'Content-Type': "application/x-www-form-urlencoded"}
-    _test_oauth1_sign_skip_params(oauth1_headers, headers=headers)
 
 
 def test_headers_options():

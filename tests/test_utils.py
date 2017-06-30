@@ -15,6 +15,7 @@ from unittest.mock import patch
 import aiohttp
 import pytest
 
+import peony
 from peony import data_processing, exceptions, utils
 
 from . import MockResponse, medias
@@ -133,59 +134,33 @@ def test_get_args_class():
 
 
 def setup_logger(logger):
-    warning = io.StringIO()
-    h = logging.StreamHandler(stream=warning)
-    h.setLevel(logging.WARNING)
+    error = io.StringIO()
+    h = logging.StreamHandler(stream=error)
+    h.setLevel(logging.ERROR)
     logger.addHandler(h)
 
-    debug = io.StringIO()
-    h = logging.StreamHandler(stream=debug)
-    h.setLevel(logging.DEBUG)
-    logger.addHandler(h)
-
-    return warning, debug
+    return error
 
 
-def test_log_error():
-    logger = logging.getLogger(__name__)
-    warning, debug = setup_logger(logger)
+@pytest.mark.parametrize('logger', [None, logging.getLogger(__name__)])
+def test_log_error(logger):
+    if logger is None:
+        _logger = logging.getLogger("peony.utils")
+    else:
+        _logger = logger
+
+    error = setup_logger(_logger)
 
     try:
         raise RuntimeError
 
     except RuntimeError:
-        logger.setLevel(logging.WARNING)
         utils.log_error(MockResponse.message, logger=logger)
 
-        warning.seek(0)
-        output = warning.read()
-        assert MockResponse.message in output
-        # make sure the debug level is mentioned
-        assert 'debug' in output.lower()
-
-        logger.setLevel(logging.DEBUG)
-        utils.log_error(MockResponse.message, logger=logger)
-
-        debug.seek(0)
-        output = debug.read()
+        error.seek(0)
+        output = error.read()
         assert traceback.format_exc().strip() in output
         assert MockResponse.message in output
-
-
-def test_log_error_default_logger():
-    logger = logging.getLogger('peony.utils')
-    logger.setLevel(logging.WARNING)
-
-    warning, _ = setup_logger(logger)
-
-    try:
-        raise RuntimeError
-
-    except RuntimeError:
-        utils.log_error(MockResponse.message)
-
-        warning.seek(0)
-        assert MockResponse.message in warning.read()
 
 
 @pytest.mark.asyncio
@@ -337,3 +312,10 @@ async def test_chunks():
         assert i_expected == i
         assert chunk == await utils.execute(media.read(1024))
         i_expected += 1
+
+
+def test_set_debug():
+    with patch.object(logging, 'basicConfig') as basicConfig:
+        peony.set_debug()
+        assert peony.logger.level == logging.DEBUG
+        basicConfig.assert_called_with(level=logging.WARNING)

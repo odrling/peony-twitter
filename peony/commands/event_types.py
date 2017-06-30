@@ -200,7 +200,7 @@ class Events(dict):
 events = Events()
 
 
-@events.alias('on_connect', 'connect')
+@events
 def friends(data):
     """
         Event triggered on connection to an userstream
@@ -243,7 +243,7 @@ def tweet(data):
     For more information:
     https://dev.twitter.com/overview/api/tweets
     """
-    return 'text' in data and 'event' not in data
+    return 'text' in data
 
 
 @events.alias(on, 'deleted_tweet')
@@ -508,6 +508,22 @@ def control():
 
 
 # Internal peony events
+
+@events.alias(on, 'first_connection')
+def connected():
+    """
+        event_triggered on the first connection to a stream
+    """
+
+
+@events.alias(on)
+@events.priority(1)
+def connect(data):
+    """
+        event triggered on connection or reconnection to a stream
+    """
+    return connected(data) or stream_restart(data)
+
 
 @events.alias(on, 'on_restart', 'restart')
 def stream_restart():

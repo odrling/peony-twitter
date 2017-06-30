@@ -1,4 +1,4 @@
-.PHONY: help clean dev doc format install test 
+.PHONY: help clean dev doc format install test release
 
 help:
 	@echo "Please use \`make <target>\` where <target> is one of"
@@ -36,3 +36,6 @@ test:
 	flake8
 	py.test --cov=peony --cov-report term-missing tests
 
+release:
+	python3 setup.py sdist bdist_wheel
+	twine upload dist/*

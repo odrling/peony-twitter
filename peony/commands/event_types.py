@@ -243,7 +243,7 @@ def tweet(data):
     For more information:
     https://dev.twitter.com/overview/api/tweets
     """
-    return 'text' in data and 'event' not in data
+    return 'text' in data
 
 
 @events.alias(on, 'deleted_tweet')

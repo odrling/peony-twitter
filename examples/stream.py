@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import html
+import logging
 import pprint
 
 try:
@@ -8,6 +9,9 @@ try:
 except (SystemError, ImportError):
     from __init__ import peony
     import api
+
+logging.basicConfig(level=logging.WARNING)
+peony.logger.setLevel(logging.DEBUG)
 
 
 def print_data(func):

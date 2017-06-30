@@ -28,6 +28,8 @@ ENHANCE_YOUR_CALM = 3
 
 HandledErrors = asyncio.TimeoutError, ClientPayloadError, TimeoutError
 
+logger = logging.getLogger(__name__)
+
 
 class StreamResponse:
     """
@@ -157,7 +159,7 @@ class StreamResponse:
             return await self.init_restart()
 
         except CancelledError:
-            raise
+            raise StopAsyncIteration
 
         except Exception as e:
             self.state = ERROR
@@ -181,8 +183,6 @@ class StreamResponse:
         error : bool, optional
             Whether to print the error or not
         """
-        logger = logging.getLogger(__name__)
-
         if error:
             logger.error(error.__class__)
             utils.log_error()
@@ -254,6 +254,8 @@ class StreamResponse:
 
     def __exit__(self, *args):
         """ Close the response on error """
+        utils.log_error(logger=logger, exc_info=args)
+
         if getattr(self, 'response', None) is not None:
             if not self.response.closed:
                 self.response.close()

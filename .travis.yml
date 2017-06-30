@@ -1,14 +1,21 @@
-language: python
-python:
-  - "3.5"
-  - "3.6"
-os:
-  - linux
-  - osx
+matrix:
+  include:
+    - os: linux
+      language: python
+      python: 3.5
+    - os: linux
+      language: python
+      python: 3.6
+    - os: osx
+      language: generic
+before_install:
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then brew update && brew install python3 && brew install libmagic && python3 -m venv .env && source .env/bin/activate; fi
 install:
   - pip install --upgrade pip wheel
   - pip install -r tests_requirements.txt
-cache: pip
+cache:
+  directories:
+    - "$HOME/.cache/pip"
 script:
   - flake8
   - py.test tests --cov=peony

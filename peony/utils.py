@@ -47,9 +47,6 @@ def error_handler(request):
                 fmt = "Request to {url} timed out, retrying"
                 _logger.info(fmt.format(url=url))
 
-            except:
-                raise
-
     return decorated_request
 
 
@@ -101,10 +98,7 @@ def log_error(msg=None, exc_info=None, logger=None, **kwargs):
     exc_class, exc_msg, _ = exc_info
 
     if all(info is not None for info in exc_info):
-        logger.warning("An error occurred, set the logger to the debug level "
-                       "to see the full report.\n%s\n%s\n%s"
-                       % (exc_class.__name__, exc_msg, msg))
-        logger.debug(msg, exc_info=exc_info)
+        logger.error(msg, exc_info=exc_info)
 
 
 def reset_io(func):
@@ -145,7 +139,6 @@ async def get_media_metadata(file_, path=None):
     str
         The category of the media on Twitter
     """
-    # try to get the path no matter what the input is
     if hasattr(file_, 'read'):
         media_type = await get_type(file_, path)
 
@@ -153,6 +146,9 @@ async def get_media_metadata(file_, path=None):
         raise TypeError("get_metadata input must be a file object")
 
     media_category = get_category(media_type)
+
+    _logger.info("media_type: %s, media_category: %s" % (media_type,
+                                                         media_category))
 
     return media_type, media_category
 
@@ -174,6 +170,8 @@ async def get_size(media):
     await execute(media.seek(0, os.SEEK_END))
     size = await execute(media.tell())
     await execute(media.seek(0))
+
+    _logger.info("media size: %dB" % size)
     return size
 
 
@@ -195,12 +193,14 @@ async def get_type(media, path=None):
         The category of the media on Twitter
     """
     if magic:
+        _logger.debug("guessing mimetype using magic")
         media_type = mime.from_buffer(await execute(media.read(1024)))
         if media_type == 'application/x-empty':
             raise TypeError("No data in media")
     else:
         media_type = None
         if path:
+            _logger.debug("guessing mimetype using built-in module")
             media_type = mime.guess_type(path)[0]
 
         if media_type is None:

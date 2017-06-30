@@ -1,6 +1,9 @@
 import json
+import logging
 
 from . import exceptions
+
+logger = logging.getLogger(__name__)
 
 
 class BaseJSONData(dict):
@@ -192,9 +195,11 @@ async def read(response, loads=loads, encoding=None):
 
     try:
         if "application/json" in ctype:
+            logger.info("decoding data as json")
             return await response.json(encoding=encoding, loads=loads)
 
         if "text" in ctype:
+            logger.info("decoding data as text")
             return await response.text(encoding=encoding)
 
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:

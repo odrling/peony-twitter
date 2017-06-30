@@ -9,6 +9,7 @@ the Twitter APIs, with a method to upload a media
 
 import asyncio
 import io
+import logging
 from concurrent.futures import ProcessPoolExecutor
 from urllib.parse import urlparse
 
@@ -19,6 +20,8 @@ from .api import APIPath, StreamingAPIPath
 from .commands import EventStreams, init_task, task
 from .oauth import OAuth1Headers
 from .stream import StreamResponse
+
+logger = logging.getLogger(__name__)
 
 
 class MetaPeonyClient(type):
@@ -349,6 +352,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         session = session if (session is not None) else self._session
 
+        logger.debug("making request with parameters: %s" % req_kwargs)
+
         async with session.request(**req_kwargs) as response:
             if response.status < 400:
                 data = await data_processing.read(response, self._loads,
@@ -460,8 +465,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 if not self.loop.is_closed():
                     self.loop.run_until_complete(self._gathered_tasks)
 
-                # we want to retrieve any exceptions to make sure that
-                # they don't nag us about it being un-retrieved.
                 self._gathered_tasks.exception()
             except:
                 pass

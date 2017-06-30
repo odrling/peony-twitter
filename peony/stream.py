@@ -80,6 +80,7 @@ class StreamResponse:
         asyncio.coroutine
             The streaming response
         """
+        logger.debug("connecting to the stream")
         await self.client.setup()
         kwargs = await self.client.headers.prepare_request(**self.kwargs)
         request = self.client.error_handler(self.session.request)
@@ -114,8 +115,11 @@ class StreamResponse:
         elif self.response.status in (420, 429):
             self.state = ENHANCE_YOUR_CALM
         else:
+            logger.debug("raising error during stream connection")
             raise await exceptions.throw(self.response,
                                          loads=self.client._loads)
+
+        logger.debug("stream state: %d" % self.state)
 
         return self
 
@@ -137,6 +141,7 @@ class StreamResponse:
                     return await self.init_restart()
 
             if not self._connected:
+                logger.info("first connection to the stream")
                 self._connected = True
                 return {'connected': True}
 
@@ -144,21 +149,27 @@ class StreamResponse:
                 with aiohttp.Timeout(90):
                     line = await self.response.content.readline()
                     line = line.strip(b'\r\n')
+                    logger.debug("received data: %s" % line)
 
             if line in rate_limit_notices:
+                logger.debug("raising StreamLimit")
                 raise StreamLimit(line)
 
+            logger.debug("decoding data")
             return self.loads(line)
 
-        except HandledErrors:
+        except HandledErrors as e:
+            logger.debug("handling error %s: %s" % (e.__class__.__name__, e))
             self.state = ERROR
             return await self.init_restart()
 
         except ClientConnectionError:
+            logger.debug("Disconnected from stream")
             self.state = DISCONNECTION
             return await self.init_restart()
 
         except CancelledError:
+            logger.debug("Stopping stream")
             raise StopAsyncIteration
 
         except Exception as e:
@@ -184,18 +195,23 @@ class StreamResponse:
             Whether to print the error or not
         """
         if error:
-            logger.error(error.__class__)
-            utils.log_error()
+            utils.log_error(logger=logger)
 
         if self.state == DISCONNECTION:
             if self._error_timeout < MAX_DISCONNECTION_TIMEOUT:
                 self._error_timeout += DISCONNECTION_TIMEOUT
+
+            logger.info("The stream was disconnected, will reconnect in %ss"
+                        % self._error_timeout)
 
         elif self.state == RECONNECTION:
             if self._error_timeout < RECONNECTION_TIMEOUT:
                 self._error_timeout = RECONNECTION_TIMEOUT
             elif self._error_timeout < MAX_RECONNECTION_TIMEOUT:
                 self._error_timeout *= 2
+
+            logger.info("Could not connect to the stream, reconnection in %ss"
+                        % self._error_timeout)
 
         elif self.state == ENHANCE_YOUR_CALM:
             if self._error_timeout < ENHANCE_YOUR_CALM_TIMEOUT:
@@ -226,6 +242,7 @@ class StreamResponse:
         await asyncio.sleep(self._error_timeout)
         await self.__aiter__()
 
+        logger.info("Reconnected to the stream")
         self._reconnecting = False
         return {'stream_restart': True}
 
@@ -258,6 +275,7 @@ class StreamResponse:
 
         if getattr(self, 'response', None) is not None:
             if not self.response.closed:
+                logger.debug("Closing the stream")
                 self.response.close()
 
     async def __aexit__(self, *args):

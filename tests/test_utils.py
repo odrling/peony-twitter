@@ -15,6 +15,7 @@ from unittest.mock import patch
 import aiohttp
 import pytest
 
+import peony
 from peony import data_processing, exceptions, utils
 
 from . import MockResponse, medias
@@ -337,3 +338,10 @@ async def test_chunks():
         assert i_expected == i
         assert chunk == await utils.execute(media.read(1024))
         i_expected += 1
+
+
+def test_set_debug():
+    with patch.object(logging, 'basicConfig') as basicConfig:
+        peony.set_debug()
+        assert peony.logger.level == logging.DEBUG
+        basicConfig.assert_called_with(level=logging.WARNING)

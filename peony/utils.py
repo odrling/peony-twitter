@@ -6,6 +6,8 @@ import logging
 import os
 import sys
 
+import peony
+
 from . import exceptions
 
 try:
@@ -236,7 +238,7 @@ async def execute(coro):
         return coro
 
 
-class chunks:  # noqa
+class Chunks:
 
     def __init__(self, media, chunk_size):
         self.media = media
@@ -254,3 +256,12 @@ class chunks:  # noqa
             raise StopAsyncIteration()
 
         return self.i, chunk
+
+
+chunks = Chunks
+
+
+def set_debug():
+    """ activates error messages, useful during development """
+    logging.basicConfig(level=logging.WARNING)
+    peony.logger.setLevel(logging.DEBUG)

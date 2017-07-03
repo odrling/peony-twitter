@@ -1,41 +1,57 @@
 # -*- coding: utf-8 -*-
 from time import time
 
-from . import data_processing
+from . import data_processing, utils
 
 
-def get_error(data):
-    """ return the error if there is a corresponding exception """
-    if isinstance(data, dict):
-        if 'errors' in data:
-            error = data['errors'][0]
-        else:
-            error = data.get('error', None)
+class BaseExceptionThrower:
 
-        if isinstance(error, dict):
-            if error.get('code') in errors:
-                return error
+    def __init__(self, response, encoding=None):
+        self.response = response
+        self.encoding = encoding
+
+    async def read_data(self):
+        return await self.response.read()
+
+    async def raise_error(self, data):
+        pass
+
+    async def raise_status(self, data):
+        if self.response.status in statuses:
+            exception = statuses[self.response.status]
+            raise exception(response=self.response, data=data)
+
+    async def __call__(self):
+        data = await utils.execute(self.read_data())
+        await utils.execute(self.raise_error(data))
+        await utils.execute(self.raise_status(data))
+        raise PeonyException(response=self.response, data=data)
 
 
-async def throw(response, loads=None, encoding=None, **kwargs):
-    """ Get the response data if possible and raise an exception """
-    if loads is None:
-        loads = data_processing.loads
+class PeonyExceptionThrower(BaseExceptionThrower):
 
-    data = await data_processing.read(response, loads=loads,
-                                      encoding=encoding)
+    async def read_data(self):
+        return await data_processing.read(self.response,
+                                          encoding=self.encoding)
 
-    error = get_error(data)
-    if error is not None:
-        exception = errors[error['code']]
-        raise exception(response=response, error=error, data=data, **kwargs)
+    @staticmethod
+    def get_error(data):
+        """ return the error if there is a corresponding exception """
+        if isinstance(data, dict):
+            if 'errors' in data:
+                error = data['errors'][0]
+            else:
+                error = data.get('error', None)
 
-    if response.status in statuses:
-        exception = statuses[response.status]
-        raise exception(response=response, data=data, **kwargs)
+            if isinstance(error, dict):
+                if error.get('code') in errors:
+                    return error
 
-    # raise PeonyException if no specific exception was found
-    raise PeonyException(response=response, data=data, **kwargs)
+    async def raise_error(self, data):
+        error = self.get_error(data)
+        if error is not None:
+            exception = errors[error['code']]
+            raise exception(response=self.response, error=error, data=data)
 
 
 class PeonyException(Exception):
@@ -264,8 +280,28 @@ class NotFound(PeonyException):
         return super().get_message() + "\nurl: %s" % self.url
 
 
+@statuses.code(405)
+class MethodNotAllowed(PeonyException):
+    pass
+
+
 @statuses.code(406)
 class NotAcceptable(PeonyException):
+    pass
+
+
+@statuses.code(407)
+class ProxyAuthenticationRequired(PeonyException):
+    pass
+
+
+@statuses.code(408)
+class RequestTimeout(PeonyException):
+    pass
+
+
+@statuses.code(409)
+class Conflict(PeonyException):
     pass
 
 
@@ -274,8 +310,43 @@ class Gone(PeonyException):
     pass
 
 
+@statuses.code(411)
+class LengthRequired(PeonyException):
+    pass
+
+
+@statuses.code(412)
+class PreconditionFailed(PeonyException):
+    pass
+
+
+@statuses.code(413)
+class RequestEntityTooLarge(PeonyException):
+    pass
+
+
+@statuses.code(414)
+class RequestURITooLong(PeonyException):
+    pass
+
+
 @statuses.code(415)
 class UnsupportedMediaType(PeonyException):
+    pass
+
+
+@statuses.code(416)
+class RequestedRangeNotSatisfiable(PeonyException):
+    pass
+
+
+@statuses.code(417)
+class ExceptationFailed(PeonyException):
+    pass
+
+
+@statuses.code(418)
+class ImATeapot(PeonyException):
     pass
 
 
@@ -284,8 +355,33 @@ class EnhanceYourCalm(PeonyException):
     pass
 
 
+@statuses.code(421)
+class MisdirectedRequest(PeonyException):
+    pass
+
+
 @statuses.code(422)
 class UnprocessableEntity(PeonyException):
+    pass
+
+
+@statuses.code(423)
+class Locked(PeonyException):
+    pass
+
+
+@statuses.code(424)
+class FailedDependency(PeonyException):
+    pass
+
+
+@statuses.code(426)
+class UpgradeRequired(PeonyException):
+    pass
+
+
+@statuses.code(428)
+class PreconditionRequired(PeonyException):
     pass
 
 
@@ -294,8 +390,23 @@ class TooManyRequests(PeonyException):
     pass
 
 
+@statuses.code(431)
+class RequestHeaderFieldsTooLarge(PeonyException):
+    pass
+
+
+@statuses.code(451)
+class UnavailableForLegalReasons(PeonyException):
+    pass
+
+
 @statuses.code(500)
 class InternalServerError(PeonyException):
+    pass
+
+
+@statuses.code(501)
+class NotImplemented(PeonyException):
     pass
 
 
@@ -311,4 +422,34 @@ class ServiceUnavailable(PeonyException):
 
 @statuses.code(504)
 class GatewayTimeout(PeonyException):
+    pass
+
+
+@statuses.code(505)
+class HTTPVersionNotSupported(PeonyException):
+    pass
+
+
+@statuses.code(506)
+class VariantAlsoNegotiates(PeonyException):
+    pass
+
+
+@statuses.code(507)
+class InsufficientStorage(PeonyException):
+    pass
+
+
+@statuses.code(508)
+class LoopDetected(PeonyException):
+    pass
+
+
+@statuses.code(510)
+class NotExtended(PeonyException):
+    pass
+
+
+@statuses.code(511)
+class NetworkAuthenticationRequired(PeonyException):
     pass

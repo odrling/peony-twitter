@@ -6,7 +6,7 @@ from concurrent.futures import CancelledError
 
 import aiohttp
 
-from . import data_processing, exceptions, utils
+from . import data_processing, utils
 from .exceptions import StreamLimit
 from .general import rate_limit_notices
 
@@ -116,8 +116,7 @@ class StreamResponse:
             self.state = ENHANCE_YOUR_CALM
         else:
             logger.debug("raising error during stream connection")
-            raise await exceptions.throw(self.response,
-                                         loads=self.client._loads)
+            raise await self.client.thrower(self.response)()
 
         logger.debug("stream state: %d" % self.state)
 

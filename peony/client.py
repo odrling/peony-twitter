@@ -71,8 +71,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         Default suffix of API endpoints
     loads : function, optional
         Function used to load JSON data
-    error_handler : function, optional
-        Requests decorator
     session : aiohttp.ClientSession, optional
         Session to use to make requests
     proxy : str
@@ -81,34 +79,27 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         Activate data compression on every requests, defaults to True
     user_agent : str, optional
         Set a custom user agent header
-    encoding : str, optional
-        text encoding of the response from the server
     loop : event loop, optional
         An event loop, if not specified :func:`asyncio.get_event_loop`
         is called
     """
 
     _streams = EventStreams()
+    _loads = staticmethod(data_processing.loads)
+    thrower = exceptions.PeonyExceptionThrower
+    error_handler = staticmethod(utils.error_handler)
 
     def __init__(self,
-                 consumer_key=None,
-                 consumer_secret=None,
-                 access_token=None,
-                 access_token_secret=None,
-                 bearer_token=None,
-                 auth=None,
+                 auth=OAuth1Headers,
                  headers=None,
                  streaming_apis=None,
                  base_url=None,
                  api_version=None,
                  suffix='.json',
-                 loads=data_processing.loads,
-                 error_handler=utils.error_handler,
                  session=None,
                  proxy=None,
                  compression=True,
                  user_agent=None,
-                 encoding=None,
                  loop=None,
                  **kwargs):
 
@@ -127,24 +118,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         else:
             self.api_version = api_version
 
-        if auth is None:
-            auth = OAuth1Headers
-
         self.proxy = proxy
 
         self._suffix = suffix
-
-        self.error_handler = error_handler
-
-        self.encoding = encoding
-
-        if encoding is not None:
-            def _loads(*args, **kwargs):
-                return loads(*args, encoding=encoding, **kwargs)
-
-            self._loads = _loads
-        else:
-            self._loads = loads
 
         self.loop = asyncio.get_event_loop() if loop is None else loop
 
@@ -153,21 +129,13 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         self._gathered_tasks = None
 
-        if consumer_key is None or consumer_secret is None:
-            raise TypeError("missing 2 required arguments: 'consumer_key' "
-                            "and 'consumer_secret'")
-
         # all the possible args required by headers in :mod:`peony.oauth`
         kwargs = {
-            'consumer_key': consumer_key,
-            'consumer_secret': consumer_secret,
-            'access_token': access_token,
-            'access_token_secret': access_token_secret,
-            'bearer_token': bearer_token,
             'compression': compression,
             'user_agent': user_agent,
             'headers': headers,
-            'client': self
+            'client': self,
+            **kwargs
         }
 
         # get the args needed by the auth parameter on initialization
@@ -175,13 +143,17 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         # keep only the arguments required by auth on init
         kwargs = {key: value for key, value in kwargs.items()
-                  if key in args}
+                  if key in args and value is not None}
 
         self.headers = auth(**kwargs)
 
         self.__setup = {'done': asyncio.Event(),
                         'early': asyncio.Event(),
                         'state': False}
+
+    async def _read(self, response, encoding=None):
+        return await data_processing.read(response, encoding,
+                                          loads=self._loads)
 
     def init_tasks(self):
         """ tasks executed on initialization """
@@ -344,9 +316,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             **kwargs
         )
 
-        if encoding is None:
-            encoding = self.encoding
-
         if 'proxy' not in req_kwargs:
             req_kwargs['proxy'] = self.proxy
 
@@ -356,8 +325,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         async with session.request(**req_kwargs) as response:
             if response.status < 400:
-                data = await data_processing.read(response, self._loads,
-                                                  encoding=encoding)
+                data = await self._read(response, encoding=encoding)
 
                 return data_processing.PeonyResponse(
                     data=data,
@@ -365,9 +333,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                     url=response.url,
                     request=req_kwargs
                 )
-            else:  # throw exception if status is not 2xx
-                await exceptions.throw(response, loads=self._loads,
-                                       encoding=encoding)
+            else:  # throw exception if status >= 400
+                throw = self.thrower(response, encoding=encoding)
+                await throw()
 
     def stream_request(self, method, url, headers=None, _session=None,
                        *args, **kwargs):
@@ -475,8 +443,19 @@ class PeonyClient(BasePeonyClient):
         A client with some useful methods for most usages
     """
 
-    def __init__(self, *args, executor=None, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self,
+                 consumer_key=None,
+                 consumer_secret=None,
+                 access_token=None,
+                 access_token_secret=None,
+                 executor=None,
+                 *args,
+                 **kwargs):
+        super().__init__(consumer_key=consumer_key,
+                         consumer_secret=consumer_secret,
+                         access_token=access_token,
+                         access_token_secret=access_token_secret,
+                         *args, **kwargs)
         self.executor = ProcessPoolExecutor() if executor is None else executor
 
     def init_tasks(self):

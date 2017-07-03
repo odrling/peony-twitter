@@ -172,7 +172,7 @@ def loads(json_data, encoding="utf-8", **kwargs):
     return json.loads(json_data, object_hook=JSONData, **kwargs)
 
 
-async def read(response, loads=loads, encoding=None):
+async def read(response, encoding=None, loads=loads):
     """
         read the data of the response
 

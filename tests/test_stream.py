@@ -28,7 +28,9 @@ async def stream_content(*args, **kwargs):
 @pytest.fixture
 def stream(event_loop):
     with aiohttp.ClientSession(loop=event_loop) as session:
-        client = peony.client.BasePeonyClient("", "", session=session)
+        client = peony.client.BasePeonyClient(consumer_key="",
+                                              consumer_secret="",
+                                              session=session)
 
         stream_response = peony.stream.StreamResponse(
             client=client,
@@ -238,7 +240,9 @@ async def test_stream_reconnection_client_connection_error(stream):
 @pytest.mark.asyncio
 async def test_stream_async_context(event_loop):
     with aiohttp.ClientSession(loop=event_loop) as session:
-        client = peony.client.BasePeonyClient("", "", session=session)
+        client = peony.client.BasePeonyClient(consumer_key="",
+                                              consumer_secret="",
+                                              session=session)
         context = peony.stream.StreamResponse(method='GET',
                                               url="http://whatever.com/stream",
                                               client=client)
@@ -250,39 +254,48 @@ async def test_stream_async_context(event_loop):
         assert context.response.closed
 
 
-@pytest.mark.asyncio
-async def test_stream_context(event_loop):
+@pytest.fixture
+def session(event_loop):
     with aiohttp.ClientSession(loop=event_loop) as session:
-        client = peony.client.BasePeonyClient("", "", session=session)
-        context = peony.stream.StreamResponse(method='GET',
-                                              url="http://whatever.com/stream",
-                                              client=client)
+        yield session
 
-        with context as stream:
-            with patch.object(stream, 'connect', side_effect=stream_content):
-                await test_stream_iteration(stream)
 
-        assert context.response.closed
+@pytest.fixture
+def client(session):
+    return peony.client.BasePeonyClient(consumer_key="",
+                                        consumer_secret="",
+                                        session=session)
 
 
 @pytest.mark.asyncio
-async def test_stream_context_response_already_closed(event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
-        client = peony.client.BasePeonyClient("", "", session=session)
-        context = peony.stream.StreamResponse(method='GET',
-                                              url="http://whatever.com/stream",
-                                              client=client)
+async def test_stream_context(client):
+    context = peony.stream.StreamResponse(method='GET',
+                                          url="http://whatever.com/stream",
+                                          client=client)
 
-        with context as stream:
-            with patch.object(stream, 'connect', side_effect=stream_content):
-                await test_stream_iteration(stream)
-                stream.response.close()
+    with context as stream:
+        with patch.object(stream, 'connect', side_effect=stream_content):
+            await test_stream_iteration(stream)
 
-        assert context.response.closed
+    assert context.response.closed
 
 
 @pytest.mark.asyncio
-async def test_stream_cancel(event_loop):
+async def test_stream_context_response_already_closed(client):
+    context = peony.stream.StreamResponse(method='GET',
+                                          url="http://whatever.com/stream",
+                                          client=client)
+
+    with context as stream:
+        with patch.object(stream, 'connect', side_effect=stream_content):
+            await test_stream_iteration(stream)
+            stream.response.close()
+
+    assert context.response.closed
+
+
+@pytest.mark.asyncio
+async def test_stream_cancel(client, event_loop):
     async def cancel(task):
         await asyncio.sleep(0.01)
         task.cancel()
@@ -291,30 +304,26 @@ async def test_stream_cancel(event_loop):
         while True:
             await test_stream_iteration(stream)
 
-    with aiohttp.ClientSession(loop=event_loop) as session:
-        client = peony.client.BasePeonyClient("", "", session=session)
-        context = peony.stream.StreamResponse(method='GET',
-                                              url="http://whatever.com",
-                                              client=client)
+    context = peony.stream.StreamResponse(method='GET',
+                                          url="http://whatever.com",
+                                          client=client)
 
-        with context as stream:
-            with patch.object(stream, 'connect',
-                              side_effect=stream_content):
-                coro = test_stream_iterations(stream)
-                task = event_loop.create_task(coro)
-                cancel_task = event_loop.create_task(cancel(task))
+    with context as stream:
+        with patch.object(stream, 'connect',
+                          side_effect=stream_content):
+            coro = test_stream_iterations(stream)
+            task = event_loop.create_task(coro)
+            cancel_task = event_loop.create_task(cancel(task))
 
-                with aiohttp.Timeout(1):
-                    await asyncio.wait([task, cancel_task])
+            with aiohttp.Timeout(1):
+                await asyncio.wait([task, cancel_task])
 
 
 @pytest.mark.asyncio
-async def test_stream_context_no_response(event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
-        client = peony.client.BasePeonyClient("", "", session=session)
-        stream = peony.stream.StreamResponse(method='GET',
-                                             url="http://whatever.com/stream",
-                                             client=client)
+async def test_stream_context_no_response(client):
+    stream = peony.stream.StreamResponse(method='GET',
+                                         url="http://whatever.com/stream",
+                                         client=client)
 
-        assert stream.response is None
-        await stream.__aexit__()
+    assert stream.response is None
+    await stream.__aexit__()

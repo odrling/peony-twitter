@@ -10,9 +10,6 @@ except (SystemError, ImportError):
     import api
 
 
-peony.set_debug()
-
-
 def print_data(func):
 
     def decorated(self, tweet):

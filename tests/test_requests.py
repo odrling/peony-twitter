@@ -14,7 +14,7 @@ url = "http://whatever.com/endpoint.json"
 
 @pytest.fixture
 def api_path():
-    client = BasePeonyClient("", "")
+    client = BasePeonyClient(consumer_key="", consumer_secret="")
     return APIPath(['http://whatever.com', 'endpoint'], '.json', client)
 
 

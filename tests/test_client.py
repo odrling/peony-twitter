@@ -19,8 +19,11 @@ from . import Data, MockResponse, dummy, medias
 
 
 @pytest.fixture
-def dummy_client():
-    return peony.BasePeonyClient("", "", loop=False)
+def dummy_client(event_loop):
+    client = peony.BasePeonyClient(consumer_key="", consumer_secret="",
+                                   loop=event_loop)
+    yield client
+    client.close()
 
 
 def test_create_endpoint(dummy_client):
@@ -113,8 +116,10 @@ class MockSession:
 
 class SetupClientTest(BasePeonyClient):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, consumer_key="", consumer_secret="", **kwargs):
+        super().__init__(consumer_key=consumer_key,
+                         consumer_secret=consumer_secret,
+                         **kwargs)
         self._session = MockSession()
         self.a, self.b, self.c = "", "", {}
 
@@ -130,13 +135,13 @@ class SetupClientTest(BasePeonyClient):
     async def setup_c(self):
         data = Data({'hello': "world"})
 
-        with patch.object(data_processing, 'read', side_effect=data):
+        with patch.object(self, '_read', side_effect=data):
             self.c = await self.api.test.get()
 
 
 @pytest.mark.asyncio
 async def test_setup(event_loop):
-    client = SetupClientTest("", "", loop=event_loop)
+    client = SetupClientTest(loop=event_loop)
 
     async def test():
         await client.setup()
@@ -195,7 +200,8 @@ async def test_streaming_apis(dummy_client):
         dummy_client.stream.test.get()
         assert request.called
 
-    client = BasePeonyClient("", "", streaming_apis={'api'})
+    client = BasePeonyClient(consumer_key="",
+                             consumer_secret="", streaming_apis={'api'})
     with patch.object(client, 'stream_request') as request:
         client.api.test.get()
         assert request.called
@@ -207,7 +213,8 @@ async def test_streaming_apis(dummy_client):
 
 def test_client_base_url():
     base_url = "http://{api}.google.com/{version}"
-    client = BasePeonyClient("", "", base_url=base_url, api_version="1")
+    client = BasePeonyClient(consumer_key="", consumer_secret="",
+                             base_url=base_url, api_version="1")
     assert client.api.test.url() == "http://api.google.com/1/test.json"
 
 
@@ -233,7 +240,7 @@ class SetupInitListTest(BasePeonyClient):
 
 @pytest.mark.asyncio
 async def test_setup_init_tasks_list():
-    client = SetupInitListTest("", "")
+    client = SetupInitListTest(consumer_key="", consumer_secret="")
     await client.setup()
     assert client.a == "123"
     assert client.b == "321"
@@ -244,21 +251,19 @@ def test_client_error():
         BasePeonyClient()
 
 
-def test_client_encoding_loads():
+def test_client_encoding_loads(dummy_client):
     text = bytes([194, 161])
     data = b"{\"hello\": \"%s\"}" % text
 
-    client = BasePeonyClient("", "", encoding='utf-8')
-    assert client._loads(data)['hello'] == text.decode('utf-8')
+    assert dummy_client._loads(data)['hello'] == text.decode('utf-8')
 
-    client = BasePeonyClient("", "", encoding='ascii')
     with pytest.raises(UnicodeDecodeError):
-        client._loads(data)
+        dummy_client._loads(data, encoding='ascii')
 
 
 @pytest.mark.asyncio
-async def test_close(event_loop):
-    client = BasePeonyClient("", "", loop=event_loop)
+async def test_close(dummy_client):
+    client = dummy_client
     await client.setup()
 
     def dummy_func(*args, **kwargs):
@@ -279,15 +284,13 @@ async def test_close(event_loop):
 
 
 def test_close_no_session():
-    client = BasePeonyClient("", "")
+    client = BasePeonyClient(consumer_key="", consumer_secret="")
     assert client._session is None
     client.close()
 
 
-def test_close_no_tasks():
-    client = BasePeonyClient("", "")
-    assert client._gathered_tasks is None
-    client.close()
+def test_close_no_tasks(dummy_client):
+    assert dummy_client._gathered_tasks is None
 
 
 @pytest.mark.asyncio
@@ -360,18 +363,17 @@ async def test_request_encoding(dummy_client):
                         assert str(e) == "best encoding"
 
 
-def test_run_keyboard_interrupt(event_loop):
-    client = BasePeonyClient("", "", loop=event_loop)
-    with patch.object(client, 'run_tasks', side_effect=KeyboardInterrupt):
-        client.run()
+def test_run_keyboard_interrupt(dummy_client):
+    with patch.object(dummy_client, 'run_tasks',
+                      side_effect=KeyboardInterrupt):
+        dummy_client.run()
 
 
-def test_run_exceptions_raise(event_loop):
-    client = BasePeonyClient("", "", loop=event_loop)
+def test_run_exceptions_raise(dummy_client):
     for exc in (Exception, RuntimeError, peony.exceptions.PeonyException):
-        with patch.object(client, 'run_tasks', side_effect=exc):
+        with patch.object(dummy_client, 'run_tasks', side_effect=exc):
             with pytest.raises(exc):
-                client.run()
+                dummy_client.run()
 
 
 def test_close_session(dummy_client):
@@ -382,7 +384,8 @@ def test_close_session(dummy_client):
 
 
 def test_close_user_session():
-    client = BasePeonyClient("", "", session=Mock())
+    client = BasePeonyClient(consumer_key="", consumer_secret="",
+                             session=Mock())
 
     client.close()
     assert not client._session.close.called
@@ -391,7 +394,7 @@ def test_close_user_session():
 class Client(peony.BasePeonyClient):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(consumer_key="", consumer_secret="", **kwargs)
         self.t1, self.t2 = False, False
 
     @peony.task
@@ -404,7 +407,7 @@ class Client(peony.BasePeonyClient):
 
 
 def test_get_tasks(event_loop):
-    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
+    client = Client(session=aiohttp.ClientSession(loop=event_loop))
 
     client._get_tasks(kind=peony.task)
 
@@ -413,7 +416,7 @@ def test_get_tasks(event_loop):
 
 
 def test_get_init_tasks(event_loop):
-    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
+    client = Client(session=aiohttp.ClientSession(loop=event_loop))
     client._get_tasks(kind=peony.init_task)
 
     assert client.t1 is False
@@ -421,7 +424,7 @@ def test_get_init_tasks(event_loop):
 
 
 def test_get_tasks_runtime_exception(event_loop):
-    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
+    client = Client(session=aiohttp.ClientSession(loop=event_loop))
 
     with pytest.raises(RuntimeError):
         client._get_tasks(kind="")
@@ -443,7 +446,7 @@ def test_tasks_inheritance():
 class ClientCancelTasks(BasePeonyClient):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        super().__init__(consumer_key="", consumer_secret="", **kwargs)
         self.cancelled = True
 
     @peony.task
@@ -459,13 +462,13 @@ class ClientCancelTasks(BasePeonyClient):
 
 @pytest.mark.asyncio
 async def test_close_cancel_tasks(event_loop):
-    client = ClientCancelTasks("", "", loop=event_loop)
+    client = ClientCancelTasks(loop=event_loop)
     await client.run_tasks()
     assert client.cancelled
 
 
-def test_close_loop_closed(event_loop):
-    client = ClientCancelTasks("", "", loop=Mock())
+def test_close_loop_closed():
+    client = ClientCancelTasks(loop=Mock())
     client.loop.is_closed.return_value = True
     with patch.object(client, '_gathered_tasks') as tasks:
         client.close()

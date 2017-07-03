@@ -8,7 +8,7 @@ from peony.general import twitter_base_api_url
 
 # unique client
 
-client = BasePeonyClient("", "")
+client = BasePeonyClient(consumer_key="", consumer_secret="")
 
 # constants
 

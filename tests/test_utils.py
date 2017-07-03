@@ -71,7 +71,7 @@ async def test_error_handler_rate_limit():
         if tries > 0:
             response = MockResponse(error=88,
                                     headers={'X-Rate-Limit-Reset': 0})
-            raise await exceptions.throw(response)
+            raise await exceptions.PeonyExceptionThrower(response)()
 
     await utils.error_handler(rate_limit)()
 

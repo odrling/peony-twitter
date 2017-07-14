@@ -83,7 +83,7 @@ successful.
 .. code-block:: python
 
     async def home():
-        req = client.api.statuses.home_timeline.get(count=200, since_id=0)
+        req = client.api.statuses.home_timeline.get(count=200, since_id=0, tweet_mode='extended')
 
         # this is a PeonyResponse object
         response = await req
@@ -97,7 +97,7 @@ successful.
             username = tweet.user.screen_name
 
             display_range = tweet.get('display_text_range', None)
-            if display_text_range is not None:
+            if display_range is not None:
                 # get the text from the display range provided in the response
                 # if present
                 text = tweet.text[display_range[0]:display_range[1]]

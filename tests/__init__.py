@@ -37,6 +37,7 @@ class Media:
                     return await self.download(session, chunk)
             else:
                 async with session.get(self.url) as response:
+                    print("downloading", self.filename)
                     self._cache = await response.read()
                     return await self.download(chunk=chunk)
 

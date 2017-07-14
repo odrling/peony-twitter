@@ -18,19 +18,19 @@ import pytest
 import peony
 from peony import data_processing, exceptions, utils
 
-from . import MockResponse, medias
+from . import MockResponse, dummy
 
 
 def builtin_mimetypes(func):
 
     @wraps(func)
-    async def decorated():
+    async def decorated(*args, **kwargs):
         with patch.object(utils, 'magic') as magic:
             magic.__bool__.return_value = False
             with patch.object(utils, 'mime') as mime:
                 mime.guess_type.side_effect = mimetypes.MimeTypes().guess_type
 
-                await func()
+                await func(*args, **kwargs)
 
     return decorated
 
@@ -73,7 +73,8 @@ async def test_error_handler_rate_limit():
                                     headers={'X-Rate-Limit-Reset': 0})
             raise await exceptions.throw(response)
 
-    await utils.error_handler(rate_limit)()
+    with patch.object(asyncio, 'sleep', side_effect=dummy):
+        await utils.error_handler(rate_limit)()
 
 
 @pytest.mark.asyncio
@@ -179,7 +180,7 @@ async def test_reset_io():
 
 
 @pytest.mark.asyncio
-async def test_get_type():
+async def test_get_type(medias):
     async def test(media, chunk_size=1024):
         f = io.BytesIO(await media.download(chunk=chunk_size))
         media_type = await utils.get_type(f)
@@ -197,7 +198,7 @@ async def test_get_type_exception():
 
 @pytest.mark.asyncio
 @builtin_mimetypes
-async def test_get_type_builtin():
+async def test_get_type_builtin(medias):
     async def test(media, chunk_size=1024):
         f = io.BytesIO(await media.download(chunk=chunk_size))
         media_type = await utils.get_type(f, media.filename)
@@ -209,7 +210,7 @@ async def test_get_type_builtin():
 
 @pytest.mark.asyncio
 @builtin_mimetypes
-async def test_get_type_builtin_exception():
+async def test_get_type_builtin_exception(medias):
     media = medias['lady_peony']
     f = io.BytesIO(await media.download(chunk=1024))
     with pytest.raises(RuntimeError):
@@ -262,7 +263,7 @@ def get_size(f):
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata():
+async def test_get_media_metadata(medias):
     async def test(media):
         data = await media.download(chunk=1024)
         f = io.BytesIO(data)
@@ -289,7 +290,7 @@ async def test_get_media_metadata_path():
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata_bytes():
+async def test_get_media_metadata_bytes(medias):
     media = medias['lady_peony']
     data = await media.download()
 
@@ -304,7 +305,7 @@ async def test_get_media_metadata_exception():
 
 
 @pytest.mark.asyncio
-async def test_chunks():
+async def test_chunks(medias):
     media_data = await medias['lady_peony'].download()
     media = io.BytesIO(media_data)
     i_expected = 0

@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 import aiohttp
@@ -130,21 +131,37 @@ async def test_read_json_decode_error():
         pytest.fail("Did not raise PeonyDecoderError")
 
 
-def download(url):
+_data = None
 
-    def decorator(func):
 
-        async def decorated():
+@pytest.fixture
+def data(event_loop):
+    global _data
+
+    if _data is None:
+
+        async def download(url):
             async with aiohttp.ClientSession() as session:
                 async with session.get(url) as response:
                     json_data = await response.text()
-                    data = data_processing.loads(json_data)
+                    return data_processing.loads(json_data)
 
-            await func(data)
+        base = "https://raw.githubusercontent.com/twitterdev/tweet-updates" \
+               "/master/samples/initial/"
 
-        return decorated
+        urls = [
+            base + "compatibilityplus_classic_hidden_13797.json",
+            base + "compatibilityplus_extended_13997.json"
+        ]
 
-    return decorator
+        tasks = [download(url) for url in urls]
+
+        values = event_loop.run_until_complete(asyncio.gather(*tasks))
+
+        _data = {key: value
+                 for key, value in zip(('classic', 'extended'), values)}
+
+    return _data
 
 
 full_text = ("@jeremycloud It's neat to have owls and raccoons around "
@@ -153,22 +170,18 @@ full_text = ("@jeremycloud It's neat to have owls and raccoons around "
 
 
 @pytest.mark.asyncio
-@download("https://raw.githubusercontent.com/twitterdev/tweet-updates/master/"
-          "samples/initial/compatibilityplus_classic_hidden_13797.json")
 async def test_json_data_extended_entities(data):
-    assert data.truncated
-    assert data.extended_tweet
-    assert data.text == full_text
-    assert data.text == data.get('text')
-    assert 'display_text_range' in data
-    assert data.geo is None
+    assert data['classic'].truncated
+    assert data['classic'].extended_tweet
+    assert data['classic'].text == full_text
+    assert data['classic'].text == data['classic'].get('text')
+    assert 'display_text_range' in data['classic']
+    assert data['classic'].geo is None
 
 
 @pytest.mark.asyncio
-@download("https://raw.githubusercontent.com/twitterdev/tweet-updates/master/"
-          "samples/initial/compatibilityplus_extended_13997.json")
 async def test_json_data_full_text(data):
-    assert not data.truncated
-    assert data.text == full_text
-    assert data.text == data.get('text')
-    assert data.geo is None
+    assert not data['extended'].truncated
+    assert data['extended'].text == full_text
+    assert data['extended'].text == data['extended'].get('text')
+    assert data['extended'].geo is None

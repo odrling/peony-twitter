@@ -45,7 +45,10 @@ class MockClient:
             auth = base64.b64encode(key.encode('utf-8')).decode('utf-8')
             assert _headers['Authorization'] == 'Basic ' + auth
 
-        await asyncio.sleep(0.1)
+        # This is needed to run `test_oauth2_concurrent_refreshes`
+        # without that, refresh tasks would be executed sequentially
+        # In a sense it is a simulation of a request being fetched
+        await asyncio.sleep(0.001)
         return {'access_token': "abc"}
 
     def url(self):

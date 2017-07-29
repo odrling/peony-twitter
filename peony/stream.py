@@ -271,8 +271,6 @@ class StreamResponse:
 
     def __exit__(self, *args):
         """ Close the response on error """
-        utils.log_error(logger=logger, exc_info=args)
-
         if getattr(self, 'response', None) is not None:
             if not self.response.closed:
                 logger.debug("Closing the stream")

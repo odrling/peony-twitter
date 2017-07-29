@@ -10,7 +10,7 @@ the Twitter APIs, with a method to upload a media
 import asyncio
 import io
 import logging
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, CancelledError
 from urllib.parse import urlparse
 
 import aiohttp
@@ -436,7 +436,10 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         await self.setup()
         tasks = self.get_tasks()
         self._gathered_tasks = asyncio.gather(*tasks, loop=self.loop)
-        await asyncio.wait(tasks)
+        try:
+            await self._gathered_tasks
+        except CancelledError:
+            pass
 
     def run(self):
         """ Run the tasks attached to the instance """
@@ -462,10 +465,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         if self._gathered_tasks is not None:
             try:
                 self._gathered_tasks.cancel()
+
                 if not self.loop.is_closed():
                     self.loop.run_until_complete(self._gathered_tasks)
-
-                self._gathered_tasks.exception()
             except:
                 pass
 

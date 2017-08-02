@@ -10,7 +10,7 @@ the Twitter APIs, with a method to upload a media
 import asyncio
 import io
 import logging
-from concurrent.futures import ProcessPoolExecutor, CancelledError
+from concurrent.futures import CancelledError, ProcessPoolExecutor
 from urllib.parse import urlparse
 
 import aiohttp
@@ -511,7 +511,7 @@ class PeonyClient(BasePeonyClient):
         req = api.account.verify_credentials.get()
         self.user = await req
 
-    async def _chunked_upload(self, media,
+    async def _chunked_upload(self, media, media_size,
                               path=None,
                               media_type=None,
                               media_category=None,
@@ -524,6 +524,8 @@ class PeonyClient(BasePeonyClient):
         ----------
         media : file object
             a file object of the media
+        media_size : int
+            size of the media
         path : str, optional
             filename of the media
         media_type : str, optional
@@ -540,10 +542,17 @@ class PeonyClient(BasePeonyClient):
         .data_processing.PeonyResponse
             Response of the request
         """
-        media_size = await utils.get_size(media)
+        if isinstance(media, bytes):
+            media = io.BytesIO(media)
+
+        chunk = media.read(chunk_size)
+        is_coro = asyncio.iscoroutine(chunk)
+
+        if is_coro:
+            chunk = await chunk
 
         if media_type is None:
-            media_metadata = await utils.get_media_metadata(media, path)
+            media_metadata = await utils.get_media_metadata(chunk, path)
             media_type, media_category = media_metadata
         elif media_category is None:
             media_category = utils.get_category(media_type)
@@ -557,12 +566,24 @@ class PeonyClient(BasePeonyClient):
         )
 
         media_id = response['media_id']
+        i = 0
 
-        async for i, chunk in utils.chunks(media, chunk_size):
-            await self.upload.media.upload.post(command="APPEND",
-                                                media_id=media_id,
-                                                media=chunk,
-                                                segment_index=i)
+        while chunk:
+            if is_coro:
+                req = self.upload.media.upload.post(command="APPEND",
+                                                    media_id=media_id,
+                                                    media=chunk,
+                                                    segment_index=i)
+                chunk, _ = await asyncio.gather(media.read(chunk_size), req)
+            else:
+                await self.upload.media.upload.post(command="APPEND",
+                                                    media_id=media_id,
+                                                    media=chunk,
+                                                    segment_index=i)
+
+                chunk = media.read(chunk_size)
+
+            i += 1
 
         status = await self.upload.media.upload.post(command="FINALIZE",
                                                      media_id=media_id)
@@ -590,7 +611,7 @@ class PeonyClient(BasePeonyClient):
 
         return response
 
-    async def _size_test(self, media, size_limit):
+    def _size_test(self, size, size_limit):
         if size_limit is None:
             if isinstance(self.twitter_configuration, APIPath):
                 return False
@@ -600,7 +621,7 @@ class PeonyClient(BasePeonyClient):
                 except KeyError:
                     return False
 
-        return await utils.get_size(media) > size_limit
+        return size > size_limit
 
     async def upload_media(self, file_,
                            media_type=None,
@@ -634,26 +655,33 @@ class PeonyClient(BasePeonyClient):
             Response of the request
         """
         if isinstance(file_, str):
-            path = urlparse(file_).path.strip(" \"'")
-            media = await utils.execute(open(path, 'rb'))
-        elif hasattr(file_, 'read'):
+            url = urlparse(file_)
+            if url.scheme.startswith('http'):
+                media = await self._session.get(file_)
+            else:
+                path = urlparse(file_).path.strip(" \"'")
+                media = await utils.execute(open(path, 'rb'))
+        elif hasattr(file_, 'read') or isinstance(file_, bytes):
             media = file_
-        elif isinstance(file_, bytes):
-            media = io.BytesIO(file_)
         else:
             raise TypeError("upload_media input must be a file object or a "
-                            "filename or binary data")
+                            "filename or binary data or an aiohttp request")
 
-        size_test = await self._size_test(media, size_limit)
+        media_size = await utils.get_size(media)
+        size_test = self._size_test(media_size, size_limit)
+
+        if isinstance(media, aiohttp.ClientResponse):
+            # send the content of the response
+            media = media.content
 
         if (size_test and chunked is None) or chunked:
-            args = media, file_, media_type, media_category
+            args = media, media_size, file_, media_type, media_category
             response = await self._chunked_upload(*args, **params)
         else:
             response = await self.upload.media.upload.post(media=media,
                                                            **params)
 
-        if not hasattr(file_, 'read') and not media.closed:
+        if not hasattr(file_, 'read') and not getattr(media, 'closed', True):
             media.close()
 
         return response

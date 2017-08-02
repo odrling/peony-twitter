@@ -85,6 +85,8 @@ def log_error(msg=None, exc_info=None, logger=None, **kwargs):
         A message to add to the error
     exc_info : tuple
         Information about the current exception
+    logger : logging.Logger
+        logger to use
     """
     if logger is None:
         logger = _logger
@@ -101,34 +103,15 @@ def log_error(msg=None, exc_info=None, logger=None, **kwargs):
         logger.error(msg, exc_info=exc_info)
 
 
-def reset_io(func):
-    """
-    A decorator to set the pointer of the file to beginning
-    of the file before and after the decorated function
-    """
-    @functools.wraps(func)
-    async def decorated(media, *args, **kwargs):
-        if await execute(media.tell()):
-            await execute(media.seek(0))
-
-        result = await func(media, *args, **kwargs)
-
-        if await execute(media.tell()):
-            await execute(media.seek(0))
-
-        return result
-
-    return decorated
-
-
-async def get_media_metadata(file_, path=None):
+async def get_media_metadata(data, path=None):
     """
         Get all the file's metadata and read any kind of file object
 
     Parameters
     ----------
-    file_ : file object
-        file object corresponding to the media
+    data : bytes
+        first bytes of the file (the mimetype shoudl be guessed from the
+        file headers
     path : str, optional
         path to the file
 
@@ -139,11 +122,11 @@ async def get_media_metadata(file_, path=None):
     str
         The category of the media on Twitter
     """
-    if hasattr(file_, 'read'):
-        media_type = await get_type(file_, path)
+    if isinstance(data, bytes):
+        media_type = await get_type(data, path)
 
     else:
-        raise TypeError("get_metadata input must be a file object")
+        raise TypeError("get_metadata input must be a bytes")
 
     media_category = get_category(media_type)
 
@@ -167,15 +150,22 @@ async def get_size(media):
     int
         The size of the file
     """
-    await execute(media.seek(0, os.SEEK_END))
-    size = await execute(media.tell())
-    await execute(media.seek(0))
+    if hasattr(media, 'seek'):
+        await execute(media.seek(0, os.SEEK_END))
+        size = await execute(media.tell())
+        await execute(media.seek(0))
+    elif hasattr(media, 'headers'):
+        size = int(media.headers['Content-Length'])
+    elif isinstance(media, bytes):
+        size = len(media)
+    else:
+        raise TypeError("Can't get size of media of type:",
+                        type(media).__name__)
 
     _logger.info("media size: %dB" % size)
     return size
 
 
-@reset_io
 async def get_type(media, path=None):
     """
     Parameters
@@ -193,10 +183,11 @@ async def get_type(media, path=None):
         The category of the media on Twitter
     """
     if magic:
+        if not media:
+            raise TypeError("Media data is empty")
+
         _logger.debug("guessing mimetype using magic")
-        media_type = mime.from_buffer(await execute(media.read(1024)))
-        if media_type == 'application/x-empty':
-            raise TypeError("No data in media")
+        media_type = mime.from_buffer(media[:1024])
     else:
         media_type = None
         if path:
@@ -236,29 +227,6 @@ async def execute(coro):
         return await coro
     else:
         return coro
-
-
-class Chunks:
-
-    def __init__(self, media, chunk_size):
-        self.media = media
-        self.chunk_size = chunk_size
-        self.i = -1
-
-    async def __aiter__(self):
-        return self
-
-    async def __anext__(self):
-        self.i += 1
-
-        chunk = await execute(self.media.read(self.chunk_size))
-        if not chunk:
-            raise StopAsyncIteration()
-
-        return self.i, chunk
-
-
-chunks = Chunks
 
 
 def set_debug():

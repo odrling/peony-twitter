@@ -179,6 +179,15 @@ async def test_upload_tweet_with_media_chunked(oauth1_client, medias):
 
 
 @oauth1_decorator
+async def test_upload_tweet_with_media_from_url(oauth1_client, medias):
+    for media in (medias[key] for key in ('pink_queen', 'bloom', 'video')):
+        media = await oauth1_client.upload_media(media.url, chunked=True)
+
+        await oauth1_client.api.statuses.update.post(status="",
+                                                     media_ids=media.media_id)
+
+
+@oauth1_decorator
 async def test_direct_message(oauth1_client):
     await oauth1_client.setup()  # needed to get the user
     message = {

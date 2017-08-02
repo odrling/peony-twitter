@@ -34,7 +34,7 @@ install:
 
 test:
 	flake8
-	py.test --cov=peony --cov-report term-missing --durations=15 tests
+	py.test --cov=peony --cov-report term-missing --durations=20 tests
 
 release:
 	python3 setup.py sdist bdist_wheel

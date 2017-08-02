@@ -6,6 +6,7 @@ import logging
 import mimetypes
 import os
 import pathlib
+import sys
 import tempfile
 import traceback
 from concurrent.futures import ProcessPoolExecutor
@@ -156,33 +157,28 @@ def test_log_error(logger):
         raise RuntimeError
 
     except RuntimeError:
-        utils.log_error(MockResponse.message, logger=logger)
+        for exc_info in (None, sys.exc_info()):
+            utils.log_error(MockResponse.message, exc_info=exc_info,
+                            logger=logger)
 
-        error.seek(0)
-        output = error.read()
-        assert traceback.format_exc().strip() in output
-        assert MockResponse.message in output
+            error.seek(0)
+            output = error.read()
+            assert traceback.format_exc().strip() in output
+            assert MockResponse.message in output
 
 
-@pytest.mark.asyncio
-async def test_reset_io():
-    @utils.reset_io
-    async def test(media):
-        assert media.tell() == 0
-        media.write(MockResponse.message)
-        assert media.tell() != 0
+def test_log_error_no_info():
+    logger = logging.getLogger("peony.utils")
+    error = setup_logger(logger)
+    utils.log_error(exc_info=(None, None, None), logger=logger)
 
-    f = io.StringIO()
-    f.write("Hello World")
-    assert f.tell() != 0
-    await test(f)
-    assert f.tell() == 0
+    assert error.tell() == 0
 
 
 @pytest.mark.asyncio
 async def test_get_type(medias):
     async def test(media, chunk_size=1024):
-        f = io.BytesIO(await media.download(chunk=chunk_size))
+        f = await media.download(chunk=chunk_size)
         media_type = await utils.get_type(f)
         assert media_type == media.type
 
@@ -193,7 +189,7 @@ async def test_get_type(medias):
 @pytest.mark.asyncio
 async def test_get_type_exception():
     with pytest.raises(TypeError):
-        await utils.get_type(io.BytesIO())
+        await utils.get_type(b"")
 
 
 @pytest.mark.asyncio
@@ -236,6 +232,17 @@ async def test_get_size():
 
 
 @pytest.mark.asyncio
+async def test_get_size_request(media_request):
+    assert await utils.get_size(media_request) == 302770
+
+
+@pytest.mark.asyncio
+async def test_get_size_exception():
+    with pytest.raises(TypeError):
+        await utils.get_size("")
+
+
+@pytest.mark.asyncio
 async def test_execute():
     def test():
         return 1
@@ -266,8 +273,7 @@ def get_size(f):
 async def test_get_media_metadata(medias):
     async def test(media):
         data = await media.download(chunk=1024)
-        f = io.BytesIO(data)
-        media_metadata = await utils.get_media_metadata(f)
+        media_metadata = await utils.get_media_metadata(data)
         assert media_metadata == (media.type, media.category)
 
     tasks = [test(media) for media in medias.values()]
@@ -290,9 +296,9 @@ async def test_get_media_metadata_path():
 
 
 @pytest.mark.asyncio
-async def test_get_media_metadata_bytes(medias):
+async def test_get_media_metadata_file(medias):
     media = medias['lady_peony']
-    data = await media.download()
+    data = io.BytesIO(await media.download())
 
     with pytest.raises(TypeError):
         await utils.get_media_metadata(data)
@@ -302,17 +308,6 @@ async def test_get_media_metadata_bytes(medias):
 async def test_get_media_metadata_exception():
     with pytest.raises(TypeError):
         await utils.get_media_metadata([])
-
-
-@pytest.mark.asyncio
-async def test_chunks(medias):
-    media_data = await medias['lady_peony'].download()
-    media = io.BytesIO(media_data)
-    i_expected = 0
-    async for i, chunk in utils.chunks(io.BytesIO(media_data), 1024):
-        assert i_expected == i
-        assert chunk == await utils.execute(media.read(1024))
-        i_expected += 1
 
 
 def test_set_debug():

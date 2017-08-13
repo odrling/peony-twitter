@@ -8,6 +8,10 @@ Asynchronous Twitter API client for Python 3.5+
 .. image:: https://codecov.io/gh/odrling/peony-twitter/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/odrling/peony-twitter
 
+.. image:: https://readthedocs.org/projects/peony-twitter/badge/?version=stable
+  :target: https://peony-twitter.readthedocs.io/en/stable/?badge=stable
+  :alt: Documentation Status
+
 
 
 Installation

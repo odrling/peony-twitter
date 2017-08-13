@@ -41,6 +41,14 @@ def convert(img, formats):
 
     for kwargs in formats:
         f = io.BytesIO()
+        if img.mode == "RGBA" and kwargs['format'] != "PNG":
+            # convert to RGB if picture is too large as a png
+            # this implies that the png format is the first in `formats`
+            if min_size < 5*1024**2:
+                continue
+            else:
+                img.convert('RGB')
+
         img.save(f, **kwargs)
         size = f.tell()
 
@@ -78,7 +86,7 @@ def optimize_media(file_, max_size, formats):
     """
     if not PIL:
         msg = ("Pillow must be installed to optimize a media\n"
-               "(pip3 install peony[Pillow])")
+               "$ pip3 install Pillow")
         raise RuntimeError(msg)
 
     img = PIL.Image.open(file_)
@@ -102,7 +110,8 @@ def optimize_media(file_, max_size, formats):
 
 
 async def process_media(media, path):
-    mime_type = await utils.get_type(media, path)
+    data = await media.read()
+    mime_type = await utils.get_type(data, path)
     if not mime_type.startswith('image'):
         return media
 
@@ -110,13 +119,10 @@ async def process_media(media, path):
     formats = [dict(format='PNG'),
                dict(format='JPEG', quality=90, optimize=True)]
 
-    # PIL can't read an aiofiles file
-    file = io.BytesIO(await media.read())
-
     return await client.loop.run_in_executor(
         ProcessPoolExecutor(),
         optimize_media,
-        file,
+        io.BytesIO(data),
         (2048, 2048),
         formats
     )

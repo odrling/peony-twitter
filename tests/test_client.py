@@ -6,6 +6,7 @@ import random
 import tempfile
 from unittest.mock import Mock, patch
 
+import aiofiles
 import aiohttp
 import pytest
 
@@ -736,21 +737,15 @@ class DummyRequest:
         self.media_id = random.randrange(1 << 16)
 
 
-@pytest.mark.usefixtures('medias')
-@pytest.mark.asyncio
-@pytest.mark.parametrize('media', medias.values())
-async def test_chunked_upload(dummy_peony_client, media):
-    media_data = await media.download()
-    media_file = io.BytesIO(media_data)
-
-    chunk_size = 1024**2
+async def chunked_upload(dummy_peony_client, media, file):
+    chunk_size = 1024 ** 2
 
     dummy_request = DummyRequest(dummy_peony_client, media, chunk_size)
 
     with patch.object(dummy_peony_client, 'request',
                       side_effect=dummy_request):
         with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
-            await dummy_peony_client.upload_media(media_file,
+            await dummy_peony_client.upload_media(file,
                                                   chunk_size=chunk_size,
                                                   chunked=True)
 
@@ -763,8 +758,9 @@ async def test_chunked_upload(dummy_peony_client, media):
             with patch.object(utils, 'get_media_metadata') as metadata:
                 with patch.object(utils, 'get_category') as category:
                     await dummy_peony_client.upload_media(
-                        media_file, chunk_size=chunk_size, chunked=True,
-                        media_category=media.category, media_type=media.type
+                        file, chunk_size=chunk_size, chunked=True,
+                        media_category=media.category,
+                        media_type=media.type
                     )
                     assert not metadata.called
                     assert not category.called
@@ -772,10 +768,34 @@ async def test_chunked_upload(dummy_peony_client, media):
             dummy_request.reset()
             with patch.object(utils, 'get_media_metadata') as metadata:
                 await dummy_peony_client.upload_media(
-                    media_file, chunk_size=chunk_size,
+                    file, chunk_size=chunk_size,
                     media_type=media.type, chunked=True
                 )
                 assert not metadata.called
+
+
+@pytest.mark.usefixtures('medias')
+@pytest.mark.asyncio
+@pytest.mark.parametrize('media', medias.values())
+async def test_chunked_upload(dummy_peony_client, media):
+    data = io.BytesIO(await media.download())
+    await chunked_upload(dummy_peony_client, media, data)
+
+
+@pytest.fixture
+def media_filename(medias):
+    media = medias['bloom']
+
+    with tempfile.NamedTemporaryFile() as file:
+        file.write(media.content)
+        yield media, file.name
+
+
+@pytest.mark.asyncio
+async def test_chunked_upload_async_input(dummy_peony_client, media_filename):
+    media, filename = media_filename
+    async with aiofiles.open(filename, 'rb') as aiofile:
+        await chunked_upload(dummy_peony_client, media, aiofile)
 
 
 @pytest.mark.asyncio

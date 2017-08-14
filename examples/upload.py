@@ -44,7 +44,7 @@ def convert(img, formats):
         if img.mode == "RGBA" and kwargs['format'] != "PNG":
             # convert to RGB if picture is too large as a png
             # this implies that the png format is the first in `formats`
-            if min_size < 5*1024**2:
+            if min_size < 5 * 1024**2:
                 continue
             else:
                 img.convert('RGB')

@@ -22,15 +22,15 @@ class Media:
         self.url = "http://static.odrling.xyz/peony/tests/" + filename
         self.type = mimetype
         self.category = category
-        self._cache = b""
+        self.content = b""
         self.content_length = content_length
 
     async def download(self, session=None, chunk=-1):
-        if self._cache:
+        if self.content:
             if chunk < 0:
-                return self._cache
+                return self.content
             else:
-                return self._cache[:chunk]
+                return self.content[:chunk]
         else:
             if session is None:
                 async with aiohttp.ClientSession() as session:
@@ -38,8 +38,14 @@ class Media:
             else:
                 async with session.get(self.url) as response:
                     print("downloading", self.filename)
-                    self._cache = await response.read()
+                    self.content = await response.read()
                     return await self.download(chunk=chunk)
+
+    def __str__(self):
+        return "<Media name={}>".format(self.filename)
+
+    def __repr__(self):
+        return str(self)
 
 
 medias = {

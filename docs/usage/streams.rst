@@ -79,9 +79,8 @@ Custom events
 If you ever need to create your own events that can easily be done with
 the :func:`~peony.commands.event_types.events`.
 The function decorated with this decorator must have at least 1 argument that
-corresponds to the data received and return
-
-``True`` if the data should trigger this event and ``False`` otherwise.
+corresponds to the data received and return ``True`` if the data should
+trigger this event and ``False`` otherwise.
 It is recommended to use the :func:`events.priority`
 decorator so that your event will be processed before the ones provided in Peony.
 

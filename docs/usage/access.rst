@@ -40,12 +40,10 @@ For a more complete example:
         return await client.api.statuses.home_timeline.get(count=200,
                                                            since_id=0)
 
-    # to access userstream.twitter.com/1.1/statuses/filter.json
-    # using the POST method with the parameter track
+    # to access api.twitter.com/1.1/statuses/update.json
+    # using the POST method with the parameter status
     async def track():
-        req = client.stream.statuses.filter.post(track="uwu")
-        async with req as ressource:
-            print(req.text)  # print the tweet's text
+        return await client.api.statuses.update.post(status="Hello World!")
 
     # would GET subdomain.twitter.com/1.1/path.json if it were
     # an API endpoint
@@ -119,9 +117,8 @@ successful.
         >>> tweet.display_text_range == tweet.extended_tweet.display_text_range
         True # if tweet.extended_tweet.display_range exists.
 
-.. note::
-    Getting the ``text`` attribute of the data should always retrieve the
-    full text of the tweet even when the data is truncated. There should
+    Also, getting the ``text`` attribute of the data should always retrieve the
+    full text of the tweet even when the data is truncated. So, there should
     be no need to look for a ``full_text`` attribute.
 
 .. note::
@@ -138,10 +135,10 @@ A call to a Streaming API endpoint should return a
 .. code-block:: python
 
     async def track():
-        ctx = client.stream.statuses.filter.post(track="uwu")
+        req = client.stream.statuses.filter.post(track="uwu")
 
-        # ctx is an asynchronous context
-        async with ctx as stream:
+        # req is an asynchronous context
+        async with req as stream:
             # stream is an asynchronous iterator
             async for tweet in stream:
                 # you can then access items as you would do with a
@@ -150,6 +147,6 @@ A call to a Streaming API endpoint should return a
                 username = tweet.user.screen_name
 
                 msg = "@{username} ({id}): {text}"
-                print(.format(username=username,
-                              id=user_id,
-                              text=tweet.text))
+                print(msg.format(username=username,
+                                 id=user_id,
+                                 text=tweet.text))

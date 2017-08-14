@@ -68,7 +68,8 @@ or a file object:
 
 .. note::
 
-    It is recommended to install ``aiofiles`` if you are planning to use files.
+    It is recommended to use ``aiofiles`` if you are planning to work with
+    files.
 
 or even bytes:
 

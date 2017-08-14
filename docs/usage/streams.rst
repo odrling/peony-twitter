@@ -3,12 +3,17 @@
 =========
 
 If you need to access the Streaming API, the recommended way is to use an
-:class:`~peony.commands.event_handlers.EventStream`.
+:class:`~peony.commands.event_handlers.EventStream`. This can help to divide
+the code in a program involving a stream into the methods of a subclass of
+:class:`~peony.commands.event_handlers.EventStream`. These methods are
+defined by their ``@decorator`` which must be an
+:class:`~peony.commands.event_handlers.EventHandler`.
 
 
 .. code-block:: python
 
     from peony import EventStream, PeonyClient, event_handler, events
+    # all the event handlers are included in peony.events
 
     class Client(PeonyClient):
         pass
@@ -66,7 +71,7 @@ If you need to access the Streaming API, the recommended way is to use an
 Default events
 --------------
 
-All the events name can be found in :obj:`peony.commands.event_types`
+All the events name can be found in :obj:`peony.commands.event_types`.
 
 Custom events
 -------------

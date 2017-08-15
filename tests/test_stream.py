@@ -36,8 +36,7 @@ def stream(event_loop):
             url="http://whatever.com/stream"
         )
 
-        with patch.object(stream_response.session, 'request',
-                          side_effect=stream_content):
+        with patch.object(session, 'request', side_effect=stream_content):
             yield stream_response
 
 

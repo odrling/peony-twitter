@@ -38,7 +38,7 @@ For a more complete example:
     # using the GET method with the parameters count and since_id
     async def home():
         return await client.api.statuses.home_timeline.get(count=200,
-                                                           since_id=0)
+                                                           since_id=20)
 
     # to access api.twitter.com/1.1/statuses/update.json
     # using the POST method with the parameter status

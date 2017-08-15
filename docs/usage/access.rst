@@ -141,12 +141,14 @@ A call to a Streaming API endpoint should return a
         async with req as stream:
             # stream is an asynchronous iterator
             async for tweet in stream:
-                # you can then access items as you would do with a
-                # `PeonyResponse` object
-                user_id = tweet['user']['id']
-                username = tweet.user.screen_name
+                # check that you actually receive a tweet
+                if peony.events.tweet(tweet):
+                    # you can then access items as you would do with a
+                    # `PeonyResponse` object
+                    user_id = tweet['user']['id']
+                    username = tweet.user.screen_name
 
-                msg = "@{username} ({id}): {text}"
-                print(msg.format(username=username,
-                                 id=user_id,
-                                 text=tweet.text))
+                    msg = "@{username} ({id}): {text}"
+                    print(msg.format(username=username,
+                                     id=user_id,
+                                     text=tweet.text))

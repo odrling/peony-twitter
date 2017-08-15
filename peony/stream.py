@@ -59,7 +59,7 @@ class StreamResponse:
                  **kwargs):
 
         self.client = client
-        self.session = self.client._session if session is None else session
+        self.session = session
         self.loads = loads
         self.timeout = timeout
         self.args = args
@@ -82,6 +82,8 @@ class StreamResponse:
         """
         logger.debug("connecting to the stream")
         await self.client.setup()
+        if self.session is None:
+            self.session = self.client._session
         kwargs = await self.client.headers.prepare_request(**self.kwargs)
         request = self.client.error_handler(self.session.request)
 

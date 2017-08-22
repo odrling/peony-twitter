@@ -463,7 +463,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         if not self._user_session:
             # close is None for Python 3.5 here (?)
             try:
-                self._session.close()
+                self.loop.create_task(self._session.close())
                 self._session = None
             except (TypeError, AttributeError):
                 pass

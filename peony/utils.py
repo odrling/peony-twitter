@@ -33,6 +33,7 @@ def error_handler(request):
 
     @functools.wraps(request)
     async def decorated_request(url=None, **kwargs):
+        tries = 3
         while True:
             try:
                 return await request(url=url, **kwargs)
@@ -46,6 +47,15 @@ def error_handler(request):
             except asyncio.TimeoutError:
                 fmt = "Request to {url} timed out, retrying"
                 _logger.info(fmt.format(url=url))
+
+            except exceptions.ServiceUnavailable:
+                tries -= 1
+                if not tries:
+                    raise
+
+                _logger.info("Service temporarily unavailable, "
+                             "request will be made again very soon")
+                await asyncio.sleep(0.5)
 
     return decorated_request
 

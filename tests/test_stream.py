@@ -47,6 +47,23 @@ async def test_stream_connect(stream):
 
 
 @pytest.mark.asyncio
+async def test_stream_connect_with_session(event_loop):
+    with aiohttp.ClientSession(loop=event_loop) as session:
+        client = peony.client.BasePeonyClient("", "", session=session)
+
+        stream = peony.stream.StreamResponse(
+            client=client,
+            method='get',
+            url="http://whatever.com/stream",
+            session=session
+        )
+
+        with patch.object(session, 'request', side_effect=stream_content):
+            response = await stream.connect()
+            assert data == await response.text()
+
+
+@pytest.mark.asyncio
 async def test_stream_iteration(stream):
     async def stop(*args, **kwargs):
         raise StopAsyncIteration

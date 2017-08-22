@@ -187,30 +187,33 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         """ tasks executed on initialization """
         return self._get_tasks(kind=init_task)
 
+    async def _setup(self):
+        if self._session is None:
+            logger.debug("Creating session")
+            self._session = aiohttp.ClientSession()
+
+        # this will allow requests to be made starting from this point
+        self.__setup['early'].set()
+
+        init_tasks = self.init_tasks
+        if callable(init_tasks):
+            init_tasks = init_tasks()
+
+        if init_tasks:
+            logger.debug("Starting init tasks")
+            await asyncio.wait(init_tasks)
+
+        self.__setup['done'].set()
+
     async def setup(self, early=False):
         """
             set up the client on the first request
         """
         if not self.__setup['state']:
-            logger.debug("Setting up client")
             self.__setup['state'] = True
+            logger.debug("Setting up client")
 
-            if self._session is None:
-                logger.debug("Creating session")
-                self._session = aiohttp.ClientSession()
-
-            # this will allow requests to be made starting from this point
-            self.__setup['early'].set()
-
-            init_tasks = self.init_tasks
-            if callable(init_tasks):
-                init_tasks = init_tasks()
-
-            if init_tasks:
-                logger.debug("Starting init tasks")
-                await asyncio.wait(init_tasks)
-
-            self.__setup['done'].set()
+            self.loop.create_task(self._setup())
 
         if early:
             await self.__setup['early'].wait()

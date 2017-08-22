@@ -20,8 +20,8 @@ from . import Data, MockResponse, dummy, medias
 
 
 @pytest.fixture
-def dummy_client():
-    return peony.BasePeonyClient("", "", loop=False)
+def dummy_client(event_loop):
+    return peony.BasePeonyClient("", "", loop=event_loop)
 
 
 def test_create_endpoint(dummy_client):

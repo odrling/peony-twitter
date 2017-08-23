@@ -63,3 +63,7 @@ target/
 
 # PyCharm folder
 .idea
+
+# files created by make
+/.installed
+/.formatted

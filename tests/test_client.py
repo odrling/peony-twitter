@@ -4,7 +4,7 @@ import asyncio
 import io
 import random
 import tempfile
-from unittest.mock import Mock, patch, call
+from unittest.mock import Mock, call, patch
 
 import aiofiles
 import aiohttp

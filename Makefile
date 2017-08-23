@@ -1,38 +1,43 @@
-.PHONY: help clean dev doc format install test release
+.PHONY: help clean doc install format test release
+
+all: .formatted test
 
 help:
 	@echo "Please use \`make <target>\` where <target> is one of"
 	@echo "  clean      to clean the repository"
 	@echo "  doc        to make the documentation (html)"
-	@echo "  dev        to install everything needed to contribute to the project"
 	@echo "  format     to correct code style"
-	@echo "  install    to install the dependencies required to run the tests"
 	@echo "  test       to test peony"
 
 clean:
 	@rm -rf build dist .cache .coverage* .tox
 	@rm -rf *.egg-info
+	@rm -f .installed
+	@rm -f .formatted
 	@python3 setup.py clean --all > /dev/null 2> /dev/null
 
-doc:
+doc: build/html
+
+build/html: docs
 	sphinx-build -b html -d build/doctrees docs build/html
 	@printf "\nBuild finished. The HTML pages are in build/html.\n"
 
-dev:
-	pip3 install --upgrade pip wheel
-	pip3 install --upgrade -r dev_requirements.txt
+install: .installed
 
-format:
-	@isort -rc examples peony tests > /dev/null
-	@autopep8 -r --in-place examples peony tests
-	@autoflake -r --in-place examples peony tests
+.installed: dev_requirements.txt tests_requirements.txt requirements.txt
+	@pip3 install --upgrade pip wheel
+	@pip3 install --upgrade -r dev_requirements.txt
+	@touch .installed
 
-install:
-	pip3 install --upgrade pip wheel
-	pip3 install --upgrade -r requirements.txt
-	pip3 install --upgrade -r extras_require.txt
+format: .formatted
 
-test:
+.formatted: .installed peony examples tests
+	isort -rc examples peony tests > /dev/null
+	autopep8 -r --in-place examples peony tests
+	autoflake -r --in-place examples peony tests
+	@touch .formatted
+
+test: .installed
 	flake8
 	py.test --cov=peony --cov-report term-missing --durations=20 tests
 

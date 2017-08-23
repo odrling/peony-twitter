@@ -75,22 +75,6 @@ Make sure to get your api keys and access tokens from
 
 .. _Authorize your client: #authorize-your-client
 
-Tests
------
-
-To run the tests run:
-
-.. code-block:: bash
-
-    make install  # install the required dependencies
-    make test
-
-You can also use tox to run the tests, a configuration file is provided:
-
-.. code-block:: bash
-
-    tox
-
 Documentation
 -------------
 
@@ -108,3 +92,34 @@ create a pull request.
 
 If you have a suggestion you can also start an issue and create a pull
 request if you managed to make it work.
+
+Tests
+-----
+
+To run the tests run:
+
+.. code-block:: bash
+
+    make test
+
+The first time this command is run it will install all the dependencies
+which can take a bit of time.
+
+The tests include a code style test. The code style is mostly PEP8, the only
+exception so far being long urls included in docstrings and some imports
+that are not at the top of the file (because they can't be there).
+
+To resolve the most trivial errors you can run:
+
+.. code-block:: bash
+
+    make format
+
+Note that running ``make`` is equivalent to running ``make format && make
+test``
+
+You can also use tox to run the tests, a configuration file is provided:
+
+.. code-block:: bash
+
+    tox

@@ -4,7 +4,7 @@ import asyncio
 import io
 import random
 import tempfile
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, call
 
 import aiofiles
 import aiohttp
@@ -217,6 +217,7 @@ async def test_session_creation(dummy_client):
     with patch.object(aiohttp, 'ClientSession') as client_session:
         await dummy_client.setup()
         assert client_session.called
+        dummy_client._session = None
 
 
 class SetupInitListTest(BasePeonyClient):
@@ -266,12 +267,15 @@ async def test_close(event_loop):
         pass
 
     client._gathered_tasks = asyncio.gather(dummy())
-    with patch.object(client.loop, 'run_until_complete',
-                      side_effect=dummy_func) as run:
+    with patch.object(client.loop, 'create_task',
+                      side_effect=dummy_func) as create_task:
         with patch.object(client._gathered_tasks, 'cancel') as cancel:
-            with patch.object(client._session, 'close') as close:
+            with patch.object(client._session, 'close',
+                              return_value=1) as close:
                 client.close()
-                run.assert_called_once_with(client._gathered_tasks)
+                calls = [call(1), call(client._gathered_tasks)]
+                create_task.assert_has_calls(calls, any_order=True)
+                create_task.assert_called_with(client._gathered_tasks)
                 cancel.assert_called_once_with()
                 close.assert_called_once_with()
                 assert client._session is None
@@ -373,11 +377,20 @@ def test_run_exceptions_raise(event_loop):
                 client.run()
 
 
-def test_close_session(dummy_client):
-    with patch.object(dummy_client, '_session') as session:
-        dummy_client.close()
-        assert session.close.called
-        assert dummy_client._session is None
+def test_close_session(dummy_client, event_loop):
+    with aiohttp.ClientSession(loop=event_loop) as session:
+        dummy_client._session = session
+
+        def dummy_func(*args, **kwargs):
+            pass
+
+        with patch.object(session, 'close', return_value=1) as close:
+            with patch.object(dummy_client.loop, 'create_task',
+                              side_effect=dummy_func) as task:
+                dummy_client.close()
+                close.assert_called_once_with()
+                task.assert_called_with(1)
+                assert dummy_client._session is None
 
 
 def test_close_user_session():
@@ -469,7 +482,7 @@ def test_close_loop_closed(event_loop):
     with patch.object(client, '_gathered_tasks') as tasks:
         client.close()
         assert tasks.cancel.called
-        assert not client.loop.run_until_complete.called
+        assert not client.loop.create_task.called
 
 
 @pytest.fixture

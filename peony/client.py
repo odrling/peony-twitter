@@ -459,11 +459,15 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
     def close(self):
         """ properly close the client """
+        if self.loop.is_closed():
+            loop = asyncio.get_event_loop()
+        else:
+            loop = self.loop
+
         # close the session only if it was created by peony
         if not self._user_session:
-            # close is None for Python 3.5 here (?)
             try:
-                self.loop.create_task(self._session.close())
+                loop.create_task(self._session.close())
                 self._session = None
             except (TypeError, AttributeError):
                 pass
@@ -473,8 +477,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             try:
                 self._gathered_tasks.cancel()
 
-                if not self.loop.is_closed():
-                    self.loop.run_until_complete(self._gathered_tasks)
+                loop.create_task(self._gathered_tasks)
             except:
                 pass
 

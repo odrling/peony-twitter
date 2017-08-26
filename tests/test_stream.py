@@ -42,7 +42,7 @@ def stream(event_loop):
 
 @pytest.mark.asyncio
 async def test_stream_connect(stream):
-    response = await stream.connect()
+    response = await stream._connect()
     assert data == await response.text()
 
 
@@ -59,7 +59,7 @@ async def test_stream_connect_with_session(event_loop):
         )
 
         with patch.object(session, 'request', side_effect=stream_content):
-            response = await stream.connect()
+            response = await stream._connect()
             assert data == await response.text()
 
 
@@ -105,15 +105,17 @@ async def test_stream_reconnection_disconnection(stream):
     async def dummy(*args, **kwargs):
         pass
 
-    turn = 0
+    turn = -1
 
-    with patch.object(stream, 'connect', side_effect=response_disconnection):
+    with patch.object(stream, '_connect', side_effect=response_disconnection):
         with patch.object(peony.stream.asyncio, 'sleep', side_effect=dummy):
             async for data in stream:
                 assert stream._state == DISCONNECTION
                 turn += 1
 
-                if turn % 2 == 1:
+                if turn == 0:
+                    assert data == {'connected': True}
+                elif turn % 2 == 1:
                     timeout = DISCONNECTION_TIMEOUT * (turn + 1) / 2
 
                     if timeout > MAX_DISCONNECTION_TIMEOUT:
@@ -131,15 +133,17 @@ async def test_stream_reconnection_reconnect(stream):
     async def dummy(*args, **kwargs):
         pass
 
-    turn = 0
+    turn = -1
 
-    with patch.object(stream, 'connect', side_effect=response_reconnection):
+    with patch.object(stream, '_connect', side_effect=response_reconnection):
         with patch.object(peony.stream.asyncio, 'sleep', side_effect=dummy):
             async for data in stream:
                 assert stream._state == RECONNECTION
                 turn += 1
 
-                if turn % 2 == 1:
+                if turn == 0:
+                    assert data == {'connected': True}
+                elif turn % 2 == 1:
                     timeout = RECONNECTION_TIMEOUT * 2**(turn // 2)
 
                     if timeout > MAX_RECONNECTION_TIMEOUT:
@@ -157,9 +161,9 @@ async def test_stream_reconnection_enhance_your_calm(stream):
     async def dummy(*args, **kwargs):
         pass
 
-    turn = 0
+    turn = -1
 
-    with patch.object(stream, 'connect', side_effect=response_calm):
+    with patch.object(stream, '_connect', side_effect=response_calm):
         with patch.object(peony.stream.asyncio, 'sleep', side_effect=dummy):
             async for data in stream:
                 assert stream._state == ENHANCE_YOUR_CALM
@@ -168,7 +172,9 @@ async def test_stream_reconnection_enhance_your_calm(stream):
                 if turn >= 100:
                     break
 
-                if turn % 2 == 1:
+                if turn == 0:
+                    assert data == {'connected': True}
+                elif turn % 2 == 1:
                     timeout = ENHANCE_YOUR_CALM_TIMEOUT * 2**(turn // 2)
                     assert data == {'reconnecting_in': timeout, 'error': None}
                 else:
@@ -177,15 +183,14 @@ async def test_stream_reconnection_enhance_your_calm(stream):
 
 @pytest.mark.asyncio
 async def test_stream_reconnection_error(stream):
-    with patch.object(stream, 'connect', side_effect=response_forbidden):
+    with patch.object(stream, '_connect', side_effect=response_forbidden):
         with pytest.raises(exceptions.Forbidden):
-            await stream.__aiter__()
+            await stream.connect()
 
 
 @pytest.mark.asyncio
 async def test_stream_reconnection_stream_limit(stream):
-    with patch.object(stream, 'connect', side_effect=response_stream_limit):
-        await stream.__aiter__()
+    with patch.object(stream, '_connect', side_effect=response_stream_limit):
         assert stream._state == NORMAL
         data = await stream.__anext__()
         assert 'connected' in data
@@ -198,14 +203,14 @@ async def test_stream_reconnection_stream_limit(stream):
 
 @pytest.mark.asyncio
 async def test_stream_reconnection_error_on_reconnection(stream):
-    with patch.object(stream, 'connect', side_effect=response_disconnection):
-        await stream.__aiter__()
+    with patch.object(stream, '_connect', side_effect=response_disconnection):
+        await stream.connect()
         assert stream._state == DISCONNECTION
         data = {'reconnecting_in': DISCONNECTION_TIMEOUT, 'error': None}
         assert data == await stream.__anext__()
         assert stream._reconnecting
 
-    with patch.object(stream, 'connect', side_effect=response_calm):
+    with patch.object(stream, '_connect', side_effect=response_calm):
         stream._error_timeout = 0
         assert {'stream_restart': True} == await stream.__anext__()
         assert stream._state == ENHANCE_YOUR_CALM
@@ -226,12 +231,11 @@ async def test_stream_reconnection_handled_errors(stream):
     async def handled_error():
         raise peony.stream.HandledErrors[0]
 
-    with patch.object(stream, 'connect', side_effect=stream_content):
-        await stream.__aiter__()
+    with patch.object(stream, '_connect', side_effect=stream_content):
+        data = await stream.__anext__()
+        assert 'connected' in data
         with patch.object(stream.response, 'readline',
                           side_effect=handled_error):
-            data = await stream.__anext__()
-            assert 'connected' in data
             data = await stream.__anext__()
             assert data == {'reconnecting_in': ERROR_TIMEOUT, 'error': None}
 
@@ -241,12 +245,11 @@ async def test_stream_reconnection_client_connection_error(stream):
     async def client_connection_error():
         raise aiohttp.ClientConnectionError
 
-    with patch.object(stream, 'connect', side_effect=stream_content):
-        await stream.__aiter__()
+    with patch.object(stream, '_connect', side_effect=stream_content):
+        data = await stream.__anext__()
+        assert 'connected' in data
         with patch.object(stream.response, 'readline',
                           side_effect=client_connection_error):
-            data = await stream.__anext__()
-            assert 'connected' in data
             data = await stream.__anext__()
             assert data == {'reconnecting_in': ERROR_TIMEOUT, 'error': None}
 
@@ -260,7 +263,7 @@ async def test_stream_async_context(event_loop):
                                               client=client)
 
         async with context as stream:
-            with patch.object(stream, 'connect', side_effect=stream_content):
+            with patch.object(stream, '_connect', side_effect=stream_content):
                 await test_stream_iteration(stream)
 
         assert context.response.closed
@@ -275,7 +278,7 @@ async def test_stream_context(event_loop):
                                               client=client)
 
         with context as stream:
-            with patch.object(stream, 'connect', side_effect=stream_content):
+            with patch.object(stream, '_connect', side_effect=stream_content):
                 await test_stream_iteration(stream)
 
         assert context.response.closed
@@ -290,7 +293,7 @@ async def test_stream_context_response_already_closed(event_loop):
                                               client=client)
 
         with context as stream:
-            with patch.object(stream, 'connect', side_effect=stream_content):
+            with patch.object(stream, '_connect', side_effect=stream_content):
                 await test_stream_iteration(stream)
                 stream.response.close()
 
@@ -300,7 +303,7 @@ async def test_stream_context_response_already_closed(event_loop):
 @pytest.mark.asyncio
 async def test_stream_cancel(event_loop):
     async def cancel(task):
-        await asyncio.sleep(0.01)
+        await asyncio.sleep(0.001)
         task.cancel()
 
     async def test_stream_iterations(stream):
@@ -314,7 +317,7 @@ async def test_stream_cancel(event_loop):
                                               client=client)
 
         with context as stream:
-            with patch.object(stream, 'connect',
+            with patch.object(stream, '_connect',
                               side_effect=stream_content):
                 coro = test_stream_iterations(stream)
                 task = event_loop.create_task(coro)

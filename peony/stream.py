@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import sys
 from concurrent.futures import CancelledError
 
 import aiohttp
@@ -69,9 +70,8 @@ class StreamResponse:
         self._reconnecting = False
         self._state = NORMAL
         self._error_timeout = 0
-        self._connected = False
 
-    async def connect(self):
+    async def _connect(self):
         """
             Connect to the stream
 
@@ -89,7 +89,7 @@ class StreamResponse:
 
         return await request(*self.args, timeout=0, **kwargs)
 
-    async def __aiter__(self):
+    async def connect(self):
         """
             Create the connection
 
@@ -105,7 +105,7 @@ class StreamResponse:
             received here
         """
         with aiohttp.Timeout(self.timeout):
-            self.response = await self.connect()
+            self.response = await self._connect()
 
         if self.response.status in range(200, 300):
             self._error_timeout = 0
@@ -123,7 +123,11 @@ class StreamResponse:
 
         logger.debug("stream state: %d" % self.state)
 
+    def __aiter__(self):
         return self
+
+    if sys.version_info < (3, 5, 2):  # pragma: no cover
+        __aiter__ = asyncio.coroutine(__aiter__)
 
     async def __anext__(self):
         """
@@ -134,6 +138,11 @@ class StreamResponse:
         dict
             Decoded JSON data
         """
+        if self.response is None:
+            logger.info("first connection to the stream")
+            await self.connect()
+            return {'connected': True}
+
         line = b''
         try:
             if self.state != NORMAL:
@@ -141,11 +150,6 @@ class StreamResponse:
                     return await self.restart_stream()
                 else:
                     return await self.init_restart()
-
-            if not self._connected:
-                logger.info("first connection to the stream")
-                self._connected = True
-                return {'connected': True}
 
             while not line:
                 with aiohttp.Timeout(90):
@@ -226,8 +230,9 @@ class StreamResponse:
                            "then there is probably something wrong with it. "
                            "Make sure you are not opening too many connections"
                            " to the endpoint you are currently using by "
-                           "checking Twitter's Streaming API documentation "
-                           "out: https://dev.twitter.com/streaming/overview\n"
+                           "checking out Twitter's Streaming API "
+                           "documentation: "
+                           "https://dev.twitter.com/streaming/overview\n"
                            "The stream will restart in %ss."
                            % self._error_timeout)
         else:
@@ -242,7 +247,7 @@ class StreamResponse:
         """
         await self.response.release()
         await asyncio.sleep(self._error_timeout)
-        await self.__aiter__()
+        await self.connect()
 
         logger.info("Reconnected to the stream")
         self._reconnecting = False

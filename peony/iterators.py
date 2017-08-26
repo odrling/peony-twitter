@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
+import sys
 from abc import ABC, abstractmethod
 
 
@@ -17,8 +19,11 @@ class AbstractIterator(ABC):
         self.request = request
         self.kwargs = request.kwargs.copy()
 
-    async def __aiter__(self):
+    def __aiter__(self):
         return self
+
+    if sys.version_info < (3, 5, 2):  # pragma: no cover
+        __aiter__ = asyncio.coroutine(__aiter__)
 
     @abstractmethod
     async def __anext__(self):

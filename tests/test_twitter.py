@@ -187,8 +187,10 @@ async def test_upload_tweet_with_media_from_url(oauth1_client, medias):
                                                      media_ids=media.media_id)
 
 
+@pytest.mark.current
 @oauth1_decorator
-async def test_direct_message(oauth1_client):
+async def test_direct_message(oauth1_client, event_loop):
+    print(event_loop, oauth1_client.loop)
     await oauth1_client.setup()  # needed to get the user
     message = {
         'event': {

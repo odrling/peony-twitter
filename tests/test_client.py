@@ -476,15 +476,6 @@ async def test_close_cancel_tasks(event_loop):
     assert client.cancelled
 
 
-def test_close_loop_closed(event_loop):
-    client = ClientCancelTasks("", "", loop=Mock())
-    client.loop.is_closed.return_value = True
-    with patch.object(client, '_gathered_tasks') as tasks:
-        client.close()
-        assert tasks.cancel.called
-        assert not client.loop.create_task.called
-
-
 @pytest.fixture
 def peony_client(event_loop):
     return PeonyClient("", "", loop=event_loop)

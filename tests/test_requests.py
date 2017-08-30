@@ -114,33 +114,27 @@ def dummy_error_handler(request):
     return request
 
 
-def test_request_without_error_handler(request):
-    client = request.api._client
-    with patch.object(client, 'request') as client_request:
-        with patch.object(client, 'error_handler') as error_handler:
-            request(_error_handling=False, test=1, _test=2)
-            assert client_request.called_with(method='get',
-                                              url=url,
-                                              skip_params=False,
-                                              test=2,
-                                              params={'test': 1})
-            assert not error_handler.called
-
-
 @pytest.mark.current
-def test_request_with_error_handler(api_path):
+def test_request_error_handler(api_path, _error_handler=True):
     client = api_path._client
     with patch.object(client, 'request', side_effect=dummy) as client_request:
         with patch.object(client, 'error_handler',
                           side_effect=dummy_error_handler) as error_handler:
-            client.loop.run_until_complete(requests.Request(api_path, 'get',
-                                                            test=1, _test=2))
+            client.loop.run_until_complete(
+                requests.Request(api_path, 'get',
+                                 _error_handling=_error_handler,
+                                 test=1, _test=2)
+            )
             assert client_request.called_with(method='get',
                                               url=url,
                                               skip_params=False,
                                               test=2,
                                               params={'test': 1})
-            assert error_handler.called
+            assert error_handler.called is _error_handler
+
+
+def test_request_no_error_handler(api_path):
+    test_request_error_handler(api_path, _error_handler=False)
 
 
 def test_streaming_request(api_path):

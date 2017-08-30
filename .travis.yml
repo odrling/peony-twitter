@@ -5,10 +5,10 @@ python:
   - "3.6"
 install:
   - pip install --upgrade pip wheel
-  - pip install --upgrade -r tests_requirements.txt
+  - pip install --upgrade -r tests_requirements.txt pytest-timeout
 script:
   - flake8
-  - py.test tests --cov=peony
+  - py.test tests --cov=peony --timeout=60
 cache: pip
 after_success:
   - codecov

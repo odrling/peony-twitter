@@ -281,6 +281,7 @@ async def test_oauth2_sign_url_invalidate(oauth2_headers):
     assert oauth2_headers.token is None
 
 
+@pytest.mark.current
 @pytest.mark.asyncio
 async def test_oauth2_concurrent_refreshes(oauth2_headers):
     assert oauth2_headers.client.count == 0

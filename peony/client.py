@@ -24,6 +24,13 @@ from .stream import StreamResponse
 logger = logging.getLogger(__name__)
 
 
+class Setup(asyncio.Future):
+
+    def __init__(self):
+        super().__init__()
+        self.early = asyncio.Future()
+
+
 class MetaPeonyClient(type):
 
     def __new__(cls, name, bases, attrs, **kwargs):
@@ -179,9 +186,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         self.headers = auth(**kwargs)
 
-        self.__setup = {'done': asyncio.Event(),
-                        'early': asyncio.Event(),
-                        'state': False}
+        self.setup = Setup()
+
+        self.__setup = self.loop.create_task(self._setup())
 
     def init_tasks(self):
         """ tasks executed on initialization """
@@ -193,7 +200,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             self._session = aiohttp.ClientSession()
 
         # this will allow requests to be made starting from this point
-        self.__setup['early'].set()
+        self.setup.early.set_result(True)
 
         init_tasks = self.init_tasks
         if callable(init_tasks):
@@ -203,22 +210,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             logger.debug("Starting init tasks")
             await asyncio.wait(init_tasks)
 
-        self.__setup['done'].set()
-
-    async def setup(self, early=False):
-        """
-            set up the client on the first request
-        """
-        if not self.__setup['state']:
-            self.__setup['state'] = True
-            logger.debug("Setting up client")
-
-            self.loop.create_task(self._setup())
-
-        if early:
-            await self.__setup['early'].wait()
-        else:
-            await self.__setup['done'].wait()
+        self.setup.set_result(True)
 
     @staticmethod
     def _get_base_url(base_url, api, version):
@@ -315,9 +307,15 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
     __getattr__ = __getitem__
 
     def __del__(self):
-        self.close()
+        if self.loop.is_closed():
+            return
 
-    async def request(self, method, url,
+        if self.loop.is_running():
+            self.loop.create_task(self.close())
+        else:
+            self.loop.run_until_complete(self.close())
+
+    async def request(self, method, url, future,
                       headers=None,
                       session=None,
                       encoding=None,
@@ -327,6 +325,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         Parameters
         ----------
+        future : asyncio.Future
+            Future used to return the response
         method : str
             Method to be used by the request
         url : str
@@ -341,7 +341,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         data.PeonyResponse
             Response to the request
         """
-        await self.setup(early=True)
+        await self.setup.early
 
         # prepare request arguments, particularly the headers
         req_kwargs = await self.headers.prepare_request(
@@ -366,12 +366,12 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 data = await data_processing.read(response, self._loads,
                                                   encoding=encoding)
 
-                return data_processing.PeonyResponse(
+                future.set_result(data_processing.PeonyResponse(
                     data=data,
                     headers=response.headers,
                     url=response.url,
                     request=req_kwargs
-                )
+                ))
             else:  # throw exception if status is not 2xx
                 await exceptions.throw(response, loads=self._loads,
                                        encoding=encoding)
@@ -440,7 +440,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
     async def run_tasks(self):
         """ Run the tasks attached to the instance """
-        await self.setup()
+        await self.setup
         tasks = self.get_tasks()
         self._gathered_tasks = asyncio.gather(*tasks, loop=self.loop)
         try:
@@ -457,24 +457,39 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         finally:
             self.close()
 
-    def close(self):
+    async def close(self):
         """ properly close the client """
-        # close the session only if it was created by peony
-        if not self._user_session:
-            try:
-                self.loop.create_task(self._session.close())
-                self._session = None
-            except (TypeError, AttributeError):
-                pass
+        tasks = []
+        # cancel setup
+        if not self.setup.done():
+            self.__setup.cancel()
+            tasks.append(self.__setup)
 
         # close currently running tasks
         if self._gathered_tasks is not None:
             try:
                 self._gathered_tasks.cancel()
 
-                self.loop.create_task(self._gathered_tasks)
+                tasks.append(self._gathered_tasks)
             except:
                 pass
+
+        # close the session only if it was created by peony
+        if not self._user_session:
+            try:
+                tasks.append(self._session.close())
+            except (TypeError, AttributeError):
+                pass
+
+        if tasks:
+            await asyncio.wait(tasks)
+            try:
+                if self._gathered_tasks is not None:
+                    raise self._gathered_tasks.exception()
+            except CancelledError:
+                pass
+
+        self._session = None
 
 
 class PeonyClient(BasePeonyClient):

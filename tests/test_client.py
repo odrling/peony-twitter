@@ -4,7 +4,7 @@ import asyncio
 import io
 import random
 import tempfile
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, patch
 
 import aiofiles
 import aiohttp
@@ -21,7 +21,9 @@ from . import Data, MockResponse, dummy, medias
 
 @pytest.fixture
 def dummy_client(event_loop):
-    return peony.BasePeonyClient("", "", loop=event_loop)
+    client = peony.BasePeonyClient("", "", loop=event_loop)
+    yield client
+    del client
 
 
 def test_create_endpoint(dummy_client):
@@ -140,7 +142,7 @@ async def test_setup(event_loop):
     client = SetupClientTest("", "", loop=event_loop)
 
     async def test():
-        await client.setup()
+        await client.setup
         assert client.a == "123"
         assert client.b == "321"
         assert client.c.data == {'hello': "world"}
@@ -186,6 +188,7 @@ async def test_tasks():
         assert all(client.tasks_tests)
 
 
+@pytest.mark.current
 @pytest.mark.asyncio
 async def test_streaming_apis(dummy_client):
     with patch.object(dummy_client, 'request', side_effect=dummy) as request:
@@ -213,11 +216,11 @@ def test_client_base_url():
 
 
 @pytest.mark.asyncio
-async def test_session_creation(dummy_client):
+async def test_session_creation(event_loop):
     with patch.object(aiohttp, 'ClientSession') as client_session:
-        await dummy_client.setup()
+        client = BasePeonyClient("", "", loop=event_loop)
+        await client.setup
         assert client_session.called
-        dummy_client._session = None
 
 
 class SetupInitListTest(BasePeonyClient):
@@ -236,7 +239,7 @@ class SetupInitListTest(BasePeonyClient):
 @pytest.mark.asyncio
 async def test_setup_init_tasks_list():
     client = SetupInitListTest("", "")
-    await client.setup()
+    await client.setup
     assert client.a == "123"
     assert client.b == "321"
 
@@ -261,24 +264,16 @@ def test_client_encoding_loads():
 @pytest.mark.asyncio
 async def test_close(event_loop):
     client = BasePeonyClient("", "", loop=event_loop)
-    await client.setup()
+    await client.setup
 
     def dummy_func(*args, **kwargs):
         pass
 
     client._gathered_tasks = asyncio.gather(dummy())
-    with patch.object(client.loop, 'create_task',
-                      side_effect=dummy_func) as create_task:
-        with patch.object(client._gathered_tasks, 'cancel') as cancel:
-            with patch.object(client._session, 'close',
-                              return_value=1) as close:
-                client.close()
-                calls = [call(1), call(client._gathered_tasks)]
-                create_task.assert_has_calls(calls, any_order=True)
-                create_task.assert_called_with(client._gathered_tasks)
-                cancel.assert_called_once_with()
-                close.assert_called_once_with()
-                assert client._session is None
+    session = client._session
+    await client.close()
+    assert session.closed
+    assert client._session is None
 
 
 def test_close_no_session():
@@ -302,9 +297,11 @@ async def test_bad_request(dummy_client):
     with patch.object(dummy_client.headers, 'prepare_request',
                       side_effect=prepare_dummy):
         with pytest.raises(exceptions.NotFound):
-            await dummy_client.request('get', "http://google.com/404")
+            await dummy_client.request('get', "http://google.com/404",
+                                       future=asyncio.Future())
 
 
+@pytest.mark.current
 def test_stream_request(dummy_client):
     # streams are tested in test_stream
     assert isinstance(dummy_client.stream.get(), stream.StreamResponse)
@@ -323,7 +320,8 @@ async def test_request_proxy(dummy_client):
                 await dummy_client.request(method='get',
                                            url="http://hello.com",
                                            proxy="http://some.proxy.com",
-                                           session=session)
+                                           session=session,
+                                           future=asyncio.Future())
             except RuntimeError as e:
                 assert str(e) == "http://some.proxy.com"
 
@@ -358,7 +356,8 @@ async def test_request_encoding(dummy_client):
                         await dummy_client.request(method='get',
                                                    url="http://hello.com",
                                                    encoding="best encoding",
-                                                   session=session)
+                                                   session=session,
+                                                   future=asyncio.Future())
                     except RuntimeError as e:
                         assert str(e) == "best encoding"
 
@@ -377,20 +376,17 @@ def test_run_exceptions_raise(event_loop):
                 client.run()
 
 
-def test_close_session(dummy_client, event_loop):
+@pytest.mark.asyncio
+async def test_close_session(dummy_client, event_loop):
     with aiohttp.ClientSession(loop=event_loop) as session:
         dummy_client._session = session
 
         def dummy_func(*args, **kwargs):
             pass
 
-        with patch.object(session, 'close', return_value=1) as close:
-            with patch.object(dummy_client.loop, 'create_task',
-                              side_effect=dummy_func) as task:
-                dummy_client.close()
-                close.assert_called_once_with()
-                task.assert_called_with(1)
-                assert dummy_client._session is None
+        await dummy_client.close()
+        assert session.closed
+        assert dummy_client._session is None
 
 
 def test_close_user_session():
@@ -461,7 +457,7 @@ class ClientCancelTasks(BasePeonyClient):
     @peony.task
     async def cancel_tasks(self):
         await asyncio.sleep(0.001)
-        self.close()
+        await self.close()
 
     @peony.task
     async def sleep(self):
@@ -478,14 +474,17 @@ async def test_close_cancel_tasks(event_loop):
 
 @pytest.fixture
 def peony_client(event_loop):
-    return PeonyClient("", "", loop=event_loop)
+    client = PeonyClient("", "", loop=event_loop)
+    yield client
+    del client
 
 
 def request_test(expected_url, expected_method):
 
-    async def request(*args, url=None, method=None, **kwargs):
+    async def request(*args, url=None, method=None, future=None, **kwargs):
         assert url == expected_url
         assert method == expected_method
+        future.set_result(True)
         return True
 
     return request
@@ -590,7 +589,7 @@ async def test_size_test_no_limit_no_config(dummy_peony_client):
 @pytest.mark.asyncio
 @pytest.mark.parametrize('input_type', ['bytes', 'file', 'path'])
 async def test_upload_media(dummy_peony_client, input_type, medias):
-    media_data = await medias['lady_peony'].download()
+    media_data = medias['lady_peony'].content
 
     if input_type == 'file':
         media = io.BytesIO(media_data)
@@ -601,7 +600,7 @@ async def test_upload_media(dummy_peony_client, input_type, medias):
     else:
         media = media_data
 
-    async def dummy_upload(url, method, data, skip_params):
+    async def dummy_upload(url, method, future, data, skip_params):
         assert url == dummy_peony_client.upload.media.upload.url()
         assert method == 'post'
         if input_type in 'file':
@@ -612,6 +611,7 @@ async def test_upload_media(dummy_peony_client, input_type, medias):
             else:
                 assert await utils.execute(data['media'].read()) == media_data
         assert skip_params is True
+        future.set_result(None)
 
     with patch.object(dummy_peony_client, 'request',
                       side_effect=dummy_upload) as req:
@@ -687,7 +687,7 @@ class DummyRequest:
         self.media_id = random.randrange(1 << 16)
         self.fail = fail
 
-    async def __call__(self, url, method,
+    async def __call__(self, url, method, future,
                        data=None, skip_params=None, params=None):
         assert url == self.client.upload.media.upload.url()
 
@@ -701,7 +701,7 @@ class DummyRequest:
             assert method == "get"
 
         if self.i == -1:
-            self.media_data = io.BytesIO(await self.media.download())
+            self.media_data = io.BytesIO(self.media.content)
             assert data == {'command': 'INIT',
                             'media_category': self.media.category,
                             'media_type': self.media.type,
@@ -734,6 +734,7 @@ class DummyRequest:
         assert skip_params is (self.i in append)
 
         self.i += 1
+        future.set_result(response)
         return response
 
     def reset(self):
@@ -778,11 +779,12 @@ async def chunked_upload(dummy_peony_client, media, file):
                 assert not metadata.called
 
 
+@pytest.mark.current
 @pytest.mark.usefixtures('medias')
 @pytest.mark.asyncio
 @pytest.mark.parametrize('media', medias.values())
 async def test_chunked_upload(dummy_peony_client, media):
-    data = io.BytesIO(await media.download())
+    data = io.BytesIO(media.content)
     await chunked_upload(dummy_peony_client, media, data)
 
 
@@ -829,11 +831,12 @@ async def test_upload_from_url(dummy_peony_client, medias, media_request):
         assert get_url == url
         return media_request
 
-    async def dummy_request(url, method, data=None, skip_params=None):
+    async def dummy_request(url, method, future, data=None, skip_params=None):
         assert url == dummy_peony_client.upload.media.upload.url()
         assert method.lower() == 'post'
         assert data['media'] == media_request.content
         assert skip_params
+        future.set_result(None)
 
     with patch.object(dummy_peony_client, '_session') as session:
         session.get = dummy_get
@@ -844,11 +847,12 @@ async def test_upload_from_url(dummy_peony_client, medias, media_request):
 
 @pytest.mark.asyncio
 async def test_upload_from_request(dummy_peony_client, media_request):
-    async def dummy_request(url, method, data=None, skip_params=None):
+    async def dummy_request(url, method, future, data=None, skip_params=None):
         assert url == dummy_peony_client.upload.media.upload.url()
         assert method.lower() == 'post'
         assert data['media'] == media_request.content
         assert skip_params
+        future.set_result(None)
 
     with patch.object(dummy_peony_client, 'request',
                       side_effect=dummy_request):

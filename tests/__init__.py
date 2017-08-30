@@ -234,5 +234,6 @@ class Data:
         return self.data()
 
 
-async def dummy(*args, **kwargs):
-    pass
+async def dummy(*args, future=None, **kwargs):
+    if future is not None:
+        future.set_result(None)

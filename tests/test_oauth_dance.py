@@ -32,10 +32,12 @@ def test_oauth2_dance(event_loop):
 
 @pytest.mark.asyncio
 async def test_get_oauth_token():
-    async def request(method, url, *args, **kwargs):
+    async def request(method, url, future, *args, **kwargs):
         assert method == 'post'
         assert url == "https://api.twitter.com/oauth/request_token"
-        return "oauth_token=abc&hello=world"
+        data = "oauth_token=abc&hello=world"
+        future.set_result(data)
+        return data
 
     with patch.object(oauth_dance.BasePeonyClient, 'request',
                       side_effect=request):
@@ -94,11 +96,13 @@ async def test_get_oauth_verifier_browser_error():
 
 @pytest.mark.asyncio
 async def test_get_access_token():
-    async def request(method, url, params, *args, **kwargs):
+    async def request(method, url, params, future, *args, **kwargs):
         assert method == 'get'
         assert url == "https://api.twitter.com/oauth/access_token"
         assert params['oauth_verifier'] == "12345"
-        return "access_token=abc&access_secret=cba"
+        data = "access_token=abc&access_secret=cba"
+        future.set_result(data)
+        return data
 
     with patch.object(oauth_dance.BasePeonyClient, 'request',
                       side_effect=request):

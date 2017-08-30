@@ -48,20 +48,12 @@ def client_oauth(key, event_loop):
 
 @pytest.fixture
 def oauth1_client(event_loop):
-    client = client_oauth(1, event_loop)
-    try:
-        yield client
-    finally:
-        client.close()
+    return client_oauth(1, event_loop)
 
 
 @pytest.fixture
 def oauth2_client(event_loop):
-    client = client_oauth(2, event_loop)
-    try:
-        yield client
-    finally:
-        client.close()
+    return client_oauth(2, event_loop)
 
 
 def decorator_oauth(key):
@@ -188,9 +180,8 @@ async def test_upload_tweet_with_media_from_url(oauth1_client, medias):
 
 
 @oauth1_decorator
-async def test_direct_message(oauth1_client, event_loop):
-    print(event_loop, oauth1_client.loop)
-    await oauth1_client.setup()  # needed to get the user
+async def test_direct_message(oauth1_client):
+    await oauth1_client.setup  # needed to get the user
     message = {
         'event': {
             'type': "message_create",

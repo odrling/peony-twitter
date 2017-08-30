@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import asyncio
 from abc import ABC, abstractmethod
 from types import GeneratorType
 
@@ -29,10 +30,13 @@ class Endpoint:
             self.api, self.method = request
 
 
-class AbstractRequest(ABC, Endpoint):
+class AbstractRequest(ABC):
     """
         A function that makes a request when called
     """
+
+    def __init__(self, *args, **kwargs):
+        pass
 
     def _get_params(self, _suffix=None, **kwargs):
         if _suffix is None:
@@ -163,36 +167,45 @@ class RequestFactory(Endpoint):
         return Request(self.api, self.method, **kwargs)
 
 
-class Request(RequestFactory, AbstractRequest):
+class Request(asyncio.Future, AbstractRequest):
 
     def __init__(self, api, method, **kwargs):
-        super().__init__(api, method)
+        super().__init__()
+        self.api = api
+        self.method = method
         self.iterator = Iterators(self)
         self.kwargs = kwargs
 
-    def __await__(self):
-        kwargs, skip_params, url = self._get_params(**self.kwargs)
+        kwargs, skip_params, url = self._get_params(**kwargs)
 
         # if user explicitly wants to skip parameters in the oauth signature
-        if '_skip_params' in self.kwargs:
-            skip_params = self.kwargs.pop('_skip_params')
+        if 'skip_params' in kwargs:
+            skip_params = kwargs.pop('skip_params')
 
-        error_handling = self.kwargs.pop('_error_handling', True)
+        error_handling = kwargs.pop('error_handling', True)
 
         kwargs.update(method=self.method, url=url, skip_params=skip_params)
 
-        client_request = self.api._client.request
+        client = self.api._client
+        request = client.request
 
-        if self.api._client.error_handler and error_handling:
-            client_request = self.api._client.error_handler(client_request)
+        if client.error_handler and error_handling:
+            request = self.api._client.error_handler(request)
 
-        return client_request(**kwargs).__await__()
+        client.loop.create_task(request(future=self, **kwargs))
+
+    def __call__(self, **kwargs):
+        return self.__class__(self.api, self.method, **kwargs)
 
 
 class StreamingRequest(AbstractRequest):
     """
         Requests to Streaming APIs
     """
+
+    def __init__(self, api, method):
+        self.api = api
+        self.method = method
 
     def __call__(self, **kwargs):
         kwargs, skip_params, url = self._get_params(**kwargs)

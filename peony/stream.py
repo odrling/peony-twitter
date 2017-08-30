@@ -81,7 +81,7 @@ class StreamResponse:
             The streaming response
         """
         logger.debug("connecting to the stream")
-        await self.client.setup()
+        await self.client.setup.early
         if self.session is None:
             self.session = self.client._session
         kwargs = await self.client.headers.prepare_request(**self.kwargs)
@@ -273,7 +273,7 @@ class StreamResponse:
         StreamResponse
             The stream iterator
         """
-        await self.client.setup()
+        await self.client.setup
         return self
 
     def __exit__(self, *args):

@@ -65,10 +65,12 @@ def test_api_request_method_post(endpoint):
     assert endpoint.post.method == 'post'
 
 
+@pytest.mark.current
 def test_api_streaming_request_method_get(streaming):
     assert streaming.endpoint.get.method == 'get'
 
 
+@pytest.mark.current
 def test_api_streaming_request_method_post(streaming):
     assert streaming.endpoint.post.method == 'post'
 

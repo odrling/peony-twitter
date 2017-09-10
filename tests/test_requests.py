@@ -61,7 +61,6 @@ def test_skip_params(api_path):
                                           url=api_path.url(), future=request)
 
 
-@pytest.mark.current
 def test_error_handling(api_path):
     client = api_path._client
     with patch.object(client, 'request', side_effect=dummy):
@@ -114,7 +113,6 @@ def dummy_error_handler(request):
     return request
 
 
-@pytest.mark.current
 def test_request_error_handler(api_path, _error_handler=True):
     client = api_path._client
     with patch.object(client, 'request', side_effect=dummy) as client_request:

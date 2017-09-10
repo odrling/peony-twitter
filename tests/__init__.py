@@ -98,6 +98,7 @@ class MockResponse:
             self.data = data
         else:
             self.data = b""
+            content_type = "text/plain"
 
         self.status = status
         self.headers = {} if headers is None else headers

@@ -23,7 +23,6 @@ from . import Data, MockResponse, dummy, medias
 def dummy_client(event_loop):
     client = peony.BasePeonyClient("", "", loop=event_loop)
     yield client
-    del client
 
 
 def test_create_endpoint(dummy_client):
@@ -188,7 +187,6 @@ async def test_tasks():
         assert all(client.tasks_tests)
 
 
-@pytest.mark.current
 @pytest.mark.asyncio
 async def test_streaming_apis(dummy_client):
     with patch.object(dummy_client, 'request', side_effect=dummy) as request:
@@ -303,7 +301,6 @@ async def test_bad_request(dummy_client):
                                        future=asyncio.Future())
 
 
-@pytest.mark.current
 def test_stream_request(dummy_client):
     # streams are tested in test_stream
     assert isinstance(dummy_client.stream.get(), stream.StreamResponse)
@@ -480,7 +477,6 @@ async def test_close_cancel_tasks(event_loop):
 def peony_client(event_loop):
     client = PeonyClient("", "", loop=event_loop)
     yield client
-    del client
 
 
 def request_test(expected_url, expected_method):
@@ -553,10 +549,11 @@ def test_add_event_stream():
 @pytest.fixture
 def dummy_peony_client(event_loop):
     client = PeonyClient("", "", loop=event_loop)
-    with patch.object(client, 'init_tasks', return_value=[]):
-        yield client
-
-    del client
+    prefix = '_PeonyClient__get_'
+    with patch.object(client, prefix + 'user', side_effect=dummy):
+        with patch.object(client, prefix + 'twitter_configuration',
+                          side_effect=dummy):
+            return client
 
 
 @pytest.mark.asyncio

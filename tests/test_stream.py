@@ -300,7 +300,6 @@ async def test_stream_context_response_already_closed(event_loop):
         assert context.response.closed
 
 
-@pytest.mark.current
 @pytest.mark.asyncio
 async def test_stream_cancel(event_loop):
     async def cancel(task):

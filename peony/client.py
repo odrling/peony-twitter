@@ -208,7 +208,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         if init_tasks:
             logger.debug("Starting init tasks")
-            await asyncio.wait(init_tasks)
+            await asyncio.gather(*init_tasks)
 
         self.setup.set_result(True)
 
@@ -464,15 +464,28 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         tasks = []
         # cancel setup
         if not self.setup.done():
-            self.__setup.cancel()
-            tasks.append(self.__setup)
+            try:
+                async def cancel_setup():
+                    self.__setup.cancel()
+                    try:
+                        await self.__setup
+                    except:
+                        pass
+                tasks.append(cancel_setup())
+            except:
+                pass
 
         # close currently running tasks
         if self._gathered_tasks is not None:
             try:
-                self._gathered_tasks.cancel()
+                async def cancel_tasks():
+                    self._gathered_tasks.cancel()
+                    try:
+                        await self._gathered_tasks
+                    except:
+                        pass
 
-                tasks.append(self._gathered_tasks)
+                tasks.append(cancel_tasks())
             except:
                 pass
 
@@ -484,12 +497,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 pass
 
         if tasks:
-            await asyncio.wait(tasks)
-            try:
-                if self._gathered_tasks is not None:
-                    raise self._gathered_tasks.exception()
-            except CancelledError:
-                pass
+            await asyncio.gather(*tasks)
 
         self._session = None
 

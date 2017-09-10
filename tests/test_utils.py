@@ -79,6 +79,27 @@ async def test_error_handler_rate_limit():
 
 
 @pytest.mark.asyncio
+async def test_error_handler_service_unavailable():
+    global tries
+    tries = 4
+
+    async def service_unavailable(**kwargs):
+        global tries
+        tries -= 1
+
+        if tries > 0:
+            response = MockResponse(status=503)
+            raise await exceptions.throw(response)
+        else:
+            return MockResponse()
+
+    with pytest.raises(exceptions.ServiceUnavailable):
+        await utils.error_handler(service_unavailable)()
+
+    await utils.error_handler(service_unavailable)()
+
+
+@pytest.mark.asyncio
 async def test_error_handler_asyncio_timeout():
     global tries
     tries = 3

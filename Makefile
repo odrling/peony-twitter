@@ -14,6 +14,7 @@ clean:
 	@rm -rf *.egg-info
 	@rm -f .installed
 	@rm -f .formatted
+	@rm -f .format_test
 	@python3 setup.py clean --all > /dev/null 2> /dev/null
 
 doc: build/html
@@ -37,8 +38,11 @@ format: .formatted
 	autoflake -r --in-place examples peony tests
 	@touch .formatted
 
-test: .installed
+.format_test: .installed peony examples tests
 	flake8
+	@touch .format_test
+
+test: .installed .format_test
 	py.test --cov=peony --cov-report term-missing --durations=20 tests
 
 release:

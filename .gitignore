@@ -67,3 +67,4 @@ target/
 # files created by make
 /.installed
 /.formatted
+/.format_test

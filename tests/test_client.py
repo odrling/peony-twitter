@@ -276,16 +276,18 @@ async def test_close(event_loop):
     assert client._session is None
 
 
-def test_close_no_session():
+@pytest.mark.asyncio
+async def test_close_no_session(event_loop):
     client = BasePeonyClient("", "")
     assert client._session is None
-    client.close()
+    await client.close()
 
 
-def test_close_no_tasks():
+@pytest.mark.asyncio
+async def test_close_no_tasks():
     client = BasePeonyClient("", "")
     assert client._gathered_tasks is None
-    client.close()
+    await client.close()
 
 
 @pytest.mark.asyncio
@@ -389,11 +391,13 @@ async def test_close_session(dummy_client, event_loop):
         assert dummy_client._session is None
 
 
-def test_close_user_session():
-    client = BasePeonyClient("", "", session=Mock())
+@pytest.mark.asyncio
+async def test_close_user_session():
+    session = Mock()
+    client = BasePeonyClient("", "", session=session)
 
-    client.close()
-    assert not client._session.close.called
+    await client.close()
+    assert not session.close.called
 
 
 class Client(peony.BasePeonyClient):
@@ -551,6 +555,8 @@ def dummy_peony_client(event_loop):
     client = PeonyClient("", "", loop=event_loop)
     with patch.object(client, 'init_tasks', return_value=[]):
         yield client
+
+    del client
 
 
 @pytest.mark.asyncio

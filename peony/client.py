@@ -308,9 +308,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
     def __del__(self):
         if self.loop.is_closed():
-            return
-
-        if self.loop.is_running():
+            pass
+        elif self.loop.is_running():
             self.loop.create_task(self.close())
         else:
             self.loop.run_until_complete(self.close())
@@ -448,14 +447,17 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         except CancelledError:
             pass
 
-    def run(self):
-        """ Run the tasks attached to the instance """
+    async def arun(self):
         try:
-            self.loop.run_until_complete(self.run_tasks())
+            await self.run_tasks()
         except KeyboardInterrupt:
             pass
         finally:
-            self.close()
+            await self.close()
+
+    def run(self):
+        """ Run the tasks attached to the instance """
+        self.loop.run_until_complete(self.arun())
 
     async def close(self):
         """ properly close the client """

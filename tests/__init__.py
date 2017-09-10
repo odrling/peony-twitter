@@ -237,3 +237,8 @@ class Data:
 async def dummy(*args, future=None, **kwargs):
     if future is not None:
         future.set_result(None)
+
+
+def async_test(func):
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(func())

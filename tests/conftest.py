@@ -6,10 +6,17 @@ import pytest
 from . import medias
 
 
+@pytest.fixture
+def event_loop():
+    return asyncio.get_event_loop()
+
+
 @pytest.fixture(name='medias')
 def fixture_medias(event_loop):
-    task = asyncio.gather(*[media.download() for media in medias.values()])
-    event_loop.run_until_complete(task)
+    with aiohttp.ClientSession(loop=event_loop) as session:
+        task = asyncio.gather(*[media.download(session=session)
+                                for media in medias.values()])
+        event_loop.run_until_complete(task)
     return medias
 
 

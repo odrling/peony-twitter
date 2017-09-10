@@ -178,8 +178,6 @@ class Request(asyncio.Future, AbstractRequest):
 
         kwargs, skip_params, url = self._get_params(**kwargs)
 
-        print(kwargs)
-
         # if user explicitly wants to skip parameters in the oauth signature
         if 'skip_params' in kwargs:
             skip_params = kwargs.pop('skip_params')

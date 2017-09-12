@@ -191,6 +191,9 @@ class Request(asyncio.Future, AbstractRequest):
 
         client.loop.create_task(request(future=self, **kwargs))
 
+    def __call__(self, **kwargs):
+        return self.__class__(self.api, self.method, **kwargs)
+
 
 class StreamingRequest(AbstractRequest):
     """

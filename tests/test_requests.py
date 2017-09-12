@@ -104,6 +104,10 @@ def test_iterator_params_from_factory(api_path):
     assert iterator.force is True
 
 
+def test_request_call(request):
+    assert isinstance(request(), requests.Request)
+
+
 def test_iterator_unknown_iterator(request):
     with pytest.raises(AttributeError):
         request.iterator.whatchamacallit()

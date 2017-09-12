@@ -35,9 +35,6 @@ class AbstractRequest(ABC):
         A function that makes a request when called
     """
 
-    def __init__(self, *args, **kwargs):
-        pass
-
     def _get_params(self, _suffix=None, **kwargs):
         if _suffix is None:
             _suffix = self.api._suffix
@@ -193,9 +190,6 @@ class Request(asyncio.Future, AbstractRequest):
             request = self.api._client.error_handler(request)
 
         client.loop.create_task(request(future=self, **kwargs))
-
-    def __call__(self, **kwargs):
-        return self.__class__(self.api, self.method, **kwargs)
 
 
 class StreamingRequest(AbstractRequest):

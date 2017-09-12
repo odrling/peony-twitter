@@ -307,7 +307,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
     __getattr__ = __getitem__
 
     def __del__(self):
-        if self.loop.is_closed():
+        if self.loop.is_closed():  # pragma: no cover
             pass
         elif self.loop.is_running():
             self.loop.create_task(self.close())
@@ -464,30 +464,25 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         tasks = []
         # cancel setup
         if not self.setup.done():
-            try:
-                async def cancel_setup():
-                    self.__setup.cancel()
-                    try:
-                        await self.__setup
-                    except:
-                        pass
-                tasks.append(cancel_setup())
-            except:
-                pass
+            async def cancel_setup():
+                self.__setup.cancel()
+                try:
+                    await self.__setup
+                except:
+                    pass
+
+            tasks.append(cancel_setup())
 
         # close currently running tasks
         if self._gathered_tasks is not None:
-            try:
-                async def cancel_tasks():
-                    self._gathered_tasks.cancel()
-                    try:
-                        await self._gathered_tasks
-                    except:
-                        pass
+            async def cancel_tasks():
+                self._gathered_tasks.cancel()
+                try:
+                    await self._gathered_tasks
+                except:
+                    pass
 
-                tasks.append(cancel_tasks())
-            except:
-                pass
+            tasks.append(cancel_tasks())
 
         # close the session only if it was created by peony
         if not self._user_session:

@@ -41,7 +41,7 @@ class Media:
         Media.cache_dir.mkdir(exist_ok=True)
 
         if self.cache.exists():
-            async with aiofiles.open(self.cache, mode='rb') as stream:
+            async with aiofiles.open(str(self.cache), mode='rb') as stream:
                 self.content = await stream.read()
                 if self.content_length == len(self.content):
                     return self.content
@@ -52,7 +52,7 @@ class Media:
         async with session.get(self.url) as response:
             print("downloading", self.filename)
             self.content = await response.read()
-            async with aiofiles.open(self.cache, mode='wb') as stream:
+            async with aiofiles.open(str(self.cache), mode='wb') as stream:
                 await stream.write(self.content)
 
             return self.content

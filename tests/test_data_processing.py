@@ -6,7 +6,7 @@ import pytest
 
 from peony import data_processing, exceptions
 
-from . import MockResponse
+from . import Media, MockResponse
 
 
 @pytest.fixture
@@ -131,37 +131,38 @@ async def test_read_json_decode_error():
         pytest.fail("Did not raise PeonyDecoderError")
 
 
-_data = None
+base_url = "https://raw.githubusercontent.com/twitterdev/tweet-updates" \
+           "/master/samples/initial/"
+
+
+class Data:
+    files = [
+        Media(filename="compatibilityplus_classic_hidden_13797.json",
+              base=base_url,
+              mimetype="application/json",
+              content_length=9238
+              ),
+        Media(filename="compatibilityplus_extended_13997.json",
+              base=base_url,
+              mimetype="application/json",
+              content_length=8478
+              )
+    ]
+
+    def __call__(self):
+        loop = asyncio.get_event_loop()
+        with aiohttp.ClientSession(loop=loop) as session:
+            coro = asyncio.gather(*(file.download(session=session)
+                                    for file in Data.files))
+            classic, extended = loop.run_until_complete(coro)
+
+        return {'classic': data_processing.loads(classic),
+                'extended': data_processing.loads(extended)}
 
 
 @pytest.fixture
-def data(event_loop):
-    global _data
-
-    if _data is None:
-
-        async def download(url):
-            async with aiohttp.ClientSession() as session:
-                async with session.get(url) as response:
-                    json_data = await response.text()
-                    return data_processing.loads(json_data)
-
-        base = "https://raw.githubusercontent.com/twitterdev/tweet-updates" \
-               "/master/samples/initial/"
-
-        urls = [
-            base + "compatibilityplus_classic_hidden_13797.json",
-            base + "compatibilityplus_extended_13997.json"
-        ]
-
-        tasks = [download(url) for url in urls]
-
-        values = event_loop.run_until_complete(asyncio.gather(*tasks))
-
-        _data = {key: value
-                 for key, value in zip(('classic', 'extended'), values)}
-
-    return _data
+def data():
+    return Data()()
 
 
 full_text = ("@jeremycloud It's neat to have owls and raccoons around "

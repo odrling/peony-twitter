@@ -94,7 +94,9 @@ async def test_error_handler_service_unavailable():
             return MockResponse()
 
     with pytest.raises(exceptions.ServiceUnavailable):
-        await utils.error_handler(service_unavailable)()
+        with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
+            await utils.error_handler(service_unavailable)()
+            assert sleep.called
 
     await utils.error_handler(service_unavailable)()
 
@@ -252,6 +254,7 @@ async def test_get_size():
     assert f.tell() == 0
 
 
+@pytest.mark.online
 @pytest.mark.asyncio
 async def test_get_size_request(media_request):
     assert await utils.get_size(media_request) == 302770

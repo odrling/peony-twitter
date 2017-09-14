@@ -5,25 +5,31 @@ import asyncio
 import inspect
 import json
 import os.path
+import pathlib
+import aiofiles
 import sys
 
-import aiohttp
+file_ = pathlib.Path(inspect.getfile(inspect.currentframe()))
+test_dir = file_.absolute().parent
 
-file_ = os.path.abspath(inspect.getfile(inspect.currentframe()))
-test_dir = os.path.dirname(file_)
-
-sys.path.insert(0, os.path.dirname(test_dir))
+sys.path.insert(0, os.path.dirname(str(test_dir)))
 
 
 class Media:
+    cache_dir = test_dir / "cache"
 
-    def __init__(self, filename, mimetype, category, content_length):
+    def __init__(self, filename, mimetype, content_length, category=None,
+                 base="http://static.odrling.xyz/peony/tests/"):
         self.filename = filename
-        self.url = "http://static.odrling.xyz/peony/tests/" + filename
+        self.url = base + filename
         self.type = mimetype
         self.category = category
         self.content = b""
         self.content_length = content_length
+
+    @property
+    def cache(self):
+        return Media.cache_dir / self.filename
 
     async def download(self, session=None, chunk=-1):
         if self.content:
@@ -31,15 +37,25 @@ class Media:
                 return self.content
             else:
                 return self.content[:chunk]
-        else:
-            if session is None:
-                async with aiohttp.ClientSession() as session:
-                    return await self.download(session, chunk)
-            else:
-                async with session.get(self.url) as response:
-                    print("downloading", self.filename)
-                    self.content = await response.read()
-                    return await self.download(chunk=chunk)
+
+        Media.cache_dir.mkdir(exist_ok=True)
+
+        if self.cache.exists():
+            async with aiofiles.open(self.cache, mode='rb') as stream:
+                self.content = await stream.read()
+                if self.content_length == len(self.content):
+                    return self.content
+
+        if session is None:
+            raise RuntimeError("No session")
+
+        async with session.get(self.url) as response:
+            print("downloading", self.filename)
+            self.content = await response.read()
+            async with aiofiles.open(self.cache, mode='wb') as stream:
+                await stream.write(self.content)
+
+            return self.content
 
     def __str__(self):
         return "<Media name={}>".format(self.filename)

@@ -826,10 +826,9 @@ async def test_chunked_upload_fail(dummy_peony_client, medias):
                 sleep.assert_called_with(5)
 
 
+@pytest.mark.online
 @pytest.mark.asyncio
-async def test_upload_from_url(dummy_peony_client, medias, media_request):
-    url = medias['lady_peony'].url
-
+async def test_upload_from_url(dummy_peony_client, medias, media_request, url):
     async def dummy_get(get_url):
         assert get_url == url
         return media_request
@@ -848,6 +847,7 @@ async def test_upload_from_url(dummy_peony_client, medias, media_request):
             await dummy_peony_client.upload_media(url)
 
 
+@pytest.mark.online
 @pytest.mark.asyncio
 async def test_upload_from_request(dummy_peony_client, media_request):
     async def dummy_request(url, method, future, data=None, skip_params=None):
@@ -862,6 +862,7 @@ async def test_upload_from_request(dummy_peony_client, media_request):
         await dummy_peony_client.upload_media(media_request)
 
 
+@pytest.mark.online
 @pytest.mark.asyncio
 async def test_upload_type_error(dummy_peony_client, media_request):
     def fail(*args, **kwargs):

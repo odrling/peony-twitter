@@ -68,3 +68,6 @@ target/
 /.installed
 /.formatted
 /.format_test
+
+# tests cache
+/tests/cache

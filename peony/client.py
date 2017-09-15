@@ -10,7 +10,7 @@ the Twitter APIs, with a method to upload a media
 import asyncio
 import io
 import logging
-from concurrent.futures import CancelledError, ProcessPoolExecutor
+from concurrent.futures import CancelledError
 from urllib.parse import urlparse
 
 import aiohttp
@@ -501,10 +501,6 @@ class PeonyClient(BasePeonyClient):
     """
         A client with some useful methods for most usages
     """
-
-    def __init__(self, *args, executor=None, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.executor = ProcessPoolExecutor() if executor is None else executor
 
     def init_tasks(self):
         tasks = super().init_tasks()

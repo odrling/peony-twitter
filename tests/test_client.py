@@ -22,7 +22,7 @@ from . import Data, MockResponse, dummy, medias
 @pytest.fixture
 def dummy_client(event_loop):
     client = peony.BasePeonyClient("", "", loop=event_loop)
-    yield client
+    return client
 
 
 def test_create_endpoint(dummy_client):
@@ -132,8 +132,9 @@ class SetupClientTest(BasePeonyClient):
     async def setup_c(self):
         data = Data({'hello': "world"})
 
-        with patch.object(data_processing, 'read', side_effect=data):
-            self.c = await self.api.test.get()
+        with patch.object(aiohttp, 'request', side_effect=dummy):
+            with patch.object(data_processing, 'read', side_effect=data):
+                self.c = await self.api.test.get()
 
 
 @pytest.mark.asyncio
@@ -158,12 +159,10 @@ class TasksClientTest(SetupClientTest):
     @peony.task
     async def task_a(self):
         self.tasks_tests[0] = True
-        await self.api.test.get()
 
     @peony.task
     async def task_b(self):
         self.tasks_tests[1] = True
-        await self.api.endpoint.post()
 
     async def not_a_task(self):
         self.tasks_tests[2] = False
@@ -476,7 +475,8 @@ async def test_close_cancel_tasks(event_loop):
 @pytest.fixture
 def peony_client(event_loop):
     client = PeonyClient("", "", loop=event_loop)
-    yield client
+    with patch.object(client, 'request', side_effect=dummy):
+        yield client
 
 
 def request_test(expected_url, expected_method):
@@ -553,7 +553,7 @@ def dummy_peony_client(event_loop):
     with patch.object(client, prefix + 'user', side_effect=dummy):
         with patch.object(client, prefix + 'twitter_configuration',
                           side_effect=dummy):
-            return client
+            yield client
 
 
 @pytest.mark.asyncio
@@ -782,7 +782,6 @@ async def chunked_upload(dummy_peony_client, media, file):
                 assert not metadata.called
 
 
-@pytest.mark.current
 @pytest.mark.usefixtures('medias')
 @pytest.mark.asyncio
 @pytest.mark.parametrize('media', medias.values())
@@ -791,20 +790,10 @@ async def test_chunked_upload(dummy_peony_client, media):
     await chunked_upload(dummy_peony_client, media, data)
 
 
-@pytest.fixture
-def media_filename(medias):
-    media = medias['bloom']
-
-    with tempfile.NamedTemporaryFile() as file:
-        file.write(media.content)
-        yield media, file.name
-
-
 @pytest.mark.asyncio
-async def test_chunked_upload_async_input(dummy_peony_client, media_filename):
-    media, filename = media_filename
-    async with aiofiles.open(filename, 'rb') as aiofile:
-        await chunked_upload(dummy_peony_client, media, aiofile)
+async def test_chunked_upload_async_input(dummy_peony_client, medias):
+    async with aiofiles.open(str(medias['bloom'].cache), 'rb') as aiofile:
+        await chunked_upload(dummy_peony_client, medias['bloom'], aiofile)
 
 
 @pytest.mark.asyncio

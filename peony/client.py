@@ -373,7 +373,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 ))
             else:  # throw exception if status is not 2xx
                 await exceptions.throw(response, loads=self._loads,
-                                       encoding=encoding)
+                                       encoding=encoding, url=url)
 
     def stream_request(self, method, url, headers=None, _session=None,
                        *args, **kwargs):

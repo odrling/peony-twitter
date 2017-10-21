@@ -41,7 +41,8 @@ async def throw(response, loads=None, encoding=None, **kwargs):
 class PeonyException(Exception):
     """ Parent class of all the exceptions of Peony """
 
-    def __init__(self, response=None, error=None, data=None, message=None):
+    def __init__(self, response=None, error=None, data=None, url=None,
+                 message=None):
         """
             Add the response and data attributes
 
@@ -53,6 +54,9 @@ class PeonyException(Exception):
 
         if not message:
             message = self.get_message()
+
+        if url:
+            message += "\nurl: " + url
 
         super().__init__(message)
 
@@ -108,9 +112,7 @@ class NotAuthenticated(PeonyException):
 
 @errors.code(34)
 class DoesNotExist(PeonyException):
-
-    def get_message(self):
-        return super().get_message() + "\n(%s)" % self.url
+    pass
 
 
 @errors.code(64)
@@ -259,9 +261,7 @@ class Forbidden(PeonyException):
 
 @statuses.code(404)
 class NotFound(PeonyException):
-
-    def get_message(self):
-        return super().get_message() + "\nurl: %s" % self.url
+    pass
 
 
 @statuses.code(406)

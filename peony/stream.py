@@ -119,7 +119,8 @@ class StreamResponse:
         else:
             logger.debug("raising error during stream connection")
             raise await exceptions.throw(self.response,
-                                         loads=self.client._loads)
+                                         loads=self.client._loads,
+                                         url=self.kwargs['url'])
 
         logger.debug("stream state: %d" % self.state)
 

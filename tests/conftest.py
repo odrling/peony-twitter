@@ -1,5 +1,6 @@
 import asyncio
 import inspect
+import os
 import pathlib
 import socket
 
@@ -21,7 +22,12 @@ def event_loop():
 
 @pytest.fixture(name='medias')
 def fixture_medias(event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
+    if os.environ.get('FORCE_IPV4', False):
+        connector = aiohttp.TCPConnector(family=socket.AF_INET)
+    else:
+        connector = aiohttp.TCPConnector()
+    with aiohttp.ClientSession(loop=event_loop,
+                               connector=connector) as session:
         task = asyncio.gather(*[media.download(session=session)
                                 for media in medias.values()])
         event_loop.run_until_complete(task)

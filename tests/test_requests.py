@@ -16,7 +16,8 @@ url = "http://whatever.com/endpoint.json"
 @pytest.fixture
 def api_path():
     client = BasePeonyClient("", "", loop=asyncio.get_event_loop())
-    return APIPath(['http://whatever.com', 'endpoint'], '.json', client)
+    with patch.object(client, 'request', side_effect=dummy):
+        yield APIPath(['http://whatever.com', 'endpoint'], '.json', client)
 
 
 @pytest.fixture
@@ -47,8 +48,7 @@ def test_sanitize_params_skip(request):
 
 def test_skip_params(api_path):
     client = api_path._client
-    with patch.object(client, 'request',
-                      side_effect=dummy) as client_request:
+    with patch.object(client, 'request', side_effect=dummy) as client_request:
         request = requests.Request(api_path, 'get', _skip_params=False)
         client.loop.run_until_complete(request)
         client_request.assert_called_with(method='get', skip_params=False,

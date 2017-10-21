@@ -639,7 +639,7 @@ class PeonyClient(BasePeonyClient):
             else:
                 try:
                     size_limit = self.twitter_configuration['photo_size_limit']
-                except KeyError:
+                except (KeyError, TypeError):
                     return False
 
         return size > size_limit

@@ -553,7 +553,8 @@ def dummy_peony_client(event_loop):
     with patch.object(client, prefix + 'user', side_effect=dummy):
         with patch.object(client, prefix + 'twitter_configuration',
                           side_effect=dummy):
-            yield client
+            with patch.object(client, 'request', side_effect=dummy):
+                yield client
 
 
 @pytest.mark.asyncio

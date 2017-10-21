@@ -87,3 +87,12 @@ def test_custom_peony_exception_message():
         exceptions.PeonyException(message=MockResponse.message)
     except exceptions.PeonyException as e:
         assert str(e) == MockResponse.message
+
+
+def test_exception_url():
+    try:
+        exceptions.PeonyException(message=MockResponse.message,
+                                  url="http://whatever.com")
+    except exceptions.PeonyException as e:
+        assert e.url == "http://whatever.com"
+        assert str(e).endswith(e.url)

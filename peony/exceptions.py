@@ -51,6 +51,7 @@ class PeonyException(Exception):
         self.response = response
         self.data = data
         self.error = error
+        self.url = url
 
         if not message:
             message = self.get_message()
@@ -65,10 +66,6 @@ class PeonyException(Exception):
             return self.error.get('message', self.error)
 
         return str(self.data)
-
-    @property
-    def url(self):
-        return self.response.url
 
 
 class PeonyDecodeError(PeonyException):

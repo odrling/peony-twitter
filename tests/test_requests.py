@@ -26,14 +26,14 @@ def request(api_path):
 
 
 def test_sanitize_params(request):
-    l = [1, 2, 3]
+    val = [1, 2, 3]
     kwargs, skip_params = request.sanitize_params('get', _test=1, boom=0,
-                                                  test=True, l=l, a=None,
+                                                  test=True, val=val, a=None,
                                                   text="aaa")
 
     assert kwargs == {'test': 1, 'params': {'boom': '0',
                                             'test': "true",
-                                            'l': "1,2,3",
+                                            'val': "1,2,3",
                                             'text': "aaa"}}
     assert skip_params is False
 

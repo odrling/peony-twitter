@@ -151,7 +151,7 @@ def test_oauth1_sign_skip_params(oauth1_headers, headers, key):
             'method': 'POST',
             'url': "http://whatever.com",
             key: {'hello': "world"},
-            'skip_params':  True,
+            'skip_params': True,
             'headers': headers
         }
         headers = oauth1_headers.sign(**kwargs)

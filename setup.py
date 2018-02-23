@@ -9,8 +9,8 @@ import sys
 from setuptools import find_packages, setup
 
 
-def get_metadata(metadatafile):
-    with open(metadatafile) as stream:
+def get_metadata(metadata_file):
+    with open(metadata_file) as stream:
         text = stream.read()
 
         ex = r"__(\w*?)__\s*?=\s*?[\"\']([^\"\']*)"
@@ -47,10 +47,10 @@ def main():
     dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
 
     # get metadata and keywords from peony/__init__.py
-    metadata = get_metadata(os.path.join(dirname, 'peony', '__init__.py'))
+    kwargs = get_metadata(os.path.join(dirname, 'peony', '__init__.py'))
 
     # get requirements from requirements.txt
-    requires = get_requirements(os.path.join(dirname, 'requirements.txt'))
+    kwargs.update(get_requirements(os.path.join(dirname, 'requirements.txt')))
 
     # get extras requirements from extras_require.txt
     extras = os.path.join(dirname, 'extras_require.txt')
@@ -60,13 +60,10 @@ def main():
     with open('README.rst') as stream:
         long_description = stream.read()
 
-    setup(
-        long_description=long_description,
-        packages=find_packages(include=["peony*"]),
-        **metadata,
-        **requires,
-        extras_require=extras_require
-    )
+    setup(long_description=long_description,
+          packages=find_packages(include=["peony*"]),
+          extras_require=extras_require,
+          **kwargs)
 
 
 if __name__ == '__main__':

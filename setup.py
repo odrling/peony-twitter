@@ -63,6 +63,7 @@ def main():
     setup(long_description=long_description,
           packages=find_packages(include=["peony*"]),
           extras_require=extras_require,
+          python_requires='>=3.5.0',
           **kwargs)
 
 

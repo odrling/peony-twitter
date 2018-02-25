@@ -71,3 +71,4 @@ target/
 
 # tests cache
 /tests/cache
+.pytest_cache

@@ -6,6 +6,7 @@ import sys
 from concurrent.futures import CancelledError
 
 import aiohttp
+import async_timeout
 
 from . import data_processing, exceptions, utils
 from .exceptions import StreamLimit
@@ -104,7 +105,7 @@ class StreamResponse:
             Also on statuses in 1xx or 3xx since this should not be the status
             received here
         """
-        with aiohttp.Timeout(self.timeout):
+        with async_timeout.timeout(self.timeout):
             self.response = await self._connect()
 
         if self.response.status in range(200, 300):
@@ -153,7 +154,7 @@ class StreamResponse:
                     return await self.init_restart()
 
             while not line:
-                with aiohttp.Timeout(90):
+                with async_timeout.timeout(90):
                     line = await self.response.content.readline()
                     line = line.strip(b'\r\n')
                     logger.debug("received data: %s" % line)

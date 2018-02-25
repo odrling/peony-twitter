@@ -27,8 +27,8 @@ build/html: docs
 install: .installed
 
 .installed: dev_requirements.txt tests_requirements.txt requirements.txt
-	@pip3 install --upgrade pip wheel
-	@pip3 install --upgrade -r dev_requirements.txt
+	pip3 install --upgrade pip wheel
+	pip3 install --upgrade -r dev_requirements.txt
 	@touch .installed
 
 format: .formatted

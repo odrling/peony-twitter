@@ -4,6 +4,7 @@ import json
 from unittest.mock import patch
 
 import aiohttp
+import async_timeout
 import pytest
 
 import peony
@@ -25,31 +26,40 @@ async def stream_content(*args, **kwargs):
     return MockResponse(data=data, status=200)
 
 
-@pytest.fixture
-def stream(event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
-        client = peony.client.BasePeonyClient("", "", session=session)
+class Stream:
 
-        stream_response = peony.stream.StreamResponse(
-            client=client,
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        self.client = peony.client.BasePeonyClient("", "",
+                                                   session=self.session)
+
+        self.patch = patch.object(self.session, 'request',
+                                  side_effect=stream_content)
+        self.patch.__enter__()
+
+        return peony.stream.StreamResponse(
+            client=self.client,
             method='get',
             url="http://whatever.com/stream"
         )
 
-        with patch.object(session, 'request', side_effect=stream_content):
-            yield stream_response
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.patch.__exit__()
+        await self.session.close()
+        await self.client.close()
 
 
 @pytest.mark.asyncio
-async def test_stream_connect(stream):
-    response = await stream._connect()
-    assert data == await response.text()
+async def test_stream_connect():
+    async with Stream() as stream:
+        response = await stream._connect()
+        assert data == await response.text()
 
 
 @pytest.mark.asyncio
-async def test_stream_connect_with_session(event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
-        client = peony.client.BasePeonyClient("", "", session=session)
+async def test_stream_connect_with_session():
+    async with aiohttp.ClientSession() as session:
+        client = peony.client.BasePeonyClient("", "")
 
         stream = peony.stream.StreamResponse(
             client=client,
@@ -63,8 +73,7 @@ async def test_stream_connect_with_session(event_loop):
             assert data == await response.text()
 
 
-@pytest.mark.asyncio
-async def test_stream_iteration(stream):
+async def _stream_iteration(stream):
     async def stop(*args, **kwargs):
         raise StopAsyncIteration
 
@@ -78,6 +87,12 @@ async def test_stream_iteration(stream):
             else:
                 assert line['text'] == MockResponse.message + " #%d" % i
                 i += 1
+
+
+@pytest.mark.asyncio
+async def test_stream_iteration():
+    async with Stream() as stream:
+        await _stream_iteration(stream)
 
 
 async def response_disconnection():
@@ -101,162 +116,185 @@ async def response_stream_limit():
 
 
 @pytest.mark.asyncio
-async def test_stream_reconnection_disconnection(stream):
+async def test_stream_reconnection_disconnection():
     async def dummy(*args, **kwargs):
         pass
 
     turn = -1
 
-    with patch.object(stream, '_connect', side_effect=response_disconnection):
-        with patch.object(peony.stream.asyncio, 'sleep', side_effect=dummy):
-            async for data in stream:
-                assert stream._state == DISCONNECTION
-                turn += 1
+    async with Stream() as stream:
+        with patch.object(stream, '_connect',
+                          side_effect=response_disconnection):
+            with patch.object(peony.stream.asyncio, 'sleep',
+                              side_effect=dummy):
+                async for data in stream:
+                    assert stream._state == DISCONNECTION
+                    turn += 1
 
-                if turn == 0:
-                    assert data == {'connected': True}
-                elif turn % 2 == 1:
-                    timeout = DISCONNECTION_TIMEOUT * (turn + 1) / 2
+                    if turn == 0:
+                        assert data == {'connected': True}
+                    elif turn % 2 == 1:
+                        timeout = DISCONNECTION_TIMEOUT * (turn + 1) / 2
 
-                    if timeout > MAX_DISCONNECTION_TIMEOUT:
-                        actual = data['reconnecting_in']
-                        assert actual == MAX_DISCONNECTION_TIMEOUT
+                        if timeout > MAX_DISCONNECTION_TIMEOUT:
+                            actual = data['reconnecting_in']
+                            assert actual == MAX_DISCONNECTION_TIMEOUT
+                            break
+
+                        assert data == {'reconnecting_in': timeout,
+                                        'error': None}
+                    else:
+                        assert data == {'stream_restart': True}
+
+
+@pytest.mark.asyncio
+async def test_stream_reconnection_reconnect():
+    async def dummy(*args, **kwargs):
+        pass
+
+    turn = -1
+
+    async with Stream() as stream:
+        with patch.object(stream, '_connect',
+                          side_effect=response_reconnection):
+            with patch.object(peony.stream.asyncio, 'sleep',
+                              side_effect=dummy):
+                async for data in stream:
+                    assert stream._state == RECONNECTION
+                    turn += 1
+
+                    if turn == 0:
+                        assert data == {'connected': True}
+                    elif turn % 2 == 1:
+                        timeout = RECONNECTION_TIMEOUT * 2**(turn // 2)
+
+                        if timeout > MAX_RECONNECTION_TIMEOUT:
+                            actual = data['reconnecting_in']
+                            assert actual == MAX_RECONNECTION_TIMEOUT
+                            break
+
+                        assert data == {'reconnecting_in': timeout,
+                                        'error': None}
+                    else:
+                        assert data == {'stream_restart': True}
+
+
+@pytest.mark.asyncio
+async def test_stream_reconnection_enhance_your_calm():
+    async def dummy(*args, **kwargs):
+        pass
+
+    turn = -1
+
+    async with Stream() as stream:
+        with patch.object(stream, '_connect', side_effect=response_calm):
+            with patch.object(peony.stream.asyncio, 'sleep',
+                              side_effect=dummy):
+                async for data in stream:
+                    assert stream._state == ENHANCE_YOUR_CALM
+                    turn += 1
+
+                    if turn >= 100:
                         break
 
-                    assert data == {'reconnecting_in': timeout, 'error': None}
-                else:
-                    assert data == {'stream_restart': True}
+                    if turn == 0:
+                        assert data == {'connected': True}
+                    elif turn % 2 == 1:
+                        timeout = ENHANCE_YOUR_CALM_TIMEOUT * 2**(turn // 2)
+                        assert data == {'reconnecting_in': timeout,
+                                        'error': None}
+                    else:
+                        assert data == {'stream_restart': True}
 
 
 @pytest.mark.asyncio
-async def test_stream_reconnection_reconnect(stream):
-    async def dummy(*args, **kwargs):
-        pass
-
-    turn = -1
-
-    with patch.object(stream, '_connect', side_effect=response_reconnection):
-        with patch.object(peony.stream.asyncio, 'sleep', side_effect=dummy):
-            async for data in stream:
-                assert stream._state == RECONNECTION
-                turn += 1
-
-                if turn == 0:
-                    assert data == {'connected': True}
-                elif turn % 2 == 1:
-                    timeout = RECONNECTION_TIMEOUT * 2**(turn // 2)
-
-                    if timeout > MAX_RECONNECTION_TIMEOUT:
-                        actual = data['reconnecting_in']
-                        assert actual == MAX_RECONNECTION_TIMEOUT
-                        break
-
-                    assert data == {'reconnecting_in': timeout, 'error': None}
-                else:
-                    assert data == {'stream_restart': True}
+async def test_stream_reconnection_error():
+    async with Stream() as stream:
+        with patch.object(stream, '_connect', side_effect=response_forbidden):
+            with pytest.raises(exceptions.Forbidden):
+                await stream.connect()
 
 
 @pytest.mark.asyncio
-async def test_stream_reconnection_enhance_your_calm(stream):
-    async def dummy(*args, **kwargs):
-        pass
+async def test_stream_reconnection_stream_limit():
+    async with Stream() as stream:
+        with patch.object(stream, '_connect',
+                          side_effect=response_stream_limit):
+            assert stream._state == NORMAL
+            data = await stream.__anext__()
+            assert 'connected' in data
 
-    turn = -1
-
-    with patch.object(stream, '_connect', side_effect=response_calm):
-        with patch.object(peony.stream.asyncio, 'sleep', side_effect=dummy):
-            async for data in stream:
-                assert stream._state == ENHANCE_YOUR_CALM
-                turn += 1
-
-                if turn >= 100:
-                    break
-
-                if turn == 0:
-                    assert data == {'connected': True}
-                elif turn % 2 == 1:
-                    timeout = ENHANCE_YOUR_CALM_TIMEOUT * 2**(turn // 2)
-                    assert data == {'reconnecting_in': timeout, 'error': None}
-                else:
-                    assert data == {'stream_restart': True}
+            data = await stream.__anext__()
+            assert stream.state == ERROR
+            assert data['reconnecting_in'] == ERROR_TIMEOUT
+            assert isinstance(data['error'], exceptions.StreamLimit)
 
 
 @pytest.mark.asyncio
-async def test_stream_reconnection_error(stream):
-    with patch.object(stream, '_connect', side_effect=response_forbidden):
-        with pytest.raises(exceptions.Forbidden):
+async def test_stream_reconnection_error_on_reconnection():
+    async with Stream() as stream:
+        with patch.object(stream, '_connect',
+                          side_effect=response_disconnection):
             await stream.connect()
+            assert stream._state == DISCONNECTION
+            data = {'reconnecting_in': DISCONNECTION_TIMEOUT,
+                    'error': None}
+            assert data == await stream.__anext__()
+            assert stream._reconnecting
+
+        with patch.object(stream, '_connect', side_effect=response_calm):
+            stream._error_timeout = 0
+            assert {'stream_restart': True} == await stream.__anext__()
+            assert stream._state == ENHANCE_YOUR_CALM
+
+            data = {'reconnecting_in': ENHANCE_YOUR_CALM_TIMEOUT,
+                    'error': None}
+            assert data == await stream.__anext__()
 
 
 @pytest.mark.asyncio
-async def test_stream_reconnection_stream_limit(stream):
-    with patch.object(stream, '_connect', side_effect=response_stream_limit):
-        assert stream._state == NORMAL
-        data = await stream.__anext__()
-        assert 'connected' in data
-
-        data = await stream.__anext__()
-        assert stream.state == ERROR
-        assert data['reconnecting_in'] == ERROR_TIMEOUT
-        assert isinstance(data['error'], exceptions.StreamLimit)
+async def test_stream_init_restart_wrong_state():
+    async with Stream() as stream:
+        stream.state = peony.stream.NORMAL
+        with pytest.raises(RuntimeError):
+            await stream.init_restart()
 
 
 @pytest.mark.asyncio
-async def test_stream_reconnection_error_on_reconnection(stream):
-    with patch.object(stream, '_connect', side_effect=response_disconnection):
-        await stream.connect()
-        assert stream._state == DISCONNECTION
-        data = {'reconnecting_in': DISCONNECTION_TIMEOUT, 'error': None}
-        assert data == await stream.__anext__()
-        assert stream._reconnecting
+async def test_stream_reconnection_handled_errors():
+    async with Stream() as stream:
+        async def handled_error():
+            raise peony.stream.HandledErrors[0]
 
-    with patch.object(stream, '_connect', side_effect=response_calm):
-        stream._error_timeout = 0
-        assert {'stream_restart': True} == await stream.__anext__()
-        assert stream._state == ENHANCE_YOUR_CALM
-
-        data = {'reconnecting_in': ENHANCE_YOUR_CALM_TIMEOUT, 'error': None}
-        assert data == await stream.__anext__()
-
-
-@pytest.mark.asyncio
-async def test_stream_init_restart_wrong_state(stream):
-    stream.state = peony.stream.NORMAL
-    with pytest.raises(RuntimeError):
-        await stream.init_restart()
-
-
-@pytest.mark.asyncio
-async def test_stream_reconnection_handled_errors(stream):
-    async def handled_error():
-        raise peony.stream.HandledErrors[0]
-
-    with patch.object(stream, '_connect', side_effect=stream_content):
-        data = await stream.__anext__()
-        assert 'connected' in data
-        with patch.object(stream.response, 'readline',
-                          side_effect=handled_error):
+        with patch.object(stream, '_connect', side_effect=stream_content):
             data = await stream.__anext__()
-            assert data == {'reconnecting_in': ERROR_TIMEOUT, 'error': None}
+            assert 'connected' in data
+            with patch.object(stream.response, 'readline',
+                              side_effect=handled_error):
+                data = await stream.__anext__()
+                assert data == {'reconnecting_in': ERROR_TIMEOUT,
+                                'error': None}
 
 
 @pytest.mark.asyncio
-async def test_stream_reconnection_client_connection_error(stream):
-    async def client_connection_error():
-        raise aiohttp.ClientConnectionError
+async def test_stream_reconnection_client_connection_error():
+    async with Stream() as stream:
+        async def client_connection_error():
+            raise aiohttp.ClientConnectionError
 
-    with patch.object(stream, '_connect', side_effect=stream_content):
-        data = await stream.__anext__()
-        assert 'connected' in data
-        with patch.object(stream.response, 'readline',
-                          side_effect=client_connection_error):
+        with patch.object(stream, '_connect', side_effect=stream_content):
             data = await stream.__anext__()
-            assert data == {'reconnecting_in': ERROR_TIMEOUT, 'error': None}
+            assert 'connected' in data
+            with patch.object(stream.response, 'readline',
+                              side_effect=client_connection_error):
+                data = await stream.__anext__()
+                assert data == {'reconnecting_in': ERROR_TIMEOUT,
+                                'error': None}
 
 
 @pytest.mark.asyncio
-async def test_stream_async_context(event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
+async def test_stream_async_context():
+    async with aiohttp.ClientSession() as session:
         client = peony.client.BasePeonyClient("", "", session=session)
         context = peony.stream.StreamResponse(method='GET',
                                               url="http://whatever.com/stream",
@@ -264,14 +302,14 @@ async def test_stream_async_context(event_loop):
 
         async with context as stream:
             with patch.object(stream, '_connect', side_effect=stream_content):
-                await test_stream_iteration(stream)
+                await _stream_iteration(stream)
 
         assert context.response.closed
 
 
 @pytest.mark.asyncio
-async def test_stream_context(event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
+async def test_stream_context():
+    async with aiohttp.ClientSession() as session:
         client = peony.client.BasePeonyClient("", "", session=session)
         context = peony.stream.StreamResponse(method='GET',
                                               url="http://whatever.com/stream",
@@ -279,14 +317,14 @@ async def test_stream_context(event_loop):
 
         with context as stream:
             with patch.object(stream, '_connect', side_effect=stream_content):
-                await test_stream_iteration(stream)
+                await _stream_iteration(stream)
 
         assert context.response.closed
 
 
 @pytest.mark.asyncio
-async def test_stream_context_response_already_closed(event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
+async def test_stream_context_response_already_closed():
+    async with aiohttp.ClientSession() as session:
         client = peony.client.BasePeonyClient("", "", session=session)
         context = peony.stream.StreamResponse(method='GET',
                                               url="http://whatever.com/stream",
@@ -294,7 +332,7 @@ async def test_stream_context_response_already_closed(event_loop):
 
         with context as stream:
             with patch.object(stream, '_connect', side_effect=stream_content):
-                await test_stream_iteration(stream)
+                await _stream_iteration(stream)
                 stream.response.close()
 
         assert context.response.closed
@@ -307,10 +345,11 @@ async def test_stream_cancel(event_loop):
         task.cancel()
 
     async def test_stream_iterations(stream):
-        while True:
-            await test_stream_iteration(stream)
+        async with async_timeout.timeout(0.5):
+            while True:
+                await _stream_iteration(stream)
 
-    with aiohttp.ClientSession(loop=event_loop) as session:
+    async with aiohttp.ClientSession() as session:
         client = peony.client.BasePeonyClient("", "", session=session)
         context = peony.stream.StreamResponse(method='GET',
                                               url="http://whatever.com",
@@ -323,13 +362,13 @@ async def test_stream_cancel(event_loop):
                 task = event_loop.create_task(coro)
                 cancel_task = event_loop.create_task(cancel(task))
 
-                with aiohttp.Timeout(1):
+                with async_timeout.timeout(1):
                     await asyncio.wait([task, cancel_task])
 
 
 @pytest.mark.asyncio
-async def test_stream_context_no_response(event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
+async def test_stream_context_no_response():
+    async with aiohttp.ClientSession() as session:
         client = peony.client.BasePeonyClient("", "", session=session)
         stream = peony.stream.StreamResponse(method='GET',
                                              url="http://whatever.com/stream",

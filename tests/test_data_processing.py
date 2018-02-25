@@ -149,20 +149,18 @@ class Data:
               )
     ]
 
-    def __call__(self):
-        loop = asyncio.get_event_loop()
-        with aiohttp.ClientSession(loop=loop) as session:
-            coro = asyncio.gather(*(file.download(session=session)
-                                    for file in Data.files))
-            classic, extended = loop.run_until_complete(coro)
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+
+        coro = asyncio.gather(*(file.download(session=self.session)
+                                for file in Data.files))
+        classic, extended = await coro
 
         return {'classic': data_processing.loads(classic),
                 'extended': data_processing.loads(extended)}
 
-
-@pytest.fixture
-def data():
-    return Data()()
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.session.close()
 
 
 full_text = ("@jeremycloud It's neat to have owls and raccoons around "
@@ -171,18 +169,20 @@ full_text = ("@jeremycloud It's neat to have owls and raccoons around "
 
 
 @pytest.mark.asyncio
-async def test_json_data_extended_entities(data):
-    assert data['classic'].truncated
-    assert data['classic'].extended_tweet
-    assert data['classic'].text == full_text
-    assert data['classic'].text == data['classic'].get('text')
-    assert 'display_text_range' in data['classic']
-    assert data['classic'].geo is None
+async def test_json_data_extended_entities():
+    async with Data() as data:
+        assert data['classic'].truncated
+        assert data['classic'].extended_tweet
+        assert data['classic'].text == full_text
+        assert data['classic'].text == data['classic'].get('text')
+        assert 'display_text_range' in data['classic']
+        assert data['classic'].geo is None
 
 
 @pytest.mark.asyncio
-async def test_json_data_full_text(data):
-    assert not data['extended'].truncated
-    assert data['extended'].text == full_text
-    assert data['extended'].text == data['extended'].get('text')
-    assert data['extended'].geo is None
+async def test_json_data_full_text():
+    async with Data() as data:
+        assert not data['extended'].truncated
+        assert data['extended'].text == full_text
+        assert data['extended'].text == data['extended'].get('text')
+        assert data['extended'].geo is None

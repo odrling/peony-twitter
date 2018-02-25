@@ -256,8 +256,10 @@ async def test_get_size():
 
 @pytest.mark.online
 @pytest.mark.asyncio
-async def test_get_size_request(media_request):
-    assert await utils.get_size(media_request) == 302770
+async def test_get_size_request(url):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as req:
+            assert await utils.get_size(req) == 302770
 
 
 @pytest.mark.asyncio

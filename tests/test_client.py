@@ -375,8 +375,8 @@ def test_run_exceptions_raise(event_loop):
 
 
 @pytest.mark.asyncio
-async def test_close_session(dummy_client, event_loop):
-    with aiohttp.ClientSession(loop=event_loop) as session:
+async def test_close_session(dummy_client):
+    async with aiohttp.ClientSession() as session:
         dummy_client._session = session
 
         def dummy_func(*args, **kwargs):
@@ -816,49 +816,70 @@ async def test_chunked_upload_fail(dummy_peony_client, medias):
                 sleep.assert_called_with(5)
 
 
+class MediaRequest:
+
+    def __init__(self, url):
+        self.url = url
+
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        self.req = await self.session.get(self.url)
+
+        return self.req
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        self.req.close()
+        await self.session.close()
+
+
 @pytest.mark.online
 @pytest.mark.asyncio
-async def test_upload_from_url(dummy_peony_client, medias, media_request, url):
-    async def dummy_get(get_url):
-        assert get_url == url
-        return media_request
+async def test_upload_from_url(dummy_peony_client, url):
+    async with MediaRequest(url) as media_request:
+        async def dummy_get(get_url):
+            assert get_url == url
+            return media_request
 
-    async def dummy_request(url, method, future, data=None, skip_params=None):
-        assert url == dummy_peony_client.upload.media.upload.url()
-        assert method.lower() == 'post'
-        assert data['media'] == media_request.content
-        assert skip_params
-        future.set_result(None)
+        async def dummy_request(url, method, future, data=None,
+                                skip_params=None):
+            assert url == dummy_peony_client.upload.media.upload.url()
+            assert method.lower() == 'post'
+            assert data['media'] == media_request.content
+            assert skip_params
+            future.set_result(None)
 
-    with patch.object(dummy_peony_client, '_session') as session:
-        session.get = dummy_get
+        with patch.object(dummy_peony_client, '_session') as session:
+            session.get = dummy_get
+            with patch.object(dummy_peony_client, 'request',
+                              side_effect=dummy_request):
+                await dummy_peony_client.upload_media(url)
+
+
+@pytest.mark.online
+@pytest.mark.asyncio
+async def test_upload_from_request(dummy_peony_client, url):
+    async with MediaRequest(url) as media_request:
+        async def dummy_request(url, method, future, data=None,
+                                skip_params=None):
+            assert url == dummy_peony_client.upload.media.upload.url()
+            assert method.lower() == 'post'
+            assert data['media'] == media_request.content
+            assert skip_params
+            future.set_result(None)
+
         with patch.object(dummy_peony_client, 'request',
                           side_effect=dummy_request):
-            await dummy_peony_client.upload_media(url)
+            await dummy_peony_client.upload_media(media_request)
 
 
 @pytest.mark.online
 @pytest.mark.asyncio
-async def test_upload_from_request(dummy_peony_client, media_request):
-    async def dummy_request(url, method, future, data=None, skip_params=None):
-        assert url == dummy_peony_client.upload.media.upload.url()
-        assert method.lower() == 'post'
-        assert data['media'] == media_request.content
-        assert skip_params
-        future.set_result(None)
+async def test_upload_type_error(dummy_peony_client, url):
+    async with MediaRequest(url) as media_request:
+        def fail(*args, **kwargs):
+            pytest.fail("Did not raise TypeError")
 
-    with patch.object(dummy_peony_client, 'request',
-                      side_effect=dummy_request):
-        await dummy_peony_client.upload_media(media_request)
-
-
-@pytest.mark.online
-@pytest.mark.asyncio
-async def test_upload_type_error(dummy_peony_client, media_request):
-    def fail(*args, **kwargs):
-        pytest.fail("Did not raise TypeError")
-
-    with pytest.raises(TypeError):
-        with patch.object(dummy_peony_client, 'request', side_effect=fail):
-            await dummy_peony_client.upload_media(media_request.content,
-                                                  chunked=True)
+        with pytest.raises(TypeError):
+            with patch.object(dummy_peony_client, 'request', side_effect=fail):
+                await dummy_peony_client.upload_media(media_request.content,
+                                                      chunked=True)

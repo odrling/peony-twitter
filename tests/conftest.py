@@ -26,12 +26,14 @@ def fixture_medias(event_loop):
         connector = aiohttp.TCPConnector(family=socket.AF_INET)
     else:
         connector = aiohttp.TCPConnector()
-    with aiohttp.ClientSession(loop=event_loop,
-                               connector=connector) as session:
-        task = asyncio.gather(*[media.download(session=session)
-                                for media in medias.values()])
-        event_loop.run_until_complete(task)
 
+    async def download():
+        async with aiohttp.ClientSession(loop=event_loop,
+                                         connector=connector) as session:
+            await asyncio.gather(*[media.download(session=session)
+                                   for media in medias.values()])
+
+    event_loop.run_until_complete(download())
     return medias
 
 
@@ -83,11 +85,3 @@ def port(event_loop):
 @pytest.fixture
 def url(medias, port):
     return "http://127.0.0.1:%d/%s" % (port, medias['lady_peony'].filename)
-
-
-@pytest.fixture
-def media_request(event_loop, url):
-    with aiohttp.ClientSession(loop=event_loop) as session:
-        req = session.get(url)
-        yield event_loop.run_until_complete(req)
-        req.close()

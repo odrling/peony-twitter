@@ -14,9 +14,8 @@ from functools import wraps
 from unittest.mock import patch
 
 import aiohttp
-import pytest
-
 import peony
+import pytest
 from peony import data_processing, exceptions, utils
 
 from . import MockResponse, dummy

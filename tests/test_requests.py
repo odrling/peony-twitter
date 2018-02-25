@@ -4,7 +4,6 @@ import io
 from unittest.mock import patch
 
 import pytest
-
 from peony import BasePeonyClient, iterators, requests
 from peony.api import APIPath
 

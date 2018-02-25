@@ -8,10 +8,9 @@ from unittest.mock import Mock, patch
 
 import aiofiles
 import aiohttp
-import pytest
-
 import peony
 import peony.api
+import pytest
 from peony import (BasePeonyClient, PeonyClient, data_processing, exceptions,
                    oauth, stream, utils)
 from peony.general import twitter_api_version, twitter_base_api_url
@@ -883,3 +882,15 @@ async def test_upload_type_error(dummy_peony_client, url):
             with patch.object(dummy_peony_client, 'request', side_effect=fail):
                 await dummy_peony_client.upload_media(media_request.content,
                                                       chunked=True)
+
+
+@pytest.mark.asyncio
+async def test_async_context():
+    client = BasePeonyClient("", "")
+    with patch.object(client, 'close', side_effect=dummy) as close:
+        async with client as context_client:
+            assert client == context_client
+
+        assert close.called
+
+    await client.close()

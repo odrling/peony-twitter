@@ -4,7 +4,6 @@ import time
 
 import aiohttp
 import pytest
-
 from peony import PeonyClient, oauth
 
 oauth2_keys = 'PEONY_CONSUMER_KEY', 'PEONY_CONSUMER_SECRET'

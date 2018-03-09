@@ -4,6 +4,7 @@ from contextlib import redirect_stdout
 from unittest.mock import patch
 
 import pytest
+
 from peony import oauth, oauth_dance, utils
 
 alphabet = ''.join(chr(i) for i in range(ord('a'), ord('a') + 26))

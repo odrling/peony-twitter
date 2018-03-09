@@ -8,9 +8,10 @@ from unittest.mock import Mock, patch
 
 import aiofiles
 import aiohttp
+import pytest
+
 import peony
 import peony.api
-import pytest
 from peony import (BasePeonyClient, PeonyClient, data_processing, exceptions,
                    oauth, stream, utils)
 from peony.general import twitter_api_version, twitter_base_api_url

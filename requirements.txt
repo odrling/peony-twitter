@@ -1,3 +1,3 @@
 # install_requires : bare minimum to make peony run correctly
-aiohttp<4.0
+aiohttp>=2.0,<4.0
 async_timeout

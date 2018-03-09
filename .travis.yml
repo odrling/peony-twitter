@@ -3,12 +3,21 @@ python:
   - "3.5.0"
   - "3.5"
   - "3.6"
+matrix:
+  include:
+    - install:
+        - pip install --upgrade pip wheel
+        - pip install --upgrade -r tests_requirements.txt pytest-timeout
+        - pip install aiohttp==2.0
+  allow_failures:
+    - python: "3.7-dev"
+  fast_finish: true
 install:
   - pip install --upgrade pip wheel
-  - pip install --upgrade -r tests_requirements.txt pytest-timeout
+  - pip install --upgrade -r tests_requirements.txt
 script:
   - flake8
-  - env FORCE_IPV4=1 py.test tests --cov=peony --timeout=300
+  - env FORCE_IPV4=1 py.test tests --cov=peony
 cache: pip
 after_success:
   - codecov

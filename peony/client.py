@@ -17,25 +17,18 @@ import aiohttp
 
 from . import data_processing, exceptions, general, oauth, utils
 from .api import APIPath, StreamingAPIPath
-from .commands import EventStreams, init_task, task
+from .commands import EventStreams, task
 from .oauth import OAuth1Headers
 from .stream import StreamResponse
 
 logger = logging.getLogger(__name__)
 
 
-class Setup(asyncio.Future):
-
-    def __init__(self):
-        super().__init__()
-        self.early = asyncio.Future()
-
-
 class MetaPeonyClient(type):
 
     def __new__(cls, name, bases, attrs, **kwargs):
         """ put the :class:`~peony.commands.tasks.Task`s in the right place """
-        tasks = {'init_tasks': set(), 'tasks': set()}
+        tasks = {'tasks': set()}
 
         for base in bases:
             if hasattr(base, '_tasks'):
@@ -43,9 +36,7 @@ class MetaPeonyClient(type):
                     tasks[key] |= value
 
         for attr in attrs.values():
-            if isinstance(attr, init_task):
-                tasks['init_tasks'].add(attr)
-            elif isinstance(attr, task):
+            if isinstance(attr, task):
                 tasks['tasks'].add(attr)
 
         attrs['_tasks'] = tasks
@@ -186,29 +177,13 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         self.headers = auth(**kwargs)
 
-        self.setup = Setup()
-
+        self.setup = self.loop.create_future()
         self.__setup = self.loop.create_task(self._setup())
-
-    def init_tasks(self):
-        """ tasks executed on initialization """
-        return self._get_tasks(kind=init_task)
 
     async def _setup(self):
         if self._session is None:
             logger.debug("Creating session")
             self._session = aiohttp.ClientSession()
-
-        # this will allow requests to be made starting from this point
-        self.setup.early.set_result(True)
-
-        init_tasks = self.init_tasks
-        if callable(init_tasks):
-            init_tasks = init_tasks()
-
-        if init_tasks:
-            logger.debug("Starting init tasks")
-            await asyncio.gather(*init_tasks)
 
         self.setup.set_result(True)
 
@@ -340,7 +315,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         data.PeonyResponse
             Response to the request
         """
-        await self.setup.early
+        await self.setup
 
         # prepare request arguments, particularly the headers
         req_kwargs = await self.headers.prepare_request(
@@ -412,15 +387,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         cls._streams.append(event_stream)
         return event_stream
 
-    def _get_tasks(self, kind=task):
-        if kind == task:
-            key = 'tasks'
-        elif kind == init_task:
-            key = 'init_tasks'
-        else:
-            raise RuntimeError("Cannot get tasks of kind %s" % kind)
-
-        return [task(self) for task in self._tasks[key]]
+    def _get_tasks(self):
+        return [task(self) for task in self._tasks['tasks']]
 
     def get_tasks(self):
         """
@@ -508,13 +476,14 @@ class PeonyClient(BasePeonyClient):
         A client with some useful methods for most usages
     """
 
-    def init_tasks(self):
-        tasks = super().init_tasks()
-        if isinstance(self.headers, oauth.OAuth1Headers):
-            tasks.append(self.__get_user())
-        return tasks
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-    @init_task
+        task = self.loop.create_task(self.__get_twitter_configuration())
+        self.twitter_configuration = task
+        if isinstance(self.headers, oauth.OAuth1Headers):
+            self.user = self.loop.create_task(self.__get_user())
+
     async def __get_twitter_configuration(self):
         """
         create a ``twitter_configuration`` attribute with the response
@@ -524,8 +493,7 @@ class PeonyClient(BasePeonyClient):
         api = self['api', general.twitter_api_version,
                    ".json", general.twitter_base_api_url]
 
-        req = api.help.configuration.get()
-        self.twitter_configuration = await req
+        return await api.help.configuration.get()
 
     async def __get_user(self):
         """
@@ -535,8 +503,7 @@ class PeonyClient(BasePeonyClient):
         api = self['api', general.twitter_api_version,
                    ".json", general.twitter_base_api_url]
 
-        req = api.account.verify_credentials.get()
-        self.user = await req
+        return await api.account.verify_credentials.get()
 
     async def _chunked_upload(self, media, media_size,
                               path=None,

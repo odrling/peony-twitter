@@ -82,7 +82,7 @@ class StreamResponse:
             The streaming response
         """
         logger.debug("connecting to the stream")
-        await self.client.setup.early
+        await self.client.setup
         if self.session is None:
             self.session = self.client._session
         kwargs = await self.client.headers.prepare_request(**self.kwargs)

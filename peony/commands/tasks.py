@@ -21,9 +21,4 @@ class Task:
         return str(self)
 
 
-class InitTask(Task):
-    pass
-
-
 task = Task
-init_task = InitTask

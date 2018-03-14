@@ -16,7 +16,7 @@ from peony import (BasePeonyClient, PeonyClient, data_processing, exceptions,
                    oauth, stream, utils)
 from peony.general import twitter_api_version, twitter_base_api_url
 
-from . import Data, MockResponse, dummy, medias
+from . import MockResponse, dummy, medias
 
 
 @pytest.fixture
@@ -120,35 +120,6 @@ class SetupClientTest(BasePeonyClient):
         self._session = MockSession()
         self.a, self.b, self.c = "", "", {}
 
-    @peony.init_task
-    async def setup_a(self):
-        self.a = "123"
-
-    @peony.init_task
-    async def setup_b(self):
-        self.b = "321"
-
-    @peony.init_task
-    async def setup_c(self):
-        data = Data({'hello': "world"})
-
-        with patch.object(aiohttp, 'request', side_effect=dummy):
-            with patch.object(data_processing, 'read', side_effect=data):
-                self.c = await self.api.test.get()
-
-
-@pytest.mark.asyncio
-async def test_setup(event_loop):
-    client = SetupClientTest("", "", loop=event_loop)
-
-    async def test():
-        await client.setup
-        assert client.a == "123"
-        assert client.b == "321"
-        assert client.c.data == {'hello': "world"}
-
-    await asyncio.gather(test(), test())
-
 
 class TasksClientTest(SetupClientTest):
 
@@ -178,10 +149,6 @@ async def test_tasks():
         assert request.called_with(method='get', url=base_url + '/test.json')
         assert request.called_with(method='get',
                                    url=base_url + '/endpoint.json')
-
-        assert client.a == "123"
-        assert client.b == "321"
-        assert client.c is None  # it's None this time
 
         assert all(client.tasks_tests)
 
@@ -218,27 +185,6 @@ async def test_session_creation(event_loop):
         client = BasePeonyClient("", "", loop=event_loop)
         await client.setup
         assert client_session.called
-
-
-class SetupInitListTest(BasePeonyClient):
-
-    @property
-    def init_tasks(self):
-        return self.setup_a(), self.setup_b()
-
-    async def setup_a(self):
-        self.a = "123"
-
-    async def setup_b(self):
-        self.b = "321"
-
-
-@pytest.mark.asyncio
-async def test_setup_init_tasks_list():
-    client = SetupInitListTest("", "")
-    await client.setup
-    assert client.a == "123"
-    assert client.b == "321"
 
 
 def test_client_error():
@@ -400,39 +346,18 @@ class Client(peony.BasePeonyClient):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.t1, self.t2 = False, False
+        self.t1 = False
 
     @peony.task
     def _t1(self):
         self.t1 = True
 
-    @peony.init_task
-    def _t2(self):
-        self.t2 = True
-
 
 def test_get_tasks(event_loop):
     client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
-
-    client._get_tasks(kind=peony.task)
-
-    assert client.t1 is True
-    assert client.t2 is False
-
-
-def test_get_init_tasks(event_loop):
-    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
-    client._get_tasks(kind=peony.init_task)
-
     assert client.t1 is False
-    assert client.t2 is True
-
-
-def test_get_tasks_runtime_exception(event_loop):
-    client = Client("", "", session=aiohttp.ClientSession(loop=event_loop))
-
-    with pytest.raises(RuntimeError):
-        client._get_tasks(kind="")
+    client._get_tasks()
+    assert client.t1 is True
 
 
 class SubClient(Client, dict):
@@ -478,61 +403,64 @@ def peony_client(event_loop):
     with patch.object(client, 'request', side_effect=dummy):
         yield client
 
+    event_loop.run_until_complete(client.close())
 
-def request_test(expected_url, expected_method):
 
-    async def request(*args, url=None, method=None, future=None, **kwargs):
-        assert url == expected_url
-        assert method == expected_method
+class RequestTest:
+
+    def __init__(self, expected_url, expected_method):
+        self.expected_url = expected_url
+        self.expected_method = expected_method
+
+    async def __call__(self, *args, url=None, method=None,
+                       future=None, **kwargs):
+        assert url == self.expected_url
+        assert method == self.expected_method
         future.set_result(True)
         return True
 
-    return request
+
+request_test = RequestTest
 
 
 @pytest.mark.asyncio
-async def test_peony_client_get_user(peony_client):
-    url = peony_client.api.account.verify_credentials.url()
+async def test_peony_client_get_user():
+    client = PeonyClient("", "")
+    url = client.api.account.verify_credentials.url()
     request = request_test(url, 'get')
 
-    with patch.object(peony_client, 'request', side_effect=request) as req:
-        await peony_client._PeonyClient__get_user()
+    with patch.object(client, 'request', side_effect=request) as req:
+        await client.user
         assert req.called
-        assert peony_client.user
+        assert client.user.done()
 
 
 @pytest.mark.asyncio
-async def test_peony_client_get_twitter_configuration(peony_client):
-    request = request_test(peony_client.api.help.configuration.url(), 'get')
+async def test_peony_client_get_twitter_configuration():
+    client = PeonyClient("", "")
+    request = request_test(client.api.help.configuration.url(), 'get')
 
-    with patch.object(peony_client, 'request', side_effect=request) as req:
-        task = peony_client._PeonyClient__get_twitter_configuration
-        await task(peony_client)
+    with patch.object(client, 'request', side_effect=request) as req:
+        await client.twitter_configuration
         assert req.called
-        assert peony_client.twitter_configuration
+        assert client.twitter_configuration.done()
 
 
-def test_peony_client_init_tasks(peony_client, event_loop):
-    conf_n = random.randrange(1 << 16)
-    user_n = random.randrange(1 << 16)
-    with patch.object(peony.BasePeonyClient, 'init_tasks',
-                      return_value=[conf_n]):
-        with patch.object(peony_client, '_PeonyClient__get_user',
-                          return_value=user_n):
-            tasks = peony_client.init_tasks()
-            assert conf_n in tasks
-            assert user_n in tasks
-            assert len(tasks) == 2
+def test_peony_client_get_user_oauth2():
+    client = PeonyClient("", "", auth=oauth.OAuth2Headers)
+    assert not isinstance(client.user, asyncio.Future)
 
 
-def test_peony_client_init_tasks_oauth2(event_loop):
-    client = PeonyClient("", "", loop=event_loop, auth=oauth.OAuth2Headers)
-    conf_n = random.randrange(1 << 16)
-    with patch.object(peony.BasePeonyClient, 'init_tasks',
-                      return_value=[conf_n]):
-        tasks = client.init_tasks()
-        assert conf_n in tasks
-        assert len(tasks) == 1
+@pytest.mark.asyncio
+async def test_peony_client_get_twitter_configuration_oauth2():
+    async with PeonyClient("", "", auth=oauth.OAuth2Headers) as client:
+        client.headers.token = "token"
+        request = request_test(client.api.help.configuration.url(), 'get')
+
+        with patch.object(client, 'request', side_effect=request) as req:
+            await client.twitter_configuration
+            assert req.called
+            assert client.twitter_configuration.done()
 
 
 def test_add_event_stream():

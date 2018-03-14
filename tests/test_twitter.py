@@ -181,12 +181,12 @@ async def test_upload_tweet_with_media_from_url(oauth1_client, medias):
 
 @oauth1_decorator
 async def test_direct_message(oauth1_client):
-    await oauth1_client.setup  # needed to get the user
+    user = await oauth1_client.user
     message = {
         'event': {
             'type': "message_create",
             'message_create': {
-                'target': {'recipient_id': oauth1_client.user.id},
+                'target': {'recipient_id': user.id},
                 'message_data': {
                     'text': "test %d" % time.time(),
                     'quick_reply': {

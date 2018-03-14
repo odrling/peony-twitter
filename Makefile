@@ -31,16 +31,18 @@ install: .installed
 	pip3 install --upgrade -r dev_requirements.txt
 	@touch .installed
 
-format: .formatted
+format: .installed .formatted
 
-.formatted: .installed peony examples tests
-	isort -rc examples peony tests > /dev/null
-	autopep8 -r --in-place examples peony tests
-	autoflake -r --in-place examples peony tests
+PYFILES = $(shell find * -type f -name "*.py")
+
+.formatted: $(PYFILES)
+	isort $? > /dev/null
+	autopep8 --in-place $?
+	autoflake --in-place $?
 	@touch .formatted
 
-.format_test: .installed peony examples tests
-	flake8
+.format_test: $(PYFILES)
+	flake8 $?
 	@touch .format_test
 
 test: .installed .format_test

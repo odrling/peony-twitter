@@ -177,8 +177,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         self.headers = auth(**kwargs)
 
-        self.setup = self.loop.create_future()
-        self.__setup = self.loop.create_task(self._setup())
+        self.setup = self.loop.create_task(self._setup())
 
     async def _setup(self):
         if self._session is None:
@@ -427,19 +426,20 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         """ Run the tasks attached to the instance """
         self.loop.run_until_complete(self.arun())
 
-    async def close(self):
-        """ properly close the client """
+    def _get_close_tasks(self):
         tasks = []
-        # cancel setup
-        if not self.setup.done():
-            async def cancel_setup():
-                self.__setup.cancel()
-                try:
-                    await self.__setup
-                except:
-                    pass
 
-            tasks.append(cancel_setup())
+        # cancel setup
+        if isinstance(self.setup, asyncio.Future):
+            if not self.setup.done():
+                async def cancel_setup():
+                    self.setup.cancel()
+                    try:
+                        await self.setup
+                    except:  # pragma: no cover
+                        pass
+
+                tasks.append(cancel_setup())
 
         # close currently running tasks
         if self._gathered_tasks is not None:
@@ -453,11 +453,17 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             tasks.append(cancel_tasks())
 
         # close the session only if it was created by peony
-        if not self._user_session:
+        if not self._user_session and self._session is not None:
             try:
                 tasks.append(self._session.close())
             except (TypeError, AttributeError):
                 pass
+
+        return tasks
+
+    async def close(self):
+        """ properly close the client """
+        tasks = self._get_close_tasks()
 
         if tasks:
             await asyncio.gather(*tasks)
@@ -480,9 +486,9 @@ class PeonyClient(BasePeonyClient):
         super().__init__(*args, **kwargs)
 
         task = self.loop.create_task(self.__get_twitter_configuration())
-        self.twitter_configuration = task
+        self._twitter_configuration = task
         if isinstance(self.headers, oauth.OAuth1Headers):
-            self.user = self.loop.create_task(self.__get_user())
+            self._user = self.loop.create_task(self.__get_user())
 
     async def __get_twitter_configuration(self):
         """
@@ -495,6 +501,14 @@ class PeonyClient(BasePeonyClient):
 
         return await api.help.configuration.get()
 
+    @property
+    def twitter_configuration(self):
+        return self._twitter_configuration
+
+    @property
+    def user(self):
+        return self._user
+
     async def __get_user(self):
         """
         create a ``user`` attribute with the response of the endpoint
@@ -504,6 +518,32 @@ class PeonyClient(BasePeonyClient):
                    ".json", general.twitter_base_api_url]
 
         return await api.account.verify_credentials.get()
+
+    def _get_close_tasks(self):
+        tasks = super()._get_close_tasks()
+
+        if self.twitter_configuration.done():
+            async def cancel_twitter_configuration():
+                self.twitter_configuration.cancel()
+                try:
+                    await self.twitter_configuration
+                except:  # pragma: no cover
+                    pass
+
+            tasks.append(cancel_twitter_configuration())
+
+        if isinstance(self.user, asyncio.Future):
+            if self.user.done():
+                async def cancel_user():
+                    self.user.cancel()
+                    try:
+                        await self.user
+                    except:  # pragma: no cover
+                        pass
+
+                tasks.append(cancel_user())
+
+        return tasks
 
     async def _chunked_upload(self, media, media_size,
                               path=None,
@@ -605,15 +645,13 @@ class PeonyClient(BasePeonyClient):
 
         return response
 
-    def _size_test(self, size, size_limit):
+    async def _size_test(self, size, size_limit):
         if size_limit is None:
-            if isinstance(self.twitter_configuration, APIPath):
+            try:
+                twitter_config = await self.twitter_configuration
+                size_limit = twitter_config['photo_size_limit']
+            except (KeyError, TypeError) as e:
                 return False
-            else:
-                try:
-                    size_limit = self.twitter_configuration['photo_size_limit']
-                except (KeyError, TypeError):
-                    return False
 
         return size > size_limit
 
@@ -662,13 +700,16 @@ class PeonyClient(BasePeonyClient):
                             "filename or binary data or an aiohttp request")
 
         media_size = await utils.get_size(media)
-        size_test = self._size_test(media_size, size_limit)
+        if chunked is not None:
+            size_test = False
+        else:
+            size_test = await self._size_test(media_size, size_limit)
 
         if isinstance(media, aiohttp.ClientResponse):
             # send the content of the response
             media = media.content
 
-        if (size_test and chunked is None) or chunked:
+        if chunked or (size_test and chunked is None):
             args = media, media_size, file_, media_type, media_category
             response = await self._chunked_upload(*args, **params)
         else:

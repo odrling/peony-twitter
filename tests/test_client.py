@@ -20,8 +20,8 @@ from . import MockResponse, dummy, medias
 
 
 @pytest.fixture
-def dummy_client(event_loop):
-    client = peony.BasePeonyClient("", "", loop=event_loop)
+def dummy_client():
+    client = peony.BasePeonyClient("", "")
     return client
 
 
@@ -402,8 +402,7 @@ def peony_client(event_loop):
     client = PeonyClient("", "", loop=event_loop)
     with patch.object(client, 'request', side_effect=dummy):
         yield client
-
-    event_loop.run_until_complete(client.close())
+        event_loop.run_until_complete(client.close())
 
 
 class RequestTest:
@@ -433,6 +432,7 @@ async def test_peony_client_get_user():
         await client.user
         assert req.called
         assert client.user.done()
+        await client.close()
 
 
 @pytest.mark.asyncio
@@ -444,23 +444,27 @@ async def test_peony_client_get_twitter_configuration():
         await client.twitter_configuration
         assert req.called
         assert client.twitter_configuration.done()
+        await client.close()
 
 
-def test_peony_client_get_user_oauth2():
-    client = PeonyClient("", "", auth=oauth.OAuth2Headers)
-    assert not isinstance(client.user, asyncio.Future)
+@pytest.mark.asyncio
+async def test_peony_client_get_user_oauth2():
+    async with PeonyClient("", "", auth=oauth.OAuth2Headers) as client:
+        client.request = dummy
+        assert not isinstance(client.user, asyncio.Future)
 
 
 @pytest.mark.asyncio
 async def test_peony_client_get_twitter_configuration_oauth2():
-    async with PeonyClient("", "", auth=oauth.OAuth2Headers) as client:
-        client.headers.token = "token"
-        request = request_test(client.api.help.configuration.url(), 'get')
+    client = PeonyClient("", "", auth=oauth.OAuth2Headers)
+    client.headers.token = "token"
+    request = request_test(client.api.help.configuration.url(), 'get')
 
-        with patch.object(client, 'request', side_effect=request) as req:
-            await client.twitter_configuration
-            assert req.called
-            assert client.twitter_configuration.done()
+    with patch.object(client, 'request', side_effect=request) as req:
+        await client.twitter_configuration
+        assert req.called
+        assert client.twitter_configuration.done()
+        await client.close()
 
 
 def test_add_event_stream():
@@ -483,45 +487,70 @@ def dummy_peony_client(event_loop):
                           side_effect=dummy):
             with patch.object(client, 'request', side_effect=dummy):
                 yield client
+                event_loop.run_until_complete(client.close())
 
 
 @pytest.mark.asyncio
 async def test_size_test(dummy_peony_client):
-    assert dummy_peony_client._size_test(5, 5) is False
-    assert dummy_peony_client._size_test(6, 5) is True
+    assert await dummy_peony_client._size_test(5, 5) is False
+    assert await dummy_peony_client._size_test(6, 5) is True
+
+
+class MyPatch:
+
+    def __init__(self, obj, attr, val):
+        self.object = obj
+        self.attr = attr
+        self.val = val
+
+    def __enter__(self):
+        self.original = getattr(self.object, self.attr)
+        setattr(self.object, self.attr, self.val)
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        setattr(self.object, self.attr, self.original)
+
+
+mypatch = MyPatch
 
 
 @pytest.mark.asyncio
 async def test_size_test_config(dummy_peony_client):
-    dummy_peony_client.twitter_configuration = {
-        'photo_size_limit': 5
-    }
+    async def twitter_config():
+        return {'photo_size_limit': 5}
 
-    assert dummy_peony_client._size_test(5, None) is False
-    assert dummy_peony_client._size_test(6, None) is True
+    task = dummy_peony_client.loop.create_task(twitter_config())
+    with mypatch(dummy_peony_client, '_twitter_configuration', task):
+        assert await dummy_peony_client._size_test(5, None) is False
+        assert await dummy_peony_client._size_test(6, None) is True
 
 
 @pytest.mark.asyncio
 async def test_size_test_config_and_limit(dummy_peony_client):
-    dummy_peony_client.twitter_configuration = {
-        'photo_size_limit': 5
-    }
+    async def twitter_config():
+        return {'photo_size_limit': 5}
 
-    assert dummy_peony_client._size_test(10, 10) is False
-    assert dummy_peony_client._size_test(11, 10) is True
+    task = dummy_peony_client.loop.create_task(twitter_config())
+    with mypatch(dummy_peony_client, '_twitter_configuration', task):
+        assert await dummy_peony_client._size_test(10, 10) is False
+        assert await dummy_peony_client._size_test(11, 10) is True
 
 
 @pytest.mark.asyncio
 async def test_size_test_no_limit_no_config(dummy_peony_client):
-    assert dummy_peony_client._size_test(5, None) is False
-    dummy_peony_client.twitter_configuration = {}
-    assert dummy_peony_client._size_test(5, None) is False
+    async def twitter_config():
+        return {}
+
+    task = dummy_peony_client.loop.create_task(twitter_config())
+    with mypatch(dummy_peony_client, '_twitter_configuration', task):
+        assert await dummy_peony_client._size_test(5, None) is False
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize('input_type', ['bytes', 'file', 'path'])
 async def test_upload_media(dummy_peony_client, input_type, medias):
     media_data = medias['lady_peony'].content
+    media_file = None
 
     if input_type == 'file':
         media = io.BytesIO(media_data)
@@ -557,15 +586,18 @@ async def test_upload_media(dummy_peony_client, input_type, medias):
 
     with patch.object(dummy_peony_client, 'request',
                       side_effect=dummy_upload) as req:
-        dummy_peony_client.twitter_configuration = {
-            'photo_size_limit': 3 * 1024**2
-        }
-        await dummy_peony_client.upload_media(media)
+        async def twitter_config():
+            return {'photo_size_limit': 3 * 1024**2}
+
+        task = dummy_peony_client.loop.create_task(twitter_config())
+        with mypatch(dummy_peony_client, '_twitter_configuration', task):
+            await dummy_peony_client.upload_media(media)
+
         assert req.called
 
     if input_type == 'file':
         media.close()
-    elif input_type == 'path':
+    if media_file is not None:
         media_file.close()
 
 
@@ -711,6 +743,7 @@ async def chunked_upload(dummy_peony_client, media, file):
                 assert not metadata.called
 
 
+@pytest.mark.selected
 @pytest.mark.usefixtures('medias')
 @pytest.mark.asyncio
 @pytest.mark.parametrize('media', medias.values())

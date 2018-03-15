@@ -184,8 +184,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             logger.debug("Creating session")
             self._session = aiohttp.ClientSession()
 
-        self.setup.set_result(True)
-
     @staticmethod
     def _get_base_url(base_url, api, version):
         """

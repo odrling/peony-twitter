@@ -259,3 +259,21 @@ async def dummy(*args, future=None, **kwargs):
 def async_test(func):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(func())
+
+
+class TaskContext:
+
+    def __init__(self, coro):
+        self.coro = coro
+
+    async def __aenter__(self):
+        self.task = asyncio.get_event_loop().create_task(self.coro)
+        return self.task
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if not self.task.done():
+            self.task.cancel()
+            try:
+                await self.task
+            except:
+                pass

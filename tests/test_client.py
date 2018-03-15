@@ -16,7 +16,7 @@ from peony import (BasePeonyClient, PeonyClient, data_processing, exceptions,
                    oauth, stream, utils)
 from peony.general import twitter_api_version, twitter_base_api_url
 
-from . import MockResponse, dummy, medias
+from . import MockResponse, TaskContext, dummy, medias
 
 
 @pytest.fixture
@@ -519,10 +519,10 @@ async def test_size_test_config(dummy_peony_client):
     async def twitter_config():
         return {'photo_size_limit': 5}
 
-    task = dummy_peony_client.loop.create_task(twitter_config())
-    with mypatch(dummy_peony_client, '_twitter_configuration', task):
-        assert await dummy_peony_client._size_test(5, None) is False
-        assert await dummy_peony_client._size_test(6, None) is True
+    async with TaskContext(twitter_config()) as task:
+        with mypatch(dummy_peony_client, '_twitter_configuration', task):
+            assert await dummy_peony_client._size_test(5, None) is False
+            assert await dummy_peony_client._size_test(6, None) is True
 
 
 @pytest.mark.asyncio
@@ -530,10 +530,10 @@ async def test_size_test_config_and_limit(dummy_peony_client):
     async def twitter_config():
         return {'photo_size_limit': 5}
 
-    task = dummy_peony_client.loop.create_task(twitter_config())
-    with mypatch(dummy_peony_client, '_twitter_configuration', task):
-        assert await dummy_peony_client._size_test(10, 10) is False
-        assert await dummy_peony_client._size_test(11, 10) is True
+    async with TaskContext(twitter_config()) as task:
+        with mypatch(dummy_peony_client, '_twitter_configuration', task):
+            assert await dummy_peony_client._size_test(10, 10) is False
+            assert await dummy_peony_client._size_test(11, 10) is True
 
 
 @pytest.mark.asyncio
@@ -541,9 +541,9 @@ async def test_size_test_no_limit_no_config(dummy_peony_client):
     async def twitter_config():
         return {}
 
-    task = dummy_peony_client.loop.create_task(twitter_config())
-    with mypatch(dummy_peony_client, '_twitter_configuration', task):
-        assert await dummy_peony_client._size_test(5, None) is False
+    async with TaskContext(twitter_config()) as task:
+        with mypatch(dummy_peony_client, '_twitter_configuration', task):
+            assert await dummy_peony_client._size_test(5, None) is False
 
 
 @pytest.mark.asyncio
@@ -589,9 +589,9 @@ async def test_upload_media(dummy_peony_client, input_type, medias):
         async def twitter_config():
             return {'photo_size_limit': 3 * 1024**2}
 
-        task = dummy_peony_client.loop.create_task(twitter_config())
-        with mypatch(dummy_peony_client, '_twitter_configuration', task):
-            await dummy_peony_client.upload_media(media)
+        async with TaskContext(twitter_config()) as task:
+            with mypatch(dummy_peony_client, '_twitter_configuration', task):
+                await dummy_peony_client.upload_media(media)
 
         assert req.called
 
@@ -743,7 +743,6 @@ async def chunked_upload(dummy_peony_client, media, file):
                 assert not metadata.called
 
 
-@pytest.mark.selected
 @pytest.mark.usefixtures('medias')
 @pytest.mark.asyncio
 @pytest.mark.parametrize('media', medias.values())

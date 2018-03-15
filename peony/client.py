@@ -466,7 +466,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         tasks = self._get_close_tasks()
 
         if tasks:
-            await asyncio.gather(*tasks)
+            await asyncio.wait(tasks)
 
         self._session = None
 

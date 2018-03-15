@@ -29,9 +29,9 @@
 
 import inspect
 import os
+import pathlib
 import re
 import sys
-import pathlib
 
 conf_py = pathlib.Path(inspect.getfile(inspect.currentframe())).absolute()
 docs = conf_py.parent

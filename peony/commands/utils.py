@@ -64,24 +64,3 @@ def permission_check(data, command_permissions,
     return any(data['sender']['id'] in command_permissions[permission]
                for permission in permissions
                if permission in command_permissions)
-
-
-def restart_on(exc):
-    """
-        restart a function every time the `exc` exception is raised
-
-    Parameters
-    ----------
-    exc : Exception
-        the exception to catch
-    """
-    def decorator(func):
-        while True:
-            try:
-                return func
-            except exc:
-                pass
-            except:
-                raise
-
-    return decorator

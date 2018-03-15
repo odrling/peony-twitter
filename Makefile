@@ -38,7 +38,7 @@ PYFILES = $(shell find * -type f -name "*.py")
 .formatted: $(PYFILES)
 	isort $? > /dev/null
 	autopep8 --in-place $?
-	autoflake --in-place $?
+	autoflake --in-place --remove-all-unused-imports $?
 	@touch .formatted
 
 .format_test: $(PYFILES)

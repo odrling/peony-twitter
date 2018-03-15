@@ -40,6 +40,7 @@ class MetaPeonyClient(type):
                 tasks['tasks'].add(attr)
 
         attrs['_tasks'] = tasks
+        attrs['_streams'] = EventStreams()
 
         return super().__new__(cls, name, bases, attrs)
 
@@ -85,8 +86,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         An event loop, if not specified :func:`asyncio.get_event_loop`
         is called
     """
-
-    _streams = EventStreams()
 
     def __init__(self,
                  consumer_key=None,
@@ -397,14 +396,12 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             List of tasks (:class:`asyncio.Task`)
         """
         tasks = self._get_tasks()
-
         tasks.extend(self._streams.get_tasks(self))
 
         return tasks
 
     async def run_tasks(self):
         """ Run the tasks attached to the instance """
-        await self.setup
         tasks = self.get_tasks()
         self._gathered_tasks = asyncio.gather(*tasks, loop=self.loop)
         try:
@@ -483,12 +480,12 @@ class PeonyClient(BasePeonyClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        task = self.loop.create_task(self.__get_twitter_configuration())
+        task = self.loop.create_task(self._get_twitter_configuration())
         self._twitter_configuration = task
         if isinstance(self.headers, oauth.OAuth1Headers):
-            self._user = self.loop.create_task(self.__get_user())
+            self._user = self.loop.create_task(self._get_user())
 
-    async def __get_twitter_configuration(self):
+    async def _get_twitter_configuration(self):
         """
         create a ``twitter_configuration`` attribute with the response
         of the endpoint
@@ -507,7 +504,7 @@ class PeonyClient(BasePeonyClient):
     def user(self):
         return self._user
 
-    async def __get_user(self):
+    async def _get_user(self):
         """
         create a ``user`` attribute with the response of the endpoint
         https://api.twitter.com/1.1/account/verify_credentials.json

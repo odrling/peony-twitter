@@ -6,23 +6,9 @@ import socket
 
 import aiohttp
 import pytest
-from _pytest.runner import runtestprotocol
 from aiohttp import web
 
 from . import medias
-
-
-def pytest_runtest_protocol(item, nextitem):
-    reports = runtestprotocol(item, nextitem=nextitem)
-    for report in reports:
-        if report.when == 'call':
-            tasks = asyncio.Task.all_tasks()
-            for task in tasks:
-                task.cancel()
-
-            asyncio.get_event_loop().run_until_complete(asyncio.wait(tasks))
-
-    return True
 
 
 @pytest.fixture

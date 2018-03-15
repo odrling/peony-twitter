@@ -3,7 +3,6 @@ import abc
 
 import peony.utils
 
-from . import utils
 from .commands import Commands
 from .tasks import task
 
@@ -70,20 +69,20 @@ class EventStream(abc.ABC):
     def stream_request(self):
         pass
 
-    @utils.restart_on(Exception)
     async def start(self):
         if callable(self.stream_request):
             stream_request = self.stream_request()
         else:
             stream_request = self.stream_request
 
-        async with stream_request as resource:
-            async for data in resource:
-                try:
-                    await self._run(data)
-                except Exception:
-                    msg = "error in %s._start:\n" % self.__class__.__name__
-                    peony.utils.log_error(msg)
+        while True:
+            async with stream_request as resource:
+                async for data in resource:
+                    try:
+                        await self._run(data)
+                    except Exception:
+                        msg = "error in %s._start:\n" % self.__class__.__name__
+                        peony.utils.log_error(msg)
 
     def _check(self, func):
         if not func.startswith("_"):
@@ -113,28 +112,22 @@ class EventStream(abc.ABC):
                 peony.utils.log_error(msg)
 
 
-def check_setup(func):
-    def decorated(self, client):
-        if not self.is_setup:
-            self.setup(client)
-
-        return func(self, client)
-
-    return decorated
-
-
 class EventStreams(list):
 
     def __init__(self):
         super().__init__()
         self.is_setup = False
 
-    @check_setup
+    def check_setup(self, client):
+        if not self.is_setup:
+            self.setup(client)
+
     def get_tasks(self, client):
+        self.check_setup(client)
         return [client.loop.create_task(stream.start()) for stream in self]
 
-    @check_setup
     def get_task(self, client):
+        self.check_setup(client)
         if len(self) == 1:
             return client.loop.create_task(self[0].start())
         elif self:

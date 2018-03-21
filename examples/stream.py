@@ -74,11 +74,11 @@ class UserStream(peony.EventStream):
         await self.get_timeline()
 
     @peony.events.on_retweeted_status.handler
-    def on_retweet(self, data):
+    async def on_retweet(self, data):
         self.print_rt(data)
 
     @peony.events.on_tweet.handler
-    def on_tweet(self, data):
+    async def on_tweet(self, data):
         self.print_tweet(data)
 
     @peony.events.reconnecting_in.handler
@@ -91,7 +91,7 @@ class UserStream(peony.EventStream):
         await self.get_timeline()
 
     @peony.events.on_dm.handler
-    def direct_message(self, data):
+    async def direct_message(self, data):
         dm = data.direct_message
         text = html.unescape(dm.text)
         fmt = "@{sender} → @{recipient}: {text}\n" + "-" * 10
@@ -100,16 +100,16 @@ class UserStream(peony.EventStream):
                          text=text))
 
     @on_favorited.handler
-    def favorited(self, data):
+    async def favorited(self, data):
         print(data.source.screen_name, "favorited:",
               html.unescape(data.target_object.text) + "\n" + "-" * 10)
 
     @peony.events.friends.handler
-    def pass_friends(self):
+    async def pass_friends(self):
         pass
 
     @peony.events.default.handler
-    def default(self, data):
+    async def default(self, data):
         print(pprint.pformat(data), "\n" + "-" * 10)
 
 

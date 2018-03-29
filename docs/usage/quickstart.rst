@@ -53,10 +53,14 @@ Make sure to get your api keys and access tokens from
                          access_token=YOUR_ACCESS_TOKEN,
                          access_token_secret=YOUR_ACCESS_TOKEN_SECRET)
 
-    # this is a coroutine
-    req = client.api.statuses.update.post(status="I'm using Peony!!")
+    async def getting_started():
+        # print your twitter username or screen name
+        user = await client.user
+        print("I am @%s" % user.screen_name)
+        # tweet about your sudden love for peony
+        await client.api.statuses.update.post(status="I'm using Peony!!")
 
     # run the coroutine
-    loop.run_until_complete(req)
+    loop.run_until_complete(getting_started())
 
 .. _Twitter's application management page: https://apps.twitter.com

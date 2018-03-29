@@ -1,3 +1,5 @@
+.. _error_handlers:
+
 =================================
  Handle errors for every request
 =================================

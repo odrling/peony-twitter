@@ -100,7 +100,7 @@ async def test_bad_request():
     async def prepare_dummy(*args, **kwargs):
         return kwargs
 
-    async with DummyClient() as dummy_client:
+    async with BasePeonyClient("", "") as dummy_client:
         dummy_client._session = MockSession(MockSessionRequest(status=404))
         with patch.object(dummy_client.headers, 'prepare_request',
                           side_effect=prepare_dummy):
@@ -123,7 +123,7 @@ async def test_request_proxy():
         def __init__(self, *args, proxy=None, **kwargs):
             raise RuntimeError(proxy)
 
-    async with DummyClient() as dummy_client:
+    async with BasePeonyClient("", "") as dummy_client:
         async with aiohttp.ClientSession() as session:
             with patch.object(session, 'request', side_effect=RaiseProxy):
                 try:
@@ -131,9 +131,11 @@ async def test_request_proxy():
                                                url="http://hello.com",
                                                proxy="http://some.proxy.com",
                                                session=session,
-                                               future=asyncio.Future())
+                                               future=None)
                 except RuntimeError as e:
                     assert str(e) == "http://some.proxy.com"
+                else:
+                    pytest.fail("Could not check proxy")
 
 
 @pytest.mark.asyncio
@@ -163,7 +165,7 @@ async def test_request_encoding():
     def check_encoding(data, *args, **kwargs):
         assert data == ENCODING
 
-    async with DummyClient() as client:
+    async with BasePeonyClient("", "") as client:
         async with aiohttp.ClientSession() as session:
             with patch.object(session, 'request', side_effect=DummyCTX):
                 with patch.object(data_processing, 'read',
@@ -269,3 +271,37 @@ async def test_close_cancel_tasks(event_loop):
     async with ClientCancelTasks(loop=event_loop) as client:
         await client.run_tasks()
         assert client.cancelled
+
+
+@pytest.mark.asyncio
+async def test_disabled_error_handler():
+    async def raise_runtime_error(*args, **kwargs):
+        raise RuntimeError
+
+    with patch.object(BasePeonyClient, 'request',
+                      side_effect=raise_runtime_error):
+        async with BasePeonyClient("", "") as client:
+            with pytest.raises(RuntimeError):
+                await client.api.test.get()
+
+
+@pytest.mark.asyncio
+async def test_change_request_client():
+    async with DummyClient() as client:
+        req = client.api.call.get()
+        assert req.client == client
+        with patch.object(client, 'request', side_effect=dummy) as request:
+            try:
+                await req()
+            finally:
+                assert request.called
+
+        async with DummyClient() as client2:
+            req.client = client2
+            assert req.client == client2
+            with patch.object(client2, 'request',
+                              side_effect=dummy) as request:
+                try:
+                    await req()
+                finally:
+                    assert request.called

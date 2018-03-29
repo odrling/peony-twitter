@@ -1,11 +1,9 @@
-import functools
 from unittest import mock
 
 import aiohttp
 import asyncio
-import async_timeout
 
-from peony import BasePeonyClient, PeonyClient
+from peony import BasePeonyClient, PeonyClient, utils
 from .. import MockResponse
 
 
@@ -37,21 +35,23 @@ class MockSession:
             self.request = request
 
 
-def dummy_error_handler(request):
+class DummyErrorHandler(utils.ErrorHandler):
 
-    @functools.wraps(request)
-    async def decorated_request(url=None, **kwargs):
-        async with async_timeout.timeout(2):
-            return await request(url=url, **kwargs)
+    async def __call__(self, future=None, **kwargs):
 
-    return decorated_request
+        if future is not None:
+            future.set_exception(RuntimeError)
+        raise RuntimeError
 
 
 class DummyClient(BasePeonyClient):
 
     def __init__(self, *args, **kwargs):
-        super().__init__("", "", error_handler=dummy_error_handler,
+        super().__init__("", "", error_handler=utils.ErrorHandler,
                          *args, **kwargs)
+
+    async def request(self, *args, **kwargs):
+        pass
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()

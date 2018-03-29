@@ -50,7 +50,7 @@ def test_api_endpoint_creation_exception(api):
 
 
 def test_api_client(api):
-    assert api._client == client
+    assert api.client == client
 
 
 def test_api_suffix(api):

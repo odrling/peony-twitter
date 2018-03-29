@@ -37,7 +37,6 @@ async def test_since_id():
         ids |= new_ids
 
         if len(ids) != len(new_ids) + size_before or len(ids) > 10:
-            print(new_ids)
             break
 
     assert len(ids) == 10
@@ -60,7 +59,6 @@ async def test_since_id_force():
             break
 
         if len(ids) != len(new_ids) + size_before or len(ids) > 10:
-            print(new_ids)
             break
 
     assert len(ids) == 10
@@ -95,7 +93,6 @@ async def test_fill_gaps_force():
     ids = set()
     async for response in responses:
         new_ids = {user['id'] for user in response}
-        print("set %d" % len(new_ids))
         size_before = len(ids)
         ids |= new_ids
 

@@ -19,7 +19,7 @@ import pytest
 import peony
 from peony import data_processing, exceptions, utils
 
-from . import MockResponse, dummy, create_future
+from . import MockResponse, create_future, dummy
 
 
 def builtin_mimetypes(func):
@@ -142,7 +142,6 @@ async def test_error_handler_response():
     assert text == MockResponse.message
 
 
-@pytest.mark.current
 @pytest.mark.asyncio
 async def test_error_handler_base_object():
     global called

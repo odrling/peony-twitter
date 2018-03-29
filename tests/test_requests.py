@@ -47,7 +47,7 @@ def test_sanitize_params_skip(request):
 
 
 def test_skip_params(api_path):
-    client = api_path._client
+    client = api_path.client
     with patch.object(client, 'request', side_effect=dummy) as client_request:
         request = requests.Request(api_path, 'get', _skip_params=False)
         client.loop.run_until_complete(request)
@@ -62,7 +62,7 @@ def test_skip_params(api_path):
 
 
 def test_error_handling(api_path):
-    client = api_path._client
+    client = api_path.client
     with patch.object(client, 'request', side_effect=dummy):
         request = requests.Request(api_path, 'get', _error_handling=False)
         with patch.object(client, 'error_handler',
@@ -118,7 +118,7 @@ def dummy_error_handler(request):
 
 
 def test_request_error_handler(api_path, _error_handler=True):
-    client = api_path._client
+    client = api_path.client
     with patch.object(client, 'request', side_effect=dummy) as client_request:
         with patch.object(client, 'error_handler',
                           side_effect=dummy_error_handler) as error_handler:
@@ -142,7 +142,7 @@ def test_request_no_error_handler(api_path):
 def test_streaming_request(api_path):
     streaming_request = requests.StreamingRequest(api_path, 'get')
 
-    with patch.object(streaming_request.api._client,
+    with patch.object(streaming_request.api.client,
                       'stream_request') as client_request:
         streaming_request(test=1, _test=2)
         assert client_request.called_with(method='get',

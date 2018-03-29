@@ -38,7 +38,7 @@ class AbstractAPIPath(ABC):
     def __init__(self, path, suffix, client):
         self._path = path
         self._suffix = suffix
-        self._client = client
+        self.client = client
 
     def url(self, suffix=None):
         """
@@ -66,7 +66,7 @@ class AbstractAPIPath(ABC):
         otherwise append the key to the _path attribute
 
         >>> api = APIPath()  # you would have to add more arguments
-        >>> api['_client']   # appends '_client' to _path
+        >>> api['client']    # appends 'client' to _path
 
         Parameters
         ----------
@@ -93,7 +93,7 @@ class AbstractAPIPath(ABC):
 
         return self.__class__(path=new_path,
                               suffix=self._suffix,
-                              client=self._client)
+                              client=self.client)
 
     def __getattr__(self, k):
         """

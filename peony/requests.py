@@ -165,6 +165,13 @@ class RequestFactory(Endpoint):
 
 
 class Request(asyncio.Future, AbstractRequest):
+    """
+        Sends requests to a REST API
+
+    Await an instance of Request to get the response of
+    the request. The request is scheduled as soon as the
+    Request object is created.
+    """
 
     def __init__(self, api, method, **kwargs):
         super().__init__()
@@ -183,13 +190,22 @@ class Request(asyncio.Future, AbstractRequest):
 
         kwargs.update(method=self.method, url=url, skip_params=skip_params)
 
-        client = self.api._client
-        request = client.request
+        client = self.api.client
 
         if client.error_handler and error_handling:
-            request = self.api._client.error_handler(request)
+            request = client.error_handler(client.request)
+        else:
+            request = utils.ErrorHandler(client.request)
 
         client.loop.create_task(request(future=self, **kwargs))
+
+    @property
+    def client(self):
+        return self.api.client
+
+    @client.setter
+    def client(self, value):
+        self.api.client = value
 
     def __call__(self, **kwargs):
         return self.__class__(self.api, self.method, **kwargs)
@@ -207,6 +223,6 @@ class StreamingRequest(AbstractRequest):
     def __call__(self, **kwargs):
         kwargs, skip_params, url = self._get_params(**kwargs)
 
-        return self.api._client.stream_request(self.method, url=url,
-                                               skip_params=skip_params,
-                                               **kwargs)
+        return self.api.client.stream_request(self.method, url=url,
+                                              skip_params=skip_params,
+                                              **kwargs)

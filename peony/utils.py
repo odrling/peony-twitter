@@ -97,7 +97,6 @@ class ErrorHandler(metaclass=MetaErrorHandler):
                                             **kwargs)
                 if reply is not ErrorHandler.RETRY:
                     _logger.debug("raising exception")
-                    print(future)
                     if future is not None:
                         future.set_exception(exc)
                     raise exc

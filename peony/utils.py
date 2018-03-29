@@ -78,7 +78,10 @@ class ErrorHandler(metaclass=MetaErrorHandler):
             args = get_args(handler, skip=1)
             handler_kwargs = {key: kwargs[key] for key in args
                               if key in kwargs}
-            return await execute(handler(self, **handler_kwargs))
+            try:
+                return await execute(handler(self, **handler_kwargs))
+            except Exception as exc:
+                return exc
 
         for base in exception_class.__bases__:
             return await self.__handle(base, **kwargs)
@@ -95,6 +98,8 @@ class ErrorHandler(metaclass=MetaErrorHandler):
             except Exception as exc:
                 reply = await self.__handle(exc.__class__, exception=exc,
                                             **kwargs)
+                if isinstance(reply, Exception):
+                    exc = reply
                 if reply is not ErrorHandler.RETRY:
                     _logger.debug("raising exception")
                     if future is not None:

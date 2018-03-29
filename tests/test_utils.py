@@ -167,6 +167,22 @@ async def test_error_handler_base_object():
         pytest.fail("PeonyException not raised")
 
 
+class ErrorHandlerWithException(utils.ErrorHandler):
+
+    @utils.ErrorHandler.handle(Exception)
+    def whoops_handler(self):
+        raise RuntimeError
+
+
+@pytest.mark.asyncio
+async def test_error_handler_with_exception():
+    async def raise_exception(**kwargs):
+        raise Exception
+
+    with pytest.raises(RuntimeError):
+        await ErrorHandlerWithException(raise_exception)()
+
+
 def test_get_args():
     def test(a, b, c):
         pass

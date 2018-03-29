@@ -58,7 +58,7 @@ class ErrorHandler(metaclass=MetaErrorHandler):
     This error handler just raises all the exceptions that it receives.
     """
 
-    CONTINUE = OK = True
+    RETRY = CONTINUE = OK = True
     RAISE = STOP = False
 
     def __init__(self, request):

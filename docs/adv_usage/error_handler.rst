@@ -28,6 +28,7 @@ exceptions you can use the ``error_handler`` argument of
         """
 
         def __init__(self, request):
+            # this will set the request as self.request (REQUIRED)
             super().__init__(request)
             self.tries = 0
 
@@ -37,7 +38,8 @@ exceptions you can use the ``error_handler`` argument of
             self.request.client = backup_client
             return ErrorHandler.RETRY
 
-        @ErrorHandler.handle(asyncio.TimeoutError)
+        # You can handle several requests with a single method
+        @ErrorHandler.handle(asyncio.TimeoutError, TimeoutError)
         async def handle_timeout_error(self):
             """ retry the request on TimeoutError """
             return ErrorHandler.RETRY
@@ -61,6 +63,15 @@ exceptions you can use the ``error_handler`` argument of
 
 
     client = PeonyClient(**creds, error_handler=MyErrorHandler)
+
+
+Your error handler must inherit from :class:`~peony.utils.ErrorHandler`
+For every exception that you want you want to handle you should create
+a method decorated by :func:`~peony.utils.ErrorHandler.handle`.
+This method can return :obj:`utils.ErrorHandler.RETRY` if you want another
+request to be made. By default a function with no return statement will raise
+the exception, but you can explicitly raise the exception by returning
+:obj:`utils.ErrorHandler.RAISE`.
 
 .. note::
     You can also choose to not use an error handler and disable the default one

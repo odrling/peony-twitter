@@ -53,7 +53,7 @@ class StreamResponse:
         Keyword parameters of the request
     """
 
-    def __init__(self, *args,
+    def __init__(self,
                  client,
                  session=None,
                  loads=data_processing.loads,
@@ -64,7 +64,6 @@ class StreamResponse:
         self.session = session
         self.loads = loads
         self.timeout = timeout
-        self.args = args
         self.kwargs = kwargs
 
         self.response = None
@@ -88,7 +87,7 @@ class StreamResponse:
         kwargs = await self.client.headers.prepare_request(**self.kwargs)
         request = self.client.error_handler(self.session.request)
 
-        return await request(*self.args, timeout=0, **kwargs)
+        return await request(timeout=0, **kwargs)
 
     async def connect(self):
         """

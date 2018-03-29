@@ -24,4 +24,4 @@ logger = logging.getLogger(__name__)
 
 from .client import BasePeonyClient, PeonyClient  # noqa
 from .commands import EventStream, event_handler, events, task  # noqa
-from .utils import set_debug  # noqa
+from .utils import ErrorHandler, set_debug  # noqa

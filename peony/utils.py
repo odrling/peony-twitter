@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import functools
 import logging
 import os
 import sys
@@ -22,42 +21,125 @@ except:  # pragma: no cover
 _logger = logging.getLogger(__name__)
 
 
-def error_handler(request):
+class Handle:
+
+    __slots__ = 'exceptions', 'handler'
+
+    def __init__(self, handler, *exceptions):
+        self.exceptions = exceptions
+        self.handler = handler
+
+
+class MetaErrorHandler(type):
+
+    def __new__(cls, name, bases, attrs, **kwargs):
+        """ put the :class:`~peony.utils.Handle`s in the right place """
+        handlers = {}
+
+        for base in bases:
+            if hasattr(base, '_handlers'):
+                for key, value in base._handlers.items():
+                    handlers[key] = value
+
+        for attr in attrs.values():
+            if isinstance(attr, Handle):
+                for exception in attr.exceptions:
+                    handlers[exception] = attr.handler
+
+        attrs['_handlers'] = handlers
+
+        return super().__new__(cls, name, bases, attrs)
+
+
+class ErrorHandler(metaclass=MetaErrorHandler):
+    """
+        Basic error handler
+
+    This error handler just raises all the exceptions that it receives.
+    """
+
+    CONTINUE = OK = True
+    RAISE = STOP = False
+
+    def __init__(self, request):
+        self.__request = request
+
+    @staticmethod
+    def handle(*exceptions):
+        """  """
+        def handler_decorator(handler):
+            return Handle(handler, *exceptions)
+
+        return handler_decorator
+
+    async def __handle(self, exception_class, **kwargs):
+        if exception_class in self._handlers:
+            handler = self._handlers[exception_class]
+            args = get_args(handler, skip=1)
+            handler_kwargs = {key: kwargs[key] for key in args
+                              if key in kwargs}
+            return await execute(handler(self, **handler_kwargs))
+
+        for base in exception_class.__bases__:
+            return await self.__handle(base, **kwargs)
+
+        return ErrorHandler.RAISE
+
+    async def __call__(self, future=None, **kwargs):
+        while True:
+            try:
+                if future is None:
+                    return await self.__request(**kwargs)
+                else:
+                    return await self.__request(future=future, **kwargs)
+            except Exception as exc:
+                reply = await self.__handle(exc.__class__, exception=exc,
+                                            **kwargs)
+                if reply is not ErrorHandler.OK:
+                    _logger.debug("raising exception")
+                    print(future)
+                    if future is not None:
+                        future.set_exception(exc)
+                    raise exc
+
+
+class DefaultErrorHandler(ErrorHandler):
     """
         The default error_handler
 
     The decorated request will retry infinitely on any handled error
-    The exceptions handled are :class:`asyncio.TimeoutError` and
-    :class:`exceptions.RateLimitExceeded`
+    The exceptions handled are :class:`TimeoutError`,
+    :class:`asyncio.TimeoutError`,
+    :class:`exceptions.RateLimitExceeded` and
+    :class:`exceptions.ServiceUnavailable`
     """
 
-    @functools.wraps(request)
-    async def decorated_request(url=None, **kwargs):
-        tries = 3
-        while True:
-            try:
-                return await request(url=url, **kwargs)
+    def __init__(self, request):
+        super().__init__(request)
+        self.tries = 3
 
-            except exceptions.RateLimitExceeded as e:
-                delay = int(e.reset_in) + 1
-                fmt = "Sleeping for {}s (rate limit exceeded on endpoint {})"
-                _logger.warning(fmt.format(delay, url))
-                await asyncio.sleep(delay)
+    @ErrorHandler.handle(exceptions.RateLimitExceeded)
+    async def handle_rate_limits(self, exception, url):
+        delay = int(exception.reset_in) + 1
+        fmt = "Sleeping for {}s (rate limit exceeded on endpoint {})"
+        _logger.warning(fmt.format(delay, url))
+        await asyncio.sleep(delay)
+        return ErrorHandler.OK
 
-            except asyncio.TimeoutError:
-                fmt = "Request to {url} timed out, retrying"
-                _logger.info(fmt.format(url=url))
+    @ErrorHandler.handle(asyncio.TimeoutError, TimeoutError)
+    def handle_timeout_error(self, url):
+        fmt = "Request to {url} timed out, retrying"
+        _logger.info(fmt.format(url=url))
+        return ErrorHandler.OK
 
-            except exceptions.ServiceUnavailable:
-                tries -= 1
-                if not tries:
-                    raise
-
-                _logger.info("Service temporarily unavailable, "
-                             "request will be made again very soon")
-                await asyncio.sleep(0.5)
-
-    return decorated_request
+    @ErrorHandler.handle(exceptions.ServiceUnavailable)
+    async def handle_service_unavailable(self):
+        self.tries -= 1
+        if self.tries > 0:
+            _logger.info("Service temporarily unavailable, "
+                         "request will be made again very soon")
+            await asyncio.sleep(0.5)
+            return ErrorHandler.OK
 
 
 def get_args(func, skip=0):

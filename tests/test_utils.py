@@ -75,11 +75,11 @@ async def test_error_handler_rate_limit():
             raise await exceptions.throw(response)
 
     with patch.object(asyncio, 'sleep', side_effect=dummy):
-        await utils.error_handler(rate_limit)()
+        await utils.DefaultErrorHandler(rate_limit)(url="http://")
 
 
 @pytest.mark.asyncio
-async def test_error_handler_service_unavailable():
+async def test_error_handler_service_unavailable(event_loop):
     global tries
     tries = 4
 
@@ -93,16 +93,20 @@ async def test_error_handler_service_unavailable():
         else:
             return MockResponse()
 
-    with pytest.raises(exceptions.ServiceUnavailable):
-        with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
-            await utils.error_handler(service_unavailable)()
+    with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
+        try:
+            fut = event_loop.create_future()
+            coro = utils.DefaultErrorHandler(service_unavailable)(future=fut)
+            event_loop.create_task(coro)
+            await fut
+        except exceptions.ServiceUnavailable:
             assert sleep.called
-
-    await utils.error_handler(service_unavailable)()
+        else:
+            pytest.fail("ServiceUnavailable not raised")
 
 
 @pytest.mark.asyncio
-async def test_error_handler_asyncio_timeout():
+async def test_error_handler_asyncio_timeout(event_loop):
     global tries
     tries = 3
 
@@ -113,7 +117,10 @@ async def test_error_handler_asyncio_timeout():
         if tries > 0:
             raise asyncio.TimeoutError
 
-    await utils.error_handler(timeout)()
+    fut = event_loop.create_future()
+    coro = utils.DefaultErrorHandler(timeout)(future=fut, url="http://")
+    await coro
+    assert tries == 0
 
 
 @pytest.mark.asyncio
@@ -122,7 +129,7 @@ async def test_error_handler_other_exception():
         raise exceptions.PeonyException
 
     with pytest.raises(exceptions.PeonyException):
-        await utils.error_handler(error)()
+        await utils.DefaultErrorHandler(error)()
 
 
 @pytest.mark.asyncio
@@ -130,9 +137,35 @@ async def test_error_handler_response():
     async def request(**kwargs):
         return MockResponse(data=MockResponse.message)
 
-    resp = await utils.error_handler(request)()
+    resp = await utils.DefaultErrorHandler(request)()
     text = await resp.text()
     assert text == MockResponse.message
+
+
+@pytest.mark.current
+@pytest.mark.asyncio
+async def test_error_handler_base_object():
+    global called
+    called = False
+
+    class ObjectErrorHandler(utils.DefaultErrorHandler, object,
+                             metaclass=utils.MetaErrorHandler):
+
+        @utils.ErrorHandler.handle(exceptions.PeonyException)
+        def handle_peony_exception(self):
+            global called
+            called = True
+            return utils.ErrorHandler.RAISE
+
+    async def error(**kwargs):
+        raise exceptions.PeonyException
+
+    try:
+        await ObjectErrorHandler(error)()
+    except exceptions.PeonyException:
+        assert called
+    else:
+        pytest.fail("PeonyException not raised")
 
 
 def test_get_args():

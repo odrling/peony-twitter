@@ -5,7 +5,7 @@ import time
 import aiohttp
 import pytest
 
-from peony import PeonyClient, oauth
+from peony import PeonyClient, exceptions, oauth
 
 oauth2_keys = 'PEONY_CONSUMER_KEY', 'PEONY_CONSUMER_SECRET'
 
@@ -108,6 +108,12 @@ async def test_oauth2_bearer_token(oauth2_client):
     client2 = PeonyClient("", "", bearer_token=token,
                           auth=oauth.OAuth2Headers)
     assert client2.headers.token == oauth2_client.headers.token
+
+
+@oauth2_decorator
+async def test_oauth2_nonexisting_endpoint(oauth2_client):
+    with pytest.raises(exceptions.DoesNotExist):
+        await oauth2_client.api.whereismytweet.get()
 
 
 @oauth1_decorator

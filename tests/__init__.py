@@ -259,3 +259,11 @@ async def dummy(*args, future=None, **kwargs):
 def async_test(func):
     loop = asyncio.get_event_loop()
     loop.run_until_complete(func())
+
+
+if sys.version_info < (3, 5, 2):
+    def create_future(loop):
+        return asyncio.Future(loop=loop)
+else:
+    def create_future(loop):
+        return loop.create_future()

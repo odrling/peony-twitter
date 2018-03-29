@@ -19,7 +19,7 @@ import pytest
 import peony
 from peony import data_processing, exceptions, utils
 
-from . import MockResponse, dummy
+from . import MockResponse, dummy, create_future
 
 
 def builtin_mimetypes(func):
@@ -95,7 +95,7 @@ async def test_error_handler_service_unavailable(event_loop):
 
     with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
         try:
-            fut = event_loop.create_future()
+            fut = create_future(event_loop)
             coro = utils.DefaultErrorHandler(service_unavailable)(future=fut)
             event_loop.create_task(coro)
             await fut
@@ -117,7 +117,7 @@ async def test_error_handler_asyncio_timeout(event_loop):
         if tries > 0:
             raise asyncio.TimeoutError
 
-    fut = event_loop.create_future()
+    fut = create_future(event_loop)
     coro = utils.DefaultErrorHandler(timeout)(future=fut, url="http://")
     await coro
     assert tries == 0

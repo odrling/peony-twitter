@@ -95,7 +95,7 @@ class ErrorHandler(metaclass=MetaErrorHandler):
             except Exception as exc:
                 reply = await self.__handle(exc.__class__, exception=exc,
                                             **kwargs)
-                if reply is not ErrorHandler.OK:
+                if reply is not ErrorHandler.RETRY:
                     _logger.debug("raising exception")
                     print(future)
                     if future is not None:
@@ -124,13 +124,13 @@ class DefaultErrorHandler(ErrorHandler):
         fmt = "Sleeping for {}s (rate limit exceeded on endpoint {})"
         _logger.warning(fmt.format(delay, url))
         await asyncio.sleep(delay)
-        return ErrorHandler.OK
+        return ErrorHandler.RETRY
 
     @ErrorHandler.handle(asyncio.TimeoutError, TimeoutError)
     def handle_timeout_error(self, url):
         fmt = "Request to {url} timed out, retrying"
         _logger.info(fmt.format(url=url))
-        return ErrorHandler.OK
+        return ErrorHandler.RETRY
 
     @ErrorHandler.handle(exceptions.ServiceUnavailable)
     async def handle_service_unavailable(self):
@@ -139,7 +139,7 @@ class DefaultErrorHandler(ErrorHandler):
             _logger.info("Service temporarily unavailable, "
                          "request will be made again very soon")
             await asyncio.sleep(0.5)
-            return ErrorHandler.OK
+            return ErrorHandler.RETRY
 
 
 def get_args(func, skip=0):

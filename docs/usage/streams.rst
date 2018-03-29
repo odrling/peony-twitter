@@ -93,7 +93,7 @@ decorator so that your event will be processed before the ones provided in Peony
     # a number < -5 is probably a good bet (events with the smallest number
     # are processed first)
     @events.priority(-10)
-    def on_followed(data, client):
+    async def on_followed(data, client):
         """
             Event triggered when the user gets a new follower
 
@@ -101,7 +101,8 @@ decorator so that your event will be processed before the ones provided in Peony
         given if a function with a second argument is provided to the `events`
         decorator.
         """
-        return data.event == 'follow' and data.target.id == client.user.id
+        user = await client.user
+        return data.event == 'follow' and data.target.id == user.id
 
     @events.priority(-10)
     def on_tweet_with_media(data):

@@ -41,8 +41,8 @@ def get_requirements(requirements):
 
 
 def main():
-    if sys.version_info < (3, 5):
-        raise RuntimeError("Peony requires Python 3.5+")
+    if sys.version_info < (3, 5, 3):
+        raise RuntimeError("Peony requires Python 3.5.3+")
 
     dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
 
@@ -63,7 +63,7 @@ def main():
     setup(long_description=long_description,
           packages=find_packages(include=["peony*"]),
           extras_require=extras_require,
-          python_requires='>=3.5.0',
+          python_requires='>=3.5.3',
           **kwargs)
 
 

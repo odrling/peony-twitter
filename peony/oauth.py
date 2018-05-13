@@ -61,6 +61,7 @@ class PeonyHeaders(ABC, dict):
     async def prepare_request(self, method, url,
                               headers=None,
                               skip_params=False,
+                              proxy=None,
                               **kwargs):
         """
         prepare all the arguments for the request
@@ -73,6 +74,8 @@ class PeonyHeaders(ABC, dict):
             The url to request
         headers : dict, optional
             Additionnal headers
+        proxy : str
+            proxy of the request
         skip_params : bool
             Don't use the parameters to sign the request
 
@@ -97,6 +100,7 @@ class PeonyHeaders(ABC, dict):
         coro = self.sign(**request_params, skip_params=skip_params,
                          headers=headers)
         request_params['headers'] = await utils.execute(coro)
+        request_params['proxy'] = proxy
 
         kwargs.update(request_params)
 

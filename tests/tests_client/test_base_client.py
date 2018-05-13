@@ -118,16 +118,14 @@ async def test_stream_request():
 
 @pytest.mark.asyncio
 async def test_request_proxy():
-    class RaiseProxy:
-
-        def __init__(self, *args, _proxy=None, **kwargs):
-            raise RuntimeError(_proxy)
+    def raise_proxy(*args, proxy=None, **kwargs):
+        raise RuntimeError(proxy)
 
     async with BasePeonyClient("", "",
                                proxy="http://some.proxy.com") as dummy_client:
         async with aiohttp.ClientSession() as session:
             with patch.object(dummy_client.headers, 'prepare_request',
-                              side_effect=RaiseProxy):
+                              side_effect=raise_proxy):
                 try:
                     await dummy_client.request(method='get',
                                                url="http://hello.com",

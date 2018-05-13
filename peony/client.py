@@ -318,7 +318,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             method=method,
             url=url,
             headers=headers,
-            _proxy=self.proxy,
+            proxy=self.proxy,
             **kwargs
         )
 
@@ -372,7 +372,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             client=self,
             headers=headers,
             session=_session,
-            _proxy=self.proxy,
+            proxy=self.proxy,
             **kwargs
         )
 

@@ -4,6 +4,7 @@ import asyncio
 from abc import ABC, abstractmethod
 from types import GeneratorType
 
+
 from . import iterators, utils
 
 iterable = (list, set, tuple, GeneratorType)

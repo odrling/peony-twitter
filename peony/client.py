@@ -318,14 +318,12 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             method=method,
             url=url,
             headers=headers,
+            _proxy=self.proxy,
             **kwargs
         )
 
         if encoding is None:
             encoding = self.encoding
-
-        if 'proxy' not in req_kwargs:
-            req_kwargs['proxy'] = self.proxy
 
         session = session if (session is not None) else self._session
 
@@ -374,6 +372,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             client=self,
             headers=headers,
             session=_session,
+            _proxy=self.proxy,
             **kwargs
         )
 

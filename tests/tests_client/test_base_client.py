@@ -123,13 +123,13 @@ async def test_request_proxy():
         def __init__(self, *args, proxy=None, **kwargs):
             raise RuntimeError(proxy)
 
-    async with BasePeonyClient("", "") as dummy_client:
+    async with BasePeonyClient("", "",
+                               proxy="http://some.proxy.com") as dummy_client:
         async with aiohttp.ClientSession() as session:
             with patch.object(session, 'request', side_effect=RaiseProxy):
                 try:
                     await dummy_client.request(method='get',
                                                url="http://hello.com",
-                                               proxy="http://some.proxy.com",
                                                session=session,
                                                future=None)
                 except RuntimeError as e:

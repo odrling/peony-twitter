@@ -19,7 +19,7 @@ class Media:
     cache_dir = test_dir / "cache"
 
     def __init__(self, filename, mimetype, content_length, category=None,
-                 base="http://tests.odrling.xyz/peony/"):
+                 base="https://tests.odrling.xyz/peony/"):
         self.filename = filename
         self.url = base + filename
         self.type = mimetype

@@ -1,9 +1,9 @@
 from unittest.mock import patch
 
-import pytest
-
 import peony
+import pytest
 from peony.general import twitter_api_version, twitter_base_api_url
+
 from tests import dummy
 
 from . import DummyClient, MockSession

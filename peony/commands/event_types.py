@@ -109,15 +109,16 @@ class Events(dict):
         super().__init__(*args, **kwargs)
         self.aliases = {}
 
-    def __getitem__(self, item):
-        return getattr(self, item)
-
     def __setitem__(self, key, func):
         event = func if isinstance(func, Event) else Event(func, key)
-        setattr(self, key, event)
+        super().__setitem__(key, event)
+
+    def __getattr__(self, item):
+        return self[item]
 
     def _set_aliases(self, *keys, event=None, func=None):
-        keys = [key if "{name}" not in key else key.format(name=func.__name__)
+        name = func.__name__
+        keys = [key if "{name}" not in key else key.format(name=name)
                 for key in keys]
 
         if func:
@@ -127,16 +128,18 @@ class Events(dict):
         else:
             raise RuntimeError("Could not set alias")
 
+        event.__doc__ += f"\n:aliases: %s\n" % ', '.join(
+            keys).format(name=name)
+
         for key in keys:
             self[key] = event
-            self.aliases[key] = self[func.__name__]
+            self.aliases[key] = self[name]
 
         return event
 
     def alias(self, *keys):
 
         def decorator(func):
-            func.__doc__ += "\n:aliases: %s\n" % ', '.join(keys)
             event = self._set_aliases(*keys, func=func)
 
             return event
@@ -146,7 +149,6 @@ class Events(dict):
     def event_alias(self, *keys):
 
         def decorator(func):
-            func.__doc__ += "\n:aliases: %s\n" % ', '.join(keys)
             event = self._set_aliases(*keys, event=func)
 
             return event
@@ -170,6 +172,8 @@ class Events(dict):
             return self[func.__name__]
 
     def __call__(self, func):
+        name = func.__name__
+
         if not len(get_args(func)):
             value = _get_value(func)
 
@@ -177,11 +181,11 @@ class Events(dict):
             def decorated(data):
                 return value in data
 
-            self[func.__name__] = decorated
+            self[name] = decorated
         else:
-            self[func.__name__] = func
+            self[name] = func
 
-        return self[func.__name__]
+        return self[name]
 
     @property
     def no_aliases(self):
@@ -221,7 +225,7 @@ def direct_message():
     """
 
 
-@events.alias(on)
+@events.alias(on, 'retweet', 'on_retweet')
 @events.priority(-1)
 def retweeted_status(data):
     """

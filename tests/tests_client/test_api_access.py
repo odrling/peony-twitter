@@ -1,9 +1,9 @@
 
-import pytest
-
 import peony
 import peony.api
+import pytest
 from peony.general import twitter_api_version, twitter_base_api_url
+
 from tests.tests_client import DummyClient
 
 

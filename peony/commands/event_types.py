@@ -128,8 +128,7 @@ class Events(dict):
         else:
             raise RuntimeError("Could not set alias")
 
-        event.__doc__ += f"\n:aliases: %s\n" % ', '.join(
-            keys).format(name=name)
+        event.__doc__ += "\n:aliases: %s" % ', '.join(keys).format(name=name)
 
         for key in keys:
             self[key] = event

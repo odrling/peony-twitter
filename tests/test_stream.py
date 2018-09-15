@@ -44,7 +44,7 @@ class Stream:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.patch.__exit__()
-        await self.session.close()
+        self.session.close()
         await self.client.close()
 
 

@@ -328,7 +328,7 @@ class MediaRequest:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.req.close()
-        await self.session.close()
+        self.session.close()
 
 
 class MediaPeonyClient(PeonyClient):

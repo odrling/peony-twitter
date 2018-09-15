@@ -159,7 +159,7 @@ class Data:
                 'extended': data_processing.loads(extended)}
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.session.close()
+        self.session.close()
 
 
 full_text = ("@jeremycloud It's neat to have owls and raccoons around "

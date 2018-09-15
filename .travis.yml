@@ -3,7 +3,6 @@ python:
   - "3.5.3"
   - "3.5"
   - "3.6"
-  - "3.7"
 matrix:
   include:
     - python: "3.5"
@@ -16,6 +15,9 @@ matrix:
         - pip install --upgrade pip wheel
         - pip install --upgrade -r tests_requirements.txt
         - pip install aiohttp==2.0
+    - python: "3.7"
+      dist: xenial
+      sudo: true
   fast_finish: true
 install:
   - pip install --upgrade pip wheel

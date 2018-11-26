@@ -644,7 +644,7 @@ class PeonyClient(BasePeonyClient):
             try:
                 twitter_config = await self.twitter_configuration
                 size_limit = twitter_config['photo_size_limit']
-            except (KeyError, TypeError) as e:
+            except (KeyError, TypeError):
                 return False
 
         return size > size_limit

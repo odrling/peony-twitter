@@ -334,8 +334,8 @@ def stall_warning(data):
     For more information:
     https://dev.twitter.com/streaming/overview/messages-types#stall-warnings-warning
     """  # noqa: E501
-    return (warning(data) and
-            data.get('warning').get('code') == "FALLING_BEHIND")
+    return (warning(data)
+            and data.get('warning').get('code') == "FALLING_BEHIND")
 
 
 @events.alias(on)
@@ -346,8 +346,8 @@ def too_many_follows(data):
     For more information:
     https://dev.twitter.com/streaming/overview/messages-types#too-many-follows-warning
     """  # noqa: E501
-    return (warning(data) and
-            data.get('warning').get('code') == "FOLLOWS_OVER_LIMIT")
+    return (warning(data)
+            and data.get('warning').get('code') == "FOLLOWS_OVER_LIMIT")
 
 # events, the data looks like; {"event": EVENT_NAME, ...}
 

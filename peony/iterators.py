@@ -87,7 +87,12 @@ class MaxIdIterator(IdIterator):
         """
             The parameter is set to the id of the tweet at index i - 1
         """
-        self.kwargs[self.param] = response[-1]['id'] - 1
+        data = response.get('statuses', response)
+        if data:
+            self.kwargs[self.param] = data[-1]['id'] - 1
+        elif not self.force:
+            raise StopAsyncIteration
+
         return response
 
 
@@ -113,13 +118,13 @@ class SinceIdIterator(IdIterator):
         self.fill_gaps = fill_gaps
         self.last_id = None
 
-    async def set_param(self, response):
-        if response:
+    async def set_param(self, data):
+        if data:
             if self.fill_gaps:
-                self.kwargs[self.param] = response[0]['id'] - 1
-                self.last_id = response[0]['id']
+                self.kwargs[self.param] = data[0]['id'] - 1
+                self.last_id = data[0]['id']
             else:
-                self.kwargs[self.param] = response[0]['id']
+                self.kwargs[self.param] = data[0]['id']
 
     async def call_on_response(self, response):
         """
@@ -132,23 +137,24 @@ class SinceIdIterator(IdIterator):
             The response
         """
         since_id = self.kwargs.get(self.param, 0) + 1
+        data = response.get('statuses', response)
 
         if self.fill_gaps:
-            if response[-1]['id'] != since_id:
-                max_id = response[-1]['id'] - 1
+            if data[-1]['id'] != since_id:
+                max_id = data[-1]['id'] - 1
                 responses = with_max_id(self.request(**self.kwargs,
                                                      max_id=max_id))
 
                 async for tweets in responses:
-                    response.extend(tweets)
+                    data.extend(tweets)
 
-            if response[-1]['id'] == self.last_id:
-                response = response[:-1]
+            if data[-1]['id'] == self.last_id:
+                data = data[:-1]
 
-                if not response and not self.force:
+                if not data and not self.force:
                     raise StopAsyncIteration
 
-        await self.set_param(response)
+        await self.set_param(data)
 
         return response
 

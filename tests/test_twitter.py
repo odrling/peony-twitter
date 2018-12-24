@@ -121,6 +121,14 @@ async def test_search(oauth1_client):
 
 
 @oauth1_decorator
+async def test_search_with_max_id(oauth1_client):
+    req = oauth1_client.api.search.tweets.get(q="nasa")
+    async for tweets in req.iterator.with_max_id():
+        for tweet in tweets:
+            print(tweet)
+
+
+@oauth1_decorator
 async def test_user_timeline(oauth1_client):
     req = oauth1_client.api.statuses.user_timeline.get(screen_name="twitter",
                                                        count=20)

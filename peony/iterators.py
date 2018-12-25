@@ -4,6 +4,8 @@ import asyncio
 import sys
 from abc import ABC, abstractmethod
 
+from .exceptions import IncorrectData
+
 
 class AbstractIterator(ABC):
     """
@@ -50,18 +52,41 @@ class IdIterator(AbstractIterator):
         """ Keep all the arguments as class attributes """
         self.param = parameter
         self.force = force
+        self._response_key = None
+        self._response_list = False
         super().__init__(request)
 
     async def __anext__(self):
         """ return each response until getting an empty data """
         request = self.request(**self.kwargs)
         response = await request
-        if response:
-            response = await self.call_on_response(response)
+        data = self.get_data(response)
+        if data:
+            await self.call_on_response(data)
         elif not self.force:
             raise StopAsyncIteration
 
         return response
+
+    def get_data(self, response):
+        """ Get the data from the response """
+        if self._response_list:
+            return response
+        elif self._response_key is None:
+            if hasattr(response, "items"):
+                for key, data in response.items():
+                    if (hasattr(data, "__getitem__")
+                            and not hasattr(data, "items")
+                            and 'id' in data[0]):
+                        self._response_key = key
+                        return data
+            else:
+                self._response_list = True
+                return response
+        else:
+            return response[self._response_key]
+
+        raise IncorrectData(response=response, url=self.request.get_url())
 
     @abstractmethod
     async def call_on_response(self, response):
@@ -83,17 +108,11 @@ class MaxIdIterator(IdIterator):
                          parameter="max_id",
                          force=False)
 
-    async def call_on_response(self, response):
+    async def call_on_response(self, data):
         """
             The parameter is set to the id of the tweet at index i - 1
         """
-        data = response.get('statuses', response)
-        if data:
-            self.kwargs[self.param] = data[-1]['id'] - 1
-        elif not self.force:
-            raise StopAsyncIteration
-
-        return response
+        self.kwargs[self.param] = data[-1]['id'] - 1
 
 
 class SinceIdIterator(IdIterator):
@@ -126,18 +145,17 @@ class SinceIdIterator(IdIterator):
             else:
                 self.kwargs[self.param] = data[0]['id']
 
-    async def call_on_response(self, response):
+    async def call_on_response(self, data):
         """
         Try to fill the gaps and strip last tweet from the response
         if its id is that of the first tweet of the last response
 
         Parameters
         ----------
-        response : dict or list
-            The response
+        data : list
+            The response data
         """
         since_id = self.kwargs.get(self.param, 0) + 1
-        data = response.get('statuses', response)
 
         if self.fill_gaps:
             if data[-1]['id'] != since_id:
@@ -151,12 +169,10 @@ class SinceIdIterator(IdIterator):
             if data[-1]['id'] == self.last_id:
                 data = data[:-1]
 
-                if not data and not self.force:
-                    raise StopAsyncIteration
+        if not data and not self.force:
+            raise StopAsyncIteration
 
         await self.set_param(data)
-
-        return response
 
 
 class CursorIterator(AbstractIterator):

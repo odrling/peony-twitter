@@ -122,10 +122,15 @@ async def test_search(oauth1_client):
 
 @oauth1_decorator
 async def test_search_with_max_id(oauth1_client):
-    req = oauth1_client.api.search.tweets.get(q="nasa")
+    req = oauth1_client.api.search.tweets.get(q="nasa", count=20)
+    all_tweets = set()
     async for tweets in req.iterator.with_max_id():
-        for tweet in tweets:
-            print(tweet)
+        # no duplicates
+        assert not any(tweet.id in all_tweets for tweet in tweets.statuses)
+        all_tweets |= set(tweet.id for tweet in tweets.statuses)
+
+        if len(all_tweets) > 20:
+            break
 
 
 @oauth1_decorator
@@ -142,6 +147,17 @@ async def test_user_timeline(oauth1_client):
 
         if len(all_tweets) > 20:
             break
+
+
+@oauth1_decorator
+async def test_iterator_incorrect_data(oauth1_client):
+    req = oauth1_client.api.users.show.get(screen_name="twitter",
+                                           include_entities=False)
+    responses = req.iterator.with_max_id()
+
+    with pytest.raises(exceptions.IncorrectData):
+        async for twitter in responses:
+            assert twitter
 
 
 @oauth1_decorator

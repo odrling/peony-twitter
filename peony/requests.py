@@ -36,12 +36,14 @@ class AbstractRequest(ABC):
     """
 
     def _get_params(self, _suffix=None, **kwargs):
-        if _suffix is None:
-            _suffix = self.api._suffix
-
         kwargs, skip_params = self.sanitize_params(self.method, **kwargs)
+        return kwargs, skip_params, self.get_url(_suffix)
 
-        return kwargs, skip_params, self.api.url(_suffix)
+    def get_url(self, suffix=None):
+        if suffix is None:
+            suffix = self.api._suffix
+
+        return self.api.url(suffix)
 
     @staticmethod
     def sanitize_params(method, **kwargs):

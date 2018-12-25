@@ -186,17 +186,23 @@ class MockIteratorRequest:
     def __init__(self, since_id=None,
                  max_id=None,
                  cursor=None,
+                 dict=False,
                  count=10):
         self.since_id = since_id
         self.max_id = max_id
         self.cursor = cursor
         self.count = count
+        self.dict = dict
 
     def __await__(self):
         return self.request().__await__()
 
     def __call__(self, **kwargs):
         return MockIteratorRequest(**kwargs)
+
+    @staticmethod
+    def get_url():
+        return "http://whatever.com/endpoint.json"
 
     async def request(self):
         since_id = self.since_id
@@ -206,18 +212,18 @@ class MockIteratorRequest:
 
         if max_id is not None:
             if max_id < 0:
-                return []
-
-            max_id = min(max_id, len(self.ids) - 1)
-
-            end = max_id - self.count
-            if since_id is not None and end < self.since_id:
-                end = since_id
-
-            if end < 0:
-                return [{'id': i} for i in self.ids[max_id::-1]]
+                data = []
             else:
-                return [{'id': i} for i in self.ids[max_id:end:-1]]
+                max_id = min(max_id, len(self.ids) - 1)
+
+                end = max_id - self.count
+                if since_id is not None and end < self.since_id:
+                    end = since_id
+
+                if end < 0:
+                    data = [{'id': i} for i in self.ids[max_id::-1]]
+                else:
+                    data = [{'id': i} for i in self.ids[max_id:end:-1]]
 
         elif cursor is not None:
             if cursor == -1:
@@ -227,16 +233,21 @@ class MockIteratorRequest:
             if next_cursor >= len(self.ids):
                 next_cursor = 0
 
-            return {'ids': self.ids[cursor:cursor + count],
+            data = {'ids': self.ids[cursor:cursor + count],
                     'next_cursor': next_cursor}
 
         else:
             last_chunk_start = len(self.ids) - count
             if since_id is None or since_id < last_chunk_start:
-                return [{'id': i} for i in
+                data = [{'id': i} for i in
                         self.ids[:len(self.ids) - count - 1:-1]]
             else:
-                return [{'id': i} for i in self.ids[:since_id:-1]]
+                data = [{'id': i} for i in self.ids[:since_id:-1]]
+
+        if self.dict:
+            return {"statuses": data}
+        else:
+            return data
 
 
 class Data:

@@ -334,9 +334,6 @@ class OAuth2Headers(PeonyHeaders):
 
         self._refreshing.set()
 
-        if 'Authorization' in self:
-            await self.invalidate_token()
-
         request = self.client['api', "", ""].oauth2.token.post
         token = await request(grant_type="client_credentials",
                               _headers=self.basic_authorization)

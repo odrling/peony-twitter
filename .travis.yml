@@ -24,7 +24,8 @@ install:
   - pip install --upgrade -r tests_requirements.txt
 script:
   - flake8
-  - travis_wait py.test tests --cov=peony
+  - travis_wait py.test tests --cov=peony -m "not invalidate_token"
+  - py.test tests --cov=peony -m invalidate_token
 cache: pip
 after_success:
   - codecov

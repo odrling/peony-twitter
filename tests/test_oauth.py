@@ -253,10 +253,6 @@ async def test_oauth2_refresh_token(oauth2_headers):
 
     await oauth2_headers.refresh_token()
     assert oauth2_headers.token == "abc"
-    with patch.object(oauth2_headers, 'invalidate_token',
-                      side_effect=dummy) as invalidate_token:
-        await oauth2_headers.refresh_token()
-        assert invalidate_token.called
 
 
 @pytest.mark.asyncio

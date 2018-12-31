@@ -3,6 +3,7 @@ import json
 
 import aiohttp
 import pytest
+
 from peony import data_processing, exceptions
 
 from . import Media, MockResponse

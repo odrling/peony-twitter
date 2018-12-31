@@ -5,9 +5,10 @@ from unittest.mock import patch
 
 import aiohttp
 import async_timeout
+import pytest
+
 import peony
 import peony.stream
-import pytest
 from peony import exceptions
 from peony.stream import (DISCONNECTION, DISCONNECTION_TIMEOUT,
                           ENHANCE_YOUR_CALM, ENHANCE_YOUR_CALM_TIMEOUT, ERROR,

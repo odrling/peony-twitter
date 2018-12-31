@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
+
 from peony import exceptions, iterators
 
 from . import MockIteratorRequest

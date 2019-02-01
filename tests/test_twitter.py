@@ -156,7 +156,7 @@ async def test_iterator_incorrect_data(oauth1_client):
                                            include_entities=False)
     responses = req.iterator.with_max_id()
 
-    with pytest.raises(exceptions.IncorrectData):
+    with pytest.raises(exceptions.NoDataFound):
         async for twitter in responses:
             assert twitter
 

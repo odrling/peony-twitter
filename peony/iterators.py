@@ -4,7 +4,7 @@ import asyncio
 import sys
 from abc import ABC, abstractmethod
 
-from .exceptions import IncorrectData
+from .exceptions import NoDataFound
 
 
 class AbstractIterator(ABC):
@@ -61,6 +61,7 @@ class IdIterator(AbstractIterator):
         request = self.request(**self.kwargs)
         response = await request
         data = self.get_data(response)
+
         if data:
             await self.call_on_response(data)
         elif not self.force:
@@ -77,6 +78,7 @@ class IdIterator(AbstractIterator):
                 for key, data in response.items():
                     if (hasattr(data, "__getitem__")
                             and not hasattr(data, "items")
+                            and len(data) > 0
                             and 'id' in data[0]):
                         self._response_key = key
                         return data
@@ -86,7 +88,7 @@ class IdIterator(AbstractIterator):
         else:
             return response[self._response_key]
 
-        raise IncorrectData(response=response, url=self.request.get_url())
+        raise NoDataFound(response=response, url=self.request.get_url())
 
     @abstractmethod
     async def call_on_response(self, response):

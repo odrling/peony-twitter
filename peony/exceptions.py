@@ -87,7 +87,7 @@ class StreamLimit(PeonyException):
     pass
 
 
-class IncorrectData(PeonyException):
+class NoDataFound(PeonyException):
     _message = "Could not find the current id in the response:\n"
 
     def __init__(self, response, *args, **kwargs):

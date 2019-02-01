@@ -17,7 +17,7 @@ def test_get_data(response):
 
 def test_get_data_incorrect():
     iterator = iterators.with_max_id(MockIteratorRequest)
-    with pytest.raises(exceptions.IncorrectData):
+    with pytest.raises(exceptions.NoDataFound):
         iterator.get_data(data[0])
 
 

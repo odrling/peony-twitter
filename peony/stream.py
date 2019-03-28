@@ -27,6 +27,7 @@ DISCONNECTION = 1
 ERROR = DISCONNECTION
 RECONNECTION = 2
 ENHANCE_YOUR_CALM = 3
+EOF = 4
 
 HandledErrors = asyncio.TimeoutError, ClientPayloadError, TimeoutError
 
@@ -153,6 +154,11 @@ class StreamResponse:
                     return await self.init_restart()
 
             while not line:
+                if self.response.content.at_eof():
+                    logger.debug("Received EOF")
+                    self.state = EOF
+                    return await self.init_restart()
+
                 with async_timeout.timeout(90):
                     line = await self.response.content.readline()
                     line = line.strip(b'\r\n')
@@ -236,6 +242,8 @@ class StreamResponse:
                            "https://dev.twitter.com/streaming/overview\n"
                            "The stream will restart in %ss."
                            % self._error_timeout)
+        elif self.state == EOF:
+            pass  # no timeout
         else:
             raise RuntimeError("Incorrect state: %d" % self.state)
 

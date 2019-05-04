@@ -158,9 +158,6 @@ class MockResponse:
 
         raise StopAsyncIteration
 
-    def at_eof(self):
-        return False
-
     async def __aenter__(self):
         return self
 

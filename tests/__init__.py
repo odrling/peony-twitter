@@ -6,8 +6,9 @@ import inspect
 import json
 import os.path
 import pathlib
-import aiofiles
 import sys
+
+import aiofiles
 
 file_ = pathlib.Path(inspect.getfile(inspect.currentframe()))
 test_dir = file_.absolute().parent

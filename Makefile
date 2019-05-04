@@ -33,7 +33,7 @@ install: .installed
 
 format: .installed .formatted
 
-PYFILES = $(shell find * -type f -name "*.py")
+PYFILES = $(shell find * -type f -name "*.py" | grep -v '__init__.py')
 
 .formatted: .installed $(PYFILES)
 	isort $? > /dev/null

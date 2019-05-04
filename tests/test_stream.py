@@ -11,8 +11,8 @@ import peony
 import peony.stream
 from peony import exceptions
 from peony.stream import (DISCONNECTION, DISCONNECTION_TIMEOUT,
-                          ENHANCE_YOUR_CALM, ENHANCE_YOUR_CALM_TIMEOUT, ERROR,
-                          ERROR_TIMEOUT, MAX_DISCONNECTION_TIMEOUT,
+                          ENHANCE_YOUR_CALM, ENHANCE_YOUR_CALM_TIMEOUT, EOF,
+                          ERROR, ERROR_TIMEOUT, MAX_DISCONNECTION_TIMEOUT,
                           MAX_RECONNECTION_TIMEOUT, NORMAL, RECONNECTION,
                           RECONNECTION_TIMEOUT)
 
@@ -115,6 +115,10 @@ async def response_stream_limit():
     return MockResponse(data="Exceeded connection limit for user", status=200)
 
 
+async def response_eof(*args, **kwargs):
+    return MockResponse(data=data, status=200, eof=True)
+
+
 @pytest.mark.asyncio
 async def test_stream_reconnection_disconnection():
     async def dummy(*args, **kwargs):
@@ -177,6 +181,32 @@ async def test_stream_reconnection_reconnect():
                                         'error': None}
                     else:
                         assert data == {'stream_restart': True}
+
+
+@pytest.mark.asyncio
+async def test_stream_eof_reconnect():
+    async def dummy(*args, **kwargs):
+        pass
+
+    turn = -1
+
+    async with Stream() as stream:
+        with patch.object(stream, '_connect',
+                          side_effect=response_eof):
+            with patch.object(peony.stream.asyncio, 'sleep',
+                              side_effect=dummy):
+                async for data in stream:
+                    turn += 1
+
+                    if turn == 0:
+                        assert data == {'connected': True}
+                    elif turn % 2 == 1:
+                        assert stream._state == EOF
+                        assert data == {'reconnecting_in': 0,
+                                        'error': None}
+                    else:
+                        assert data == {'stream_restart': True}
+                        break
 
 
 @pytest.mark.asyncio

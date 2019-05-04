@@ -103,7 +103,8 @@ class MockResponse:
     message = "to err is human, to arr is pirate"
 
     def __init__(self, data=None, error=None,
-                 content_type="application/json", headers=None, status=200):
+                 content_type="application/json",
+                 headers=None, status=200, eof=False):
 
         if error is not None:
             data = json.dumps({'errors': [{'code': error,
@@ -121,6 +122,7 @@ class MockResponse:
         self.headers = {} if headers is None else headers
 
         self.headers['Content-Type'] = content_type
+        self.eof = eof
         self.url = ''  # quite irrelevant here
         self._closed = False
 
@@ -181,6 +183,9 @@ class MockResponse:
     @property
     def content(self):
         return self
+
+    def at_eof(self):
+        return self.eof
 
 
 class MockIteratorRequest:

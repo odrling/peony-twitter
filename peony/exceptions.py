@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from pprint import pformat
 from time import time
 
 from . import data_processing
@@ -85,14 +84,6 @@ class MediaProcessingError(PeonyException):
 
 class StreamLimit(PeonyException):
     pass
-
-
-class NoDataFound(PeonyException):
-    _message = "Could not find the current id in the response:\n"
-
-    def __init__(self, response, *args, **kwargs):
-        msg = self._message + pformat(response)
-        super().__init__(*args, **kwargs, message=msg)
 
 
 class ErrorDict(dict):

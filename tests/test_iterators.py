@@ -2,7 +2,7 @@
 
 import pytest
 
-from peony import exceptions, iterators
+from peony import iterators
 
 from . import MockIteratorRequest
 
@@ -17,8 +17,7 @@ def test_get_data(response):
 
 def test_get_data_incorrect():
     iterator = iterators.with_max_id(MockIteratorRequest)
-    with pytest.raises(exceptions.NoDataFound):
-        iterator.get_data(data[0])
+    assert iterator.get_data(data[0]) == []
 
 
 @pytest.mark.parametrize('dict_resp', (False, True))

@@ -4,8 +4,6 @@ import asyncio
 import sys
 from abc import ABC, abstractmethod
 
-from .exceptions import NoDataFound
-
 
 class AbstractIterator(ABC):
     """
@@ -88,7 +86,7 @@ class IdIterator(AbstractIterator):
         else:
             return response[self._response_key]
 
-        raise NoDataFound(response=response, url=self.request.get_url())
+        return []
 
     @abstractmethod
     async def call_on_response(self, response):
@@ -105,10 +103,10 @@ class MaxIdIterator(IdIterator):
         Main request
     """
 
-    def __init__(self, request):
+    def __init__(self, request, force=False):
         super().__init__(request,
                          parameter="max_id",
-                         force=False)
+                         force=force)
 
     async def call_on_response(self, data):
         """

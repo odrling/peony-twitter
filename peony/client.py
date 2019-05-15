@@ -493,7 +493,8 @@ class PeonyClient(BasePeonyClient):
         api = self['api', general.twitter_api_version,
                    ".json", general.twitter_base_api_url]
 
-        return await api.help.configuration.get()
+        if isinstance(self.headers, OAuth1Headers):
+            return await api.help.configuration.get()
 
     @property
     def twitter_configuration(self):

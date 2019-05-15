@@ -66,7 +66,7 @@ async def test_peony_client_get_twitter_configuration_oauth2():
         request = request_test(client.api.help.configuration.url(), 'get')
 
         with patch.object(client, 'request', side_effect=request) as req:
-            await client.twitter_configuration
-            assert req.called
+            assert await client.twitter_configuration is None
+            assert not req.called
             assert client.twitter_configuration.done()
             await client.close()

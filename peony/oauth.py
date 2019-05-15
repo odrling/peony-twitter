@@ -298,6 +298,7 @@ class OAuth2Headers(PeonyHeaders):
 
     @property
     def token(self):
+        print("setting token")
         if 'Authorization' in self:
             return self['Authorization'][len("Bearer "):]
 
@@ -336,11 +337,31 @@ class OAuth2Headers(PeonyHeaders):
 
         request = self.client['api', "", ""].oauth2.token.post
         token = await request(grant_type="client_credentials",
-                              _headers=self.basic_authorization)
+                              _headers=self.basic_authorization,
+                              _oauth2_pass=True)
 
         self.token = token['access_token']
 
         self._refreshing.clear()
+
+    async def prepare_request(self, *args, oauth2_pass=False, **kwargs):
+        """
+        prepare all the arguments for the request
+
+        Parameters
+        ----------
+        oauth2_pass : bool
+            For oauth2 authentication only (don't use it)
+
+        Returns
+        -------
+        dict
+            Parameters of the request correctly formatted
+        """
+        if not oauth2_pass:
+            await self.sign()
+
+        return await super().prepare_request(*args, **kwargs)
 
 
 class RawFormData(aiohttp.FormData):

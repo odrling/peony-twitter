@@ -115,8 +115,8 @@ To resolve the most trivial errors you can run:
 
     make format
 
-Note that running ``make`` is equivalent to running ``make format && make
-test``
+Note that running ``make`` is equivalent to running
+``make format && make test``
 
 You can also use tox to run the tests, a configuration file is provided:
 

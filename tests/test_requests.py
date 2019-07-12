@@ -21,15 +21,16 @@ def api_path():
 
 
 @pytest.fixture
-def request(api_path):
+def peony_request(api_path):
     return requests.Request(api_path, 'get')
 
 
-def test_sanitize_params(request):
+def test_sanitize_params(peony_request):
     val = [1, 2, 3]
-    kwargs, skip_params = request.sanitize_params('get', _test=1, boom=0,
-                                                  test=True, val=val, a=None,
-                                                  text="aaa")
+    kwargs, skip_params = peony_request.sanitize_params('get', _test=1,
+                                                        boom=0, test=True,
+                                                        val=val, a=None,
+                                                        text="aaa")
 
     assert kwargs == {'test': 1, 'params': {'boom': '0',
                                             'test': "true",
@@ -38,9 +39,11 @@ def test_sanitize_params(request):
     assert skip_params is False
 
 
-def test_sanitize_params_skip(request):
+def test_sanitize_params_skip(peony_request):
     data = io.BytesIO(b'test')
-    kwargs, skip_params = request.sanitize_params('post', _test=1, boom=data)
+    kwargs, skip_params = peony_request.sanitize_params('post',
+                                                        _test=1,
+                                                        boom=data)
 
     assert kwargs == {'test': 1, 'data': {'boom': data}}
     assert skip_params is True
@@ -71,20 +74,20 @@ def test_error_handling(api_path):
             assert not error_handler.called
 
 
-def test_get_params(request):
-    kwargs, skip_params, req_url = request._get_params(_test=1, test=2)
+def test_get_params(peony_request):
+    kwargs, skip_params, req_url = peony_request._get_params(_test=1, test=2)
 
     assert kwargs == {'test': 1, 'params': {'test': '2'}}
     assert skip_params is False
     assert url == req_url
 
 
-def test_get_iterator(request):
-    assert isinstance(request.iterator.with_cursor(),
+def test_get_iterator(peony_request):
+    assert isinstance(peony_request.iterator.with_cursor(),
                       iterators.CursorIterator)
-    assert isinstance(request.iterator.with_max_id(),
+    assert isinstance(peony_request.iterator.with_max_id(),
                       iterators.MaxIdIterator)
-    assert isinstance(request.iterator.with_since_id(),
+    assert isinstance(peony_request.iterator.with_since_id(),
                       iterators.SinceIdIterator)
 
 
@@ -104,17 +107,17 @@ def test_iterator_params_from_factory(api_path):
     assert iterator.force is True
 
 
-def test_request_call(request):
-    assert isinstance(request(), requests.Request)
+def test_request_call(peony_request):
+    assert isinstance(peony_request(), requests.Request)
 
 
-def test_iterator_unknown_iterator(request):
+def test_iterator_unknown_iterator(peony_request):
     with pytest.raises(AttributeError):
-        request.iterator.whatchamacallit()
+        peony_request.iterator.whatchamacallit()
 
 
-def dummy_error_handler(request):
-    return request
+def dummy_error_handler(peony_request):
+    return peony_request
 
 
 def test_request_error_handler(api_path, _error_handler=True):

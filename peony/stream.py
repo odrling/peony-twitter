@@ -183,7 +183,7 @@ class StreamResponse:
 
         except CancelledError:
             logger.debug("Stopping stream")
-            raise StopAsyncIteration
+            raise
 
         except Exception as e:
             self.state = ERROR

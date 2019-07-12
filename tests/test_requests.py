@@ -27,7 +27,7 @@ def peony_request(api_path):
 
 def test_sanitize_params(peony_request):
     val = [1, 2, 3]
-    kwargs, skip_params = peony_request.sanitize_params('get', _test=1, 
+    kwargs, skip_params = peony_request.sanitize_params('get', _test=1,
                                                         boom=0, test=True,
                                                         val=val, a=None,
                                                         text="aaa")
@@ -41,7 +41,7 @@ def test_sanitize_params(peony_request):
 
 def test_sanitize_params_skip(peony_request):
     data = io.BytesIO(b'test')
-    kwargs, skip_params = peony_request.sanitize_params('post', 
+    kwargs, skip_params = peony_request.sanitize_params('post',
                                                         _test=1,
                                                         boom=data)
 

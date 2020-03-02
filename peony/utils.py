@@ -104,7 +104,8 @@ class ErrorHandler(metaclass=MetaErrorHandler):
                     _logger.debug("raising exception")
                     if future is not None:
                         future.set_exception(exc)
-                    raise exc
+                    else:
+                        raise exc
 
 
 class DefaultErrorHandler(ErrorHandler):

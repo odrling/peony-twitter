@@ -104,7 +104,7 @@ async def test_bad_request():
         dummy_client._session = MockSession(MockSessionRequest(status=404))
         with patch.object(dummy_client.headers, 'prepare_request',
                           side_effect=prepare_dummy):
-            with pytest.raises(exceptions.NotFound):
+            with pytest.raises(exceptions.HTTPNotFound):
                 await dummy_client.request('get', "http://google.com/404",
                                            future=asyncio.Future())
 

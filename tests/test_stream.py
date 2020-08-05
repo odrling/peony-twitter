@@ -241,7 +241,7 @@ async def test_stream_reconnection_enhance_your_calm():
 async def test_stream_reconnection_error():
     async with Stream() as stream:
         with patch.object(stream, '_connect', side_effect=response_forbidden):
-            with pytest.raises(exceptions.Forbidden):
+            with pytest.raises(exceptions.HTTPForbidden):
                 await stream.connect()
 
 

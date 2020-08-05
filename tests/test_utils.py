@@ -99,7 +99,7 @@ async def test_error_handler_service_unavailable(event_loop):
             coro = utils.DefaultErrorHandler(service_unavailable)(future=fut)
             event_loop.create_task(coro)
             await fut
-        except exceptions.ServiceUnavailable:
+        except exceptions.HTTPServiceUnavailable:
             assert sleep.called
         else:
             pytest.fail("ServiceUnavailable not raised")

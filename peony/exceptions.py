@@ -103,77 +103,77 @@ errors = ErrorDict()
 
 
 @statuses.code(304)
-class NotModified(PeonyException):
+class HTTPNotModified(PeonyException):
     pass
 
 
 @statuses.code(400)
-class BadRequest(PeonyException):
+class HTTPBadRequest(PeonyException):
     pass
 
 
 @statuses.code(401)
-class Unauthorized(PeonyException):
+class HTTPUnauthorized(PeonyException):
     pass
 
 
 @statuses.code(403)
-class Forbidden(PeonyException):
+class HTTPForbidden(PeonyException):
     pass
 
 
 @statuses.code(404)
-class NotFound(PeonyException):
+class HTTPNotFound(PeonyException):
     pass
 
 
 @statuses.code(406)
-class NotAcceptable(PeonyException):
+class HTTPNotAcceptable(PeonyException):
     pass
 
 
 @statuses.code(409)
-class Conflict(PeonyException):
+class HTTPConflict(PeonyException):
     pass
 
 
 @statuses.code(410)
-class Gone(PeonyException):
+class HTTPGone(PeonyException):
     pass
 
 
 @statuses.code(420)
-class EnhanceYourCalm(PeonyException):
+class HTTPEnhanceYourCalm(PeonyException):
     pass
 
 
 @statuses.code(422)
-class UnprocessableEntity(PeonyException):
+class HTTPUnprocessableEntity(PeonyException):
     pass
 
 
 @statuses.code(429)
-class TooManyRequests(PeonyException):
+class HTTPTooManyRequests(PeonyException):
     pass
 
 
 @statuses.code(500)
-class InternalServerError(PeonyException):
+class HTTPInternalServerError(PeonyException):
     pass
 
 
 @statuses.code(502)
-class BadGateway(PeonyException):
+class HTTPBadGateway(PeonyException):
     pass
 
 
 @statuses.code(503)
-class ServiceUnavailable(PeonyException):
+class HTTPServiceUnavailable(PeonyException):
     pass
 
 
 @statuses.code(504)
-class GatewayTimeout(PeonyException):
+class HTTPGatewayTimeout(PeonyException):
     pass
 
 

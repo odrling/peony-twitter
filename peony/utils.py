@@ -137,7 +137,7 @@ class DefaultErrorHandler(ErrorHandler):
         _logger.info(fmt.format(url=url))
         return ErrorHandler.RETRY
 
-    @ErrorHandler.handle(exceptions.ServiceUnavailable)
+    @ErrorHandler.handle(exceptions.HTTPServiceUnavailable)
     async def handle_service_unavailable(self):
         self.tries -= 1
         if self.tries > 0:

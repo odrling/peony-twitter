@@ -16,7 +16,7 @@ So to access
 
 .. code-block:: python
 
-    client.api.status.statuses.home_timeline.get()
+    client.api.statuses.home_timeline.get()
 
 .. _Twitter's documentation: https://dev.twitter.com/rest/reference
 

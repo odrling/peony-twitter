@@ -89,18 +89,22 @@ class ErrorHandler(metaclass=MetaErrorHandler):
         return ErrorHandler.RAISE
 
     async def __call__(self, future=None, **kwargs):
-        while True:
+        status = ErrorHandler.OK
+        while status:
             try:
                 if future is None:
                     return await self.__request(**kwargs)
                 else:
                     return await self.__request(future=future, **kwargs)
             except Exception as exc:
-                reply = await self.__handle(exc.__class__, exception=exc,
-                                            **kwargs)
-                if isinstance(reply, Exception):
-                    exc = reply
-                if reply is not ErrorHandler.RETRY:
+                status = await self.__handle(exc.__class__, exception=exc,
+                                             **kwargs)
+
+                if isinstance(status, Exception):
+                    exc = status
+                    status = ErrorHandler.RAISE
+
+                if status is ErrorHandler.RAISE:
                     _logger.debug("raising exception")
                     if future is not None:
                         future.set_exception(exc)

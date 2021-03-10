@@ -1,9 +1,11 @@
 # -*- coding: utf-8 -*-
-
 import asyncio
 import logging
 import os
 import sys
+from functools import partial
+from itertools import chain
+from typing import Any, Iterable, Mapping
 
 import peony
 
@@ -334,3 +336,64 @@ def set_debug():
     """ activates error messages, useful during development """
     logging.basicConfig(level=logging.WARNING)
     peony.logger.setLevel(logging.DEBUG)
+
+
+class Entity:
+    """ Helper to use Twitter entities """
+
+    def __init__(self, original: str,
+                 entity_type: str,
+                 data: Mapping[str, Any]):
+        self.data = data
+        self.entity_type = entity_type
+        self.original = original[self.start:self.end]
+
+    def __getitem__(self, key: str) -> Any:
+        return self.data[key]
+
+    @property
+    def start(self) -> int:
+        return self.data['start']
+
+    @property
+    def end(self) -> int:
+        return self.data['end']
+
+    @property
+    def text(self) -> str:
+        """ returns text representing the entity """
+        ret = {
+            'urls': lambda: self.data['display_url']
+        }
+
+        return ret.get(self.entity_type, lambda: self.original)()
+
+    @property
+    def url(self) -> str:
+        """ returns an url representing the entity """
+        ret = {
+            'urls': lambda: self.data['expanded_url'],
+            'mentions': lambda: f"https://twitter.com/{self.data['username']}",
+            'hashtags': lambda: f"https://twitter.com/hashtag/{self.data['tag']}"  # noqa
+        }
+
+        return ret.get(self.entity_type, lambda: "")()
+
+
+def get_twitter_entities(
+    text: str,
+    entities: Mapping[str, Mapping[str, Any]]
+) -> Iterable[Entity]:
+    """ Returns twitter entities from an entities dictionnary
+
+    Entities are returned is reversed order for ease of use (start and end
+    indexes stay the same if the string is changed in place)
+    """
+    return sorted(
+        chain.from_iterable(
+            map(partial(Entity, text, entity_type), entities)
+            for entity_type, entities in entities.items()
+        ),
+        key=lambda e: e.start,
+        reverse=True
+    )

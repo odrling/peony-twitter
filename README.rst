@@ -2,9 +2,6 @@ Asynchronous Twitter API client for Python 3.5+
 ===============================================
 
 
-.. image:: https://travis-ci.org/odrling/peony-twitter.svg?branch=master
-  :target: https://travis-ci.org/odrling/peony-twitter
-
 .. image:: https://codecov.io/gh/odrling/peony-twitter/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/odrling/peony-twitter
 
@@ -100,7 +97,7 @@ To run the tests run:
 
 .. code-block:: bash
 
-    make test
+    make
 
 The first time this command is run it will install all the dependencies
 which can take a bit of time.
@@ -108,15 +105,6 @@ which can take a bit of time.
 The tests include a code style test. The code style is mostly PEP8, the only
 exception so far being long urls included in docstrings and some imports
 that are not at the top of the file (because they can't be there).
-
-To resolve the most trivial errors you can run:
-
-.. code-block:: bash
-
-    make format
-
-Note that running ``make`` is equivalent to running
-``make format && make test``
 
 You can also use tox to run the tests, a configuration file is provided:
 

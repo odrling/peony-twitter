@@ -373,8 +373,8 @@ class Entity:
         """ returns an url representing the entity """
         ret = {
             'urls': lambda: self.data['expanded_url'],
-            'mentions': lambda: f"https://twitter.com/{self.data['username']}",
-            'hashtags': lambda: f"https://twitter.com/hashtag/{self.data['tag']}"  # noqa
+            'mentions': lambda: "https://twitter.com/{}".format(self.data['username']),    # noqa
+            'hashtags': lambda: "https://twitter.com/hashtag/{}".format(self.data['tag'])  # noqa
         }
 
         return ret.get(self.entity_type, lambda: "")()

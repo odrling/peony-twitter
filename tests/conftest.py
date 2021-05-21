@@ -57,7 +57,7 @@ class AppMedias(web.Application):
     async def stop(self):
         try:
             await self.srv.close()
-        except:
+        except Exception:
             pass
         finally:
             await self.srv.wait_closed()

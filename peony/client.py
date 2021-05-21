@@ -18,6 +18,7 @@ import aiohttp
 from . import data_processing, exceptions, general, oauth, utils
 from .api import APIPath, StreamingAPIPath
 from .commands import EventStreams, task
+from .exceptions import PeonyUnavailableMethod
 from .oauth import OAuth1Headers
 from .stream import StreamResponse
 
@@ -479,30 +480,17 @@ class PeonyClient(BasePeonyClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        task = self.loop.create_task(self._get_twitter_configuration())
         self._twitter_configuration = task
         if isinstance(self.headers, oauth.OAuth1Headers):
             self._user = self.loop.create_task(self._get_user())
 
-    async def _get_twitter_configuration(self):
-        """
-        create a ``twitter_configuration`` attribute with the response
-        of the endpoint
-        https://api.twitter.com/1.1/help/configuration.json
-        """
-        api = self['api', general.twitter_api_version,
-                   ".json", general.twitter_base_api_url]
-
-        if isinstance(self.headers, OAuth1Headers):
-            return await api.help.configuration.get()
-
-    @property
-    def twitter_configuration(self):
-        return self._twitter_configuration
-
     @property
     def user(self):
-        return self._user
+        if isinstance(self.headers, oauth.OAuth1Headers):
+            return self._user
+
+        raise PeonyUnavailableMethod("user attribute is only available with "
+                                     "OAuth 1 authentification.")
 
     async def _get_user(self):
         """
@@ -517,18 +505,8 @@ class PeonyClient(BasePeonyClient):
     def _get_close_tasks(self):
         tasks = super()._get_close_tasks()
 
-        if self.twitter_configuration.done():
-            async def cancel_twitter_configuration():
-                self.twitter_configuration.cancel()
-                try:
-                    await self.twitter_configuration
-                except:  # pragma: no cover
-                    pass
-
-            tasks.append(cancel_twitter_configuration())
-
-        if isinstance(self.user, asyncio.Future):
-            if self.user.done():
+        if hasattr(self, '_user'):
+            if not self.user.done():
                 async def cancel_user():
                     self.user.cancel()
                     try:
@@ -640,24 +618,14 @@ class PeonyClient(BasePeonyClient):
 
         return response
 
-    async def _size_test(self, size, size_limit):
-        if size_limit is None:
-            try:
-                twitter_config = await self.twitter_configuration
-                size_limit = twitter_config['photo_size_limit']
-            except (KeyError, TypeError):
-                return False
-
-        return size > size_limit
-
     async def upload_media(self, file_,
                            media_type=None,
                            media_category=None,
                            chunked=None,
-                           size_limit=None,
+                           size_limit=3 * (1024**2),
                            **params):
         """
-            upload a media on twitter
+            upload a media file on twitter
 
         Parameters
         ----------
@@ -698,7 +666,7 @@ class PeonyClient(BasePeonyClient):
         if chunked is not None:
             size_test = False
         else:
-            size_test = await self._size_test(media_size, size_limit)
+            size_test = media_size > size_limit
 
         if isinstance(media, aiohttp.ClientResponse):
             # send the content of the response

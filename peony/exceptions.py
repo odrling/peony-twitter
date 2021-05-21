@@ -68,6 +68,10 @@ class PeonyException(Exception):
         return str(self.data)
 
 
+class PeonyUnavailableMethod(PeonyException):
+    pass
+
+
 class PeonyDecodeError(PeonyException):
 
     def __init__(self, exception, *args, **kwargs):

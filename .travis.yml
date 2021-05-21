@@ -11,7 +11,7 @@ install:
   - pip install --upgrade -r tests_requirements.txt
 script:
   - flake8
-  - travis_wait py.test tests --cov=peony --timeout=30
+  - py.test tests --cov=peony --timeout=30
 cache: pip
 after_success:
   - codecov

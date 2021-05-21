@@ -1,6 +1,8 @@
 -r tests_requirements.txt
-autopep8
 autoflake
+autopep8
+flake8
+flake8-bugbear
 isort
 pytest-sugar
 sphinx

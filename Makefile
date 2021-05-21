@@ -1,12 +1,12 @@
-.PHONY: help clean doc install format test release
+.PHONY: help clean doc format install test release
 
-all: .formatted test
+all: test
 
 help:
 	@echo "Please use \`make <target>\` where <target> is one of"
 	@echo "  clean      to clean the repository"
 	@echo "  doc        to make the documentation (html)"
-	@echo "  format     to correct code style"
+	@echo "  format     to check code style"
 	@echo "  test       to test peony"
 
 clean:
@@ -31,17 +31,9 @@ install: .installed
 	pip3 install --upgrade -r dev_requirements.txt
 	@touch .installed
 
-format: .installed .formatted
-
 PYFILES = $(shell find * -type f -name "*.py" | grep -v '__init__.py')
 
-.formatted: .installed $(PYFILES)
-	isort $? > /dev/null
-	autopep8 --in-place $?
-	autoflake --in-place --remove-all-unused-imports $?
-	@touch .formatted
-
-.format_test: $(PYFILES)
+format: .installed $(PYFILES)
 	flake8 $?
 	@touch .format_test
 

@@ -61,7 +61,7 @@ class BDClient(peony.PeonyClient):
         try:
             await self.set_tz()
             print("Timezone in use is", os.environ['TZ'])
-        except:
+        except Exception:
             print("Timezone in use is that of your computer")
 
         await asyncio.sleep(self.time_until_birthday)

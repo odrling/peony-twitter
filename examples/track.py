@@ -2,10 +2,10 @@
 import asyncio
 
 try:
-    from . import peony, api
-except:
-    from __init__ import peony
+    from . import api, peony
+except Exception:
     import api
+    from __init__ import peony
 
 client = peony.PeonyClient(**api.keys)
 

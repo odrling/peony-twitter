@@ -69,7 +69,9 @@ class PeonyException(Exception):
 
 
 class PeonyUnavailableMethod(PeonyException):
-    pass
+
+    def __init__(self, message):
+        super().__init__(message=message)
 
 
 class PeonyDecodeError(PeonyException):

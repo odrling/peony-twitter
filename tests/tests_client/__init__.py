@@ -84,5 +84,5 @@ class TaskContext:
             self.task.cancel()
             try:
                 await self.task
-            except:
+            except Exception:
                 pass

@@ -14,7 +14,7 @@ from . import exceptions
 try:
     import magic
     mime = magic.Magic(mime=True)
-except:  # pragma: no cover
+except Exception:  # pragma: no cover
     import mimetypes
     mime = mimetypes.MimeTypes()
     magic = None

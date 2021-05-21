@@ -325,7 +325,7 @@ class OAuth2Headers(PeonyHeaders):
             data = RawFormData({'access_token': token}, quote_fields=False)
 
             await request(_data=data, _headers=self.basic_authorization)
-        except:
+        except Exception:
             self.token = token
             raise
 

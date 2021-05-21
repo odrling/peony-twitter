@@ -104,7 +104,7 @@ class EventStream(abc.ABC):
             coro = event_handler(self, data)
             try:
                 return await peony.utils.execute(coro)
-            except:
+            except Exception:
                 fmt = "error occurred while running {classname}.{handler}:"
                 msg = fmt.format(classname=self.__class__.__name__,
                                  handler=event_handler.__name__)

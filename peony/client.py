@@ -431,7 +431,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                     self.setup.cancel()
                     try:
                         await self.setup
-                    except:  # pragma: no cover
+                    except Exception:  # pragma: no cover
                         pass
 
                 tasks.append(cancel_setup())
@@ -442,7 +442,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 self._gathered_tasks.cancel()
                 try:
                     await self._gathered_tasks
-                except:
+                except Exception:
                     pass
 
             tasks.append(cancel_tasks())
@@ -511,7 +511,7 @@ class PeonyClient(BasePeonyClient):
                     self.user.cancel()
                     try:
                         await self.user
-                    except:  # pragma: no cover
+                    except Exception:  # pragma: no cover
                         pass
 
                 tasks.append(cancel_user())
@@ -576,18 +576,14 @@ class PeonyClient(BasePeonyClient):
         i = 0
 
         while chunk:
+            req = self.upload.media.upload.post(command="APPEND",
+                                                media_id=media_id,
+                                                media=chunk,
+                                                segment_index=i)
             if is_coro:
-                req = self.upload.media.upload.post(command="APPEND",
-                                                    media_id=media_id,
-                                                    media=chunk,
-                                                    segment_index=i)
                 chunk, _ = await asyncio.gather(media.read(chunk_size), req)
             else:
-                await self.upload.media.upload.post(command="APPEND",
-                                                    media_id=media_id,
-                                                    media=chunk,
-                                                    segment_index=i)
-
+                await req
                 chunk = media.read(chunk_size)
 
             i += 1

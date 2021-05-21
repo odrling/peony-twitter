@@ -104,7 +104,7 @@ class Functions(dict):
                 command = self[cmd](*args, data=data)
                 return await peony.utils.execute(command)
 
-        except:
+        except Exception:
             fmt = "Error occurred while running function {cmd}:"
             peony.utils.log_error(fmt.format(cmd=cmd))
 

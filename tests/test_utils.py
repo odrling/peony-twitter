@@ -53,7 +53,7 @@ def executor():
     return ProcessPoolExecutor()
 
 
-@pytest.yield_fixture
+@pytest.fixture
 def session(event_loop):
     with aiohttp.ClientSession(loop=event_loop):
         yield session

@@ -117,6 +117,8 @@ class DummyRequest:
 
     async def __call__(self, url, method, future,
                        data=None, skip_params=None, params=None):
+        if url == self.client.api.account.verify_credentials.url():
+            return
         assert url == self.client.upload.media.upload.url()
 
         response = {'media_id': self.media_id}

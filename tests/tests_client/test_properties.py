@@ -28,6 +28,7 @@ request_test = RequestTest
 
 
 @pytest.mark.asyncio
+@pytest.mark.skip
 async def test_peony_client_get_user():
     async with DummyPeonyClient() as client:
         with patch.object(client, 'request') as req:

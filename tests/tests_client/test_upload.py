@@ -13,7 +13,7 @@ import peony.exceptions
 import pytest
 from peony import utils
 from peony.client import PeonyClient
-from tests.tests_client import DummyPeonyClient, TaskContext
+from tests.tests_client import DummyPeonyClient
 
 from .. import dummy, medias
 

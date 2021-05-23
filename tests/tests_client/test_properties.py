@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import asyncio
 from unittest.mock import patch
 
 import pytest
@@ -31,10 +30,10 @@ request_test = RequestTest
 @pytest.mark.asyncio
 async def test_peony_client_get_user():
     async with DummyPeonyClient() as client:
-        await client.user
-        # with patch.object(client, 'request', side_effect=request) as req:
-        #     assert await client.user
-        #     assert req.called
+        with patch.object(client, 'request') as req:
+            await client._get_user()
+            assert await client.user
+            assert req.called
 
 
 @pytest.mark.asyncio

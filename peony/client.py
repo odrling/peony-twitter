@@ -10,7 +10,6 @@ the Twitter APIs, with a method to upload a media
 import asyncio
 import io
 import logging
-import sys
 
 try:
     from asyncio.exceptions import CancelledError

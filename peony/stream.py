@@ -3,7 +3,11 @@
 import asyncio
 import logging
 import sys
-from concurrent.futures import CancelledError
+
+try:
+    from asyncio import CancelledError
+except ImportError:
+    from concurrent.futures import CancelledError
 
 import aiohttp
 import async_timeout

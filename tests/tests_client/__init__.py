@@ -2,7 +2,6 @@ import asyncio
 from unittest import mock
 
 import aiohttp
-
 from peony import BasePeonyClient, PeonyClient, utils
 
 from .. import MockResponse
@@ -63,7 +62,7 @@ class DummyClient(BasePeonyClient):
 
     async def __aexit__(self, *args):
         await super().__aexit__(*args)
-        self.patch.__exit__()
+        self.patch.__exit__(*args)
 
 
 class DummyPeonyClient(DummyClient, PeonyClient):

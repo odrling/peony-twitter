@@ -14,9 +14,8 @@ from functools import wraps
 from unittest.mock import patch
 
 import aiohttp
-import pytest
-
 import peony
+import pytest
 from peony import data_processing, exceptions, utils
 
 from . import MockResponse, create_future, dummy
@@ -72,37 +71,22 @@ async def test_error_handler_rate_limit():
         if tries > 0:
             response = MockResponse(error=88,
                                     headers={'X-Rate-Limit-Reset': 0})
-            raise await exceptions.throw(response)
+            await exceptions.throw(response)
 
     with patch.object(asyncio, 'sleep', side_effect=dummy):
-        await utils.DefaultErrorHandler(rate_limit)(url="http://")
+        await utils.DefaultErrorHandler(rate_limit, tries=tries)(url="http://")
 
 
 @pytest.mark.asyncio
-async def test_error_handler_service_unavailable(event_loop):
-    global tries
-    tries = 4
-
+async def test_error_handler_service_unavailable():
     async def service_unavailable(**kwargs):
-        global tries
-        tries -= 1
-
-        if tries > 0:
-            response = MockResponse(status=503)
-            raise await exceptions.throw(response)
-        else:
-            return MockResponse()
+        raise exceptions.HTTPServiceUnavailable()
 
     with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
-        try:
-            fut = create_future(event_loop)
-            coro = utils.DefaultErrorHandler(service_unavailable)(future=fut)
-            event_loop.create_task(coro)
-            await fut
-        except exceptions.HTTPServiceUnavailable:
-            assert sleep.called
-        else:
-            pytest.fail("ServiceUnavailable not raised")
+        with pytest.raises(exceptions.HTTPServiceUnavailable):
+            await utils.DefaultErrorHandler(service_unavailable)()
+
+        assert sleep.called
 
 
 @pytest.mark.asyncio

@@ -4,8 +4,8 @@ import asyncio
 from unittest.mock import patch
 
 import pytest
-
 from peony import oauth
+from peony.exceptions import PeonyUnavailableMethod
 from tests import dummy
 from tests.tests_client import DummyPeonyClient
 
@@ -41,32 +41,8 @@ async def test_peony_client_get_user():
 
 
 @pytest.mark.asyncio
-async def test_peony_client_get_twitter_configuration():
-    async with DummyPeonyClient() as client:
-        request = request_test(client.api.help.configuration.url(), 'get')
-
-        with patch.object(client, 'request', side_effect=request) as req:
-            await client.twitter_configuration
-            assert req.called
-            assert client.twitter_configuration.done()
-            await client.close()
-
-
-@pytest.mark.asyncio
 async def test_peony_client_get_user_oauth2():
     async with DummyPeonyClient(auth=oauth.OAuth2Headers) as client:
         client.request = dummy
-        assert not isinstance(client.user, asyncio.Future)
-
-
-@pytest.mark.asyncio
-async def test_peony_client_get_twitter_configuration_oauth2():
-    async with DummyPeonyClient(auth=oauth.OAuth2Headers) as client:
-        client.headers.token = "token"
-        request = request_test(client.api.help.configuration.url(), 'get')
-
-        with patch.object(client, 'request', side_effect=request) as req:
-            assert await client.twitter_configuration is None
-            assert not req.called
-            assert client.twitter_configuration.done()
-            await client.close()
+        with pytest.raises(PeonyUnavailableMethod):
+            client.user

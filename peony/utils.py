@@ -68,13 +68,12 @@ class ErrorHandler(metaclass=MetaErrorHandler):
 
     @staticmethod
     def handle(*exceptions):
-        """  """
         def handler_decorator(handler):
             return Handle(handler, *exceptions)
 
         return handler_decorator
 
-    async def __handle(self, exception_class, **kwargs):
+    async def _handle(self, exception_class, **kwargs):
         if exception_class in self._handlers:
             handler = self._handlers[exception_class]
             args = get_args(handler, skip=1)
@@ -86,7 +85,7 @@ class ErrorHandler(metaclass=MetaErrorHandler):
                 return exc
 
         for base in exception_class.__bases__:
-            return await self.__handle(base, **kwargs)
+            return await self._handle(base, **kwargs)
 
         return ErrorHandler.RAISE
 
@@ -98,14 +97,14 @@ class ErrorHandler(metaclass=MetaErrorHandler):
                 else:
                     return await self.__request(future=future, **kwargs)
             except Exception as exc:
-                status = await self.__handle(exc.__class__, exception=exc,
-                                             **kwargs)
+                status = await self._handle(exc.__class__, exception=exc,
+                                            **kwargs)
 
                 if isinstance(status, Exception):
                     exc = status
                     status = ErrorHandler.RAISE
 
-                if status is ErrorHandler.RAISE:
+                if status is not ErrorHandler.RETRY:
                     _logger.debug("raising exception")
                     if future is not None:
                         future.set_exception(exc)
@@ -125,9 +124,9 @@ class DefaultErrorHandler(ErrorHandler):
     :class:`exceptions.ServiceUnavailable`
     """
 
-    def __init__(self, request):
+    def __init__(self, request, tries=3):
         super().__init__(request)
-        self.tries = 3
+        self.tries = tries
 
     @ErrorHandler.handle(exceptions.RateLimitExceeded)
     async def handle_rate_limits(self, exception, url):

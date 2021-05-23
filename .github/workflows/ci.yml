@@ -31,3 +31,5 @@ jobs:
       run: flake8
     - name: Run tests
       run: pytest tests --cov=peony --cov-report=xml --timeout=10
+    - name: Codecov
+      uses: codecov/codecov-action@v1

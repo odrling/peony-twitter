@@ -486,17 +486,7 @@ class PeonyClient(BasePeonyClient):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self._twitter_configuration = task
-        if isinstance(self.headers, oauth.OAuth1Headers):
-            self._user = self.loop.create_task(self._get_user())
-
-    @property
-    def user(self):
-        if isinstance(self.headers, oauth.OAuth1Headers):
-            return self._user
-
-        raise PeonyUnavailableMethod("user attribute is only available with "
-                                     "OAuth 1 authentification.")
+        self.user = self.loop.create_task(self._get_user())
 
     async def _get_user(self):
         """

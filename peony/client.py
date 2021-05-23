@@ -10,7 +10,13 @@ the Twitter APIs, with a method to upload a media
 import asyncio
 import io
 import logging
-from concurrent.futures import CancelledError
+import sys
+
+try:
+    from asyncio.exceptions import CancelledError
+except ImportError:
+    from concurrent.futures import CancelledError
+
 from urllib.parse import urlparse
 
 import aiohttp
@@ -434,7 +440,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                     except Exception:  # pragma: no cover
                         pass
 
-                tasks.append(cancel_setup())
+                tasks.append(self.loop.create_task(cancel_setup()))
 
         # close currently running tasks
         if self._gathered_tasks is not None:
@@ -445,12 +451,12 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 except Exception:
                     pass
 
-            tasks.append(cancel_tasks())
+            tasks.append(self.loop.create_task(cancel_tasks()))
 
         # close the session only if it was created by peony
         if not self._user_session and self._session is not None:
             try:
-                tasks.append(self._session.close())
+                tasks.append(self.loop.create_task(self._session.close()))
             except (TypeError, AttributeError):
                 pass
 
@@ -500,12 +506,16 @@ class PeonyClient(BasePeonyClient):
         api = self['api', general.twitter_api_version,
                    ".json", general.twitter_base_api_url]
 
-        return await api.account.verify_credentials.get()
+        if isinstance(self.headers, oauth.OAuth1Headers):
+            return await api.account.verify_credentials.get()
+
+        raise PeonyUnavailableMethod("user attribute is only available with "
+                                     "OAuth 1 authentification.")
 
     def _get_close_tasks(self):
         tasks = super()._get_close_tasks()
 
-        if hasattr(self, '_user'):
+        if isinstance(self.headers, OAuth1Headers):
             if not self.user.done():
                 async def cancel_user():
                     self.user.cancel()
@@ -514,7 +524,7 @@ class PeonyClient(BasePeonyClient):
                     except Exception:  # pragma: no cover
                         pass
 
-                tasks.append(cancel_user())
+                tasks.append(self.loop.create_task(cancel_user()))
 
         return tasks
 

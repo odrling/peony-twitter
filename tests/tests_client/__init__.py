@@ -65,8 +65,25 @@ class DummyClient(BasePeonyClient):
         self.patch.__exit__(*args)
 
 
-class DummyPeonyClient(DummyClient, PeonyClient):
-    pass
+class DummyPeonyClient(PeonyClient):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__("", "", error_handler=utils.ErrorHandler,
+                         *args, **kwargs)
+
+    async def request(self, *args, **kwargs):
+        pass
+
+    async def __aenter__(self):
+        self.session = aiohttp.ClientSession()
+        self.patch = mock.patch.object(self.session, 'request')
+        self.patch.__enter__()
+
+        return await super().__aenter__()
+
+    async def __aexit__(self, *args):
+        await super().__aexit__(*args)
+        self.patch.__exit__(*args)
 
 
 class TaskContext:

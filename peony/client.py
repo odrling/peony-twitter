@@ -13,7 +13,7 @@ import logging
 
 try:
     from asyncio.exceptions import CancelledError
-except ImportError:
+except ImportError:  # pragma: no cover
     from concurrent.futures import CancelledError
 
 from urllib.parse import urlparse
@@ -436,7 +436,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                     self.setup.cancel()
                     try:
                         await self.setup
-                    except Exception:  # pragma: no cover
+                    except CancelledError:  # pragma: no cover
                         pass
 
                 tasks.append(self.loop.create_task(cancel_setup()))
@@ -447,7 +447,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 self._gathered_tasks.cancel()
                 try:
                     await self._gathered_tasks
-                except Exception:
+                except CancelledError:
                     pass
 
             tasks.append(self.loop.create_task(cancel_tasks()))
@@ -510,7 +510,7 @@ class PeonyClient(BasePeonyClient):
                     self.user.cancel()
                     try:
                         await self.user
-                    except Exception:  # pragma: no cover
+                    except CancelledError:  # pragma: no cover
                         pass
 
                 tasks.append(self.loop.create_task(cancel_user()))

@@ -6,7 +6,7 @@ import sys
 
 try:
     from asyncio import CancelledError
-except ImportError:
+except ImportError:  # pragma: no cover
     from concurrent.futures import CancelledError
 
 import aiohttp

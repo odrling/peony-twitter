@@ -38,7 +38,7 @@ format: .installed $(PYFILES)
 	@touch .format_test
 
 test: .installed .format_test
-	py.test --timeout=10 --cov=peony --cov-report term-missing --durations=20 tests
+	py.test --cov=peony --cov-report term-missing --durations=20 tests
 
 release:
 	python3 setup.py sdist bdist_wheel

@@ -4,36 +4,18 @@ import asyncio
 import io
 import random
 import tempfile
-from unittest.mock import patch
 
 import aiofiles
 import aiohttp
 import peony
 import peony.exceptions
 import pytest
+from asynctest import patch
 from peony import utils
 from peony.client import PeonyClient
 from tests.tests_client import DummyPeonyClient
 
-from .. import dummy, medias
-
-
-class MyPatch:
-
-    def __init__(self, obj, attr, val):
-        self.object = obj
-        self.attr = attr
-        self.val = val
-
-    def __enter__(self):
-        self.original = getattr(self.object, self.attr)
-        setattr(self.object, self.attr, self.val)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        setattr(self.object, self.attr, self.original)
-
-
-mypatch = MyPatch
+from .. import medias
 
 
 @pytest.mark.asyncio
@@ -196,7 +178,7 @@ async def chunked_upload(media, file):
 
         with patch.object(dummy_peony_client, 'request',
                           side_effect=dummy_request):
-            with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
+            with patch.object(asyncio, 'sleep') as sleep:
                 await dummy_peony_client.upload_media(file,
                                                       chunk_size=chunk_size,
                                                       chunked=True)
@@ -252,7 +234,7 @@ async def test_chunked_upload_fail(medias):
 
         with patch.object(client, 'request',
                           side_effect=dummy_request):
-            with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
+            with patch.object(asyncio, 'sleep') as sleep:
                 with pytest.raises(peony.exceptions.MediaProcessingError):
                     await client.upload_media(
                         media_data, chunk_size=chunk_size, chunked=True
@@ -273,7 +255,7 @@ class MediaRequest:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         self.req.close()
-        self.session.close()
+        await self.session.close()
 
 
 class MediaPeonyClient(PeonyClient):

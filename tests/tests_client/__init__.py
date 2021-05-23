@@ -1,7 +1,7 @@
 import asyncio
-from unittest import mock
 
 import aiohttp
+import asynctest as mock
 from peony import BasePeonyClient, PeonyClient, utils
 
 from .. import MockResponse

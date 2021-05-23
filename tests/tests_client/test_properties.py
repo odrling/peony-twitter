@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from unittest.mock import patch
-
 import pytest
+from asynctest import patch
 from peony import oauth
 from peony.exceptions import PeonyUnavailableMethod
 from tests import dummy
@@ -33,7 +32,6 @@ async def test_peony_client_get_user():
     async with DummyPeonyClient() as client:
         with patch.object(client, 'request') as req:
             await client._get_user()
-            assert await client.user
             assert req.called
 
 

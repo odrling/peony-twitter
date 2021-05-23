@@ -1,10 +1,8 @@
-from unittest.mock import patch
-
-import pytest
 
 import peony
+import pytest
+from asynctest import patch
 from peony.general import twitter_api_version, twitter_base_api_url
-from tests import dummy
 
 from . import DummyClient, MockSession
 
@@ -38,7 +36,7 @@ class TasksClientTest(DummyClient):
 @pytest.mark.asyncio
 async def test_tasks():
     async with TasksClientTest() as client:
-        with patch.object(client, 'request', side_effect=dummy) as request:
+        with patch.object(client, 'request') as request:
             await client.run_tasks()
             base_url = twitter_base_api_url.format(api='api',
                                                    version=twitter_api_version)
@@ -52,7 +50,7 @@ async def test_tasks():
 
 def test_run():
     client = TasksClientTest()
-    with patch.object(client, 'request', side_effect=dummy) as request:
+    with patch.object(client, 'request') as request:
         client.run()
         base_url = twitter_base_api_url.format(api='api',
                                                version=twitter_api_version)

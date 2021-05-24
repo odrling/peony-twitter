@@ -20,7 +20,7 @@ clean:
 
 doc: build/html
 
-build/html: docs
+build/html: $(wildcard docs/*) $(wildcard docs/*/*)
 	sphinx-build -b html -d build/doctrees docs build/html
 	@printf "\nBuild finished. The HTML pages are in build/html.\n"
 

@@ -5,15 +5,12 @@ on:
     branches: [ master ]
   pull_request:
     branches: [ master ]
-  schedule:
-    - cron: 0 0 * * 5 # run actions on friday
 
 jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        # in this example, there is a newer version already installed, 3.7.7, so the older version will be downloaded
         python-version:
           - '3.5'
           - '3.6'

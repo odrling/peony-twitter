@@ -4,7 +4,6 @@ import time
 
 import aiohttp
 import pytest
-
 from peony import PeonyClient, exceptions, oauth
 
 oauth2_keys = 'PEONY_CONSUMER_KEY', 'PEONY_CONSUMER_SECRET'
@@ -18,6 +17,7 @@ keys_oauth = {1: oauth1_keys,
 test_oauth = {i: all(key in os.environ for key in keys_oauth[i])
               for i in keys_oauth}
 
+print(test_oauth)
 oauth2_creds = 'consumer_key', 'consumer_secret'
 oauth1_creds = *oauth2_creds, 'access_token', 'access_token_secret'
 
@@ -63,8 +63,10 @@ def decorator_oauth(key):
         # very dirty don't do this at home
         return pytest.mark.asyncio(
             pytest.mark.twitter(
-                pytest.mark.skipif(not test_oauth[key],
-                                   reason="no credentials found")(func)
+                pytest.mark.timeout(1800)(
+                    pytest.mark.skipif(not test_oauth[key],
+                                       reason="no credentials found")(func)
+                )
             )
         )
 

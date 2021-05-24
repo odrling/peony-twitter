@@ -2,7 +2,7 @@ name: "Peony CI (Twitter)"
 
 on:
   push:
-    branches: [ master ]
+    branches: [ ci-test ]
   pull_request:
     branches: [ master ]
   schedule:

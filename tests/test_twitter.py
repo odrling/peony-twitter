@@ -17,7 +17,6 @@ keys_oauth = {1: oauth1_keys,
 test_oauth = {i: all(key in os.environ for key in keys_oauth[i])
               for i in keys_oauth}
 
-print(test_oauth)
 oauth2_creds = 'consumer_key', 'consumer_secret'
 oauth1_creds = *oauth2_creds, 'access_token', 'access_token_secret'
 
@@ -38,6 +37,9 @@ def client_oauth(key, event_loop):
     if clients[key] is None:
         creds = {k: os.environ[envk]
                  for k, envk in zip(creds_oauth[key], keys_oauth[key])}
+
+        for k, v in creds.items():
+            print(k, len(v))
 
         clients[key] = PeonyClient(auth=headers[key], **creds)
 

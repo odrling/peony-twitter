@@ -7,6 +7,8 @@ from functools import partial
 from itertools import chain
 from typing import Any, Iterable, Mapping
 
+import aiohttp
+
 import peony
 
 from . import exceptions
@@ -149,6 +151,14 @@ class DefaultErrorHandler(ErrorHandler):
             _logger.info("Service temporarily unavailable, "
                          "request will be made again very soon")
             await asyncio.sleep(0.5)
+            return ErrorHandler.RETRY
+
+    @ErrorHandler.handle(aiohttp.ClientError)
+    async def handle_client_error(self, exception=None):
+        assert exception is not None
+        self.tries -= 1
+        if self.tries > 0:
+            _logger.info(str(exception))
             return ErrorHandler.RETRY
 
 

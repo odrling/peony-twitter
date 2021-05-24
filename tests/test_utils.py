@@ -101,8 +101,8 @@ async def test_error_handler_client_error():
         if tries > 0:
             raise aiohttp.ClientError()
 
-    with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
-        await utils.DefaultErrorHandler(client_error)()
+    await utils.DefaultErrorHandler(client_error)()
+
 
 @pytest.mark.asyncio
 async def test_error_handler_asyncio_timeout(event_loop):

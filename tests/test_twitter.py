@@ -41,7 +41,7 @@ def client_oauth(key, event_loop):
         clients[key] = PeonyClient(auth=headers[key], **creds)
 
     clients[key].loop = event_loop
-    clients[key]._session = aiohttp.ClientSession(loop=event_loop)
+    clients[key]._session = aiohttp.ClientSession()
     return clients[key]
 
 

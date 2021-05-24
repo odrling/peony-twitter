@@ -35,9 +35,8 @@ PYFILES = $(shell find * -type f -name "*.py" | grep -v '__init__.py')
 
 format: .installed $(PYFILES)
 	flake8 $?
-	@touch .format_test
 
-test: .installed .format_test
+test: .installed format
 	py.test --cov=peony --cov-report term-missing --durations=20 tests
 
 release:

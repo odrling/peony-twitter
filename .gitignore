@@ -72,3 +72,6 @@ target/
 # tests cache
 /tests/cache
 .pytest_cache
+
+# zsh autoenv
+.autoenv.zsh

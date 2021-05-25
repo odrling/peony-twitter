@@ -241,4 +241,5 @@ def oauth2_dance(consumer_key, consumer_secret, loop=None):
         Bearer token
     """
     loop = asyncio.get_event_loop() if loop is None else loop
-    return loop.run_until_complete(async_oauth2_dance(consumer_key, consumer_secret))
+    coro = async_oauth2_dance(consumer_key, consumer_secret)
+    return loop.run_until_complete(coro)

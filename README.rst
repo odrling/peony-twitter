@@ -75,9 +75,15 @@ Make sure to get your api keys and access tokens from
 Documentation
 -------------
 
-Read `Peony's documentation`_.
+Read `Peony's documentation`_ on Read The Docs.
+
+There is a `#peony`_ channel on the Libera IRC network for support and
+discussion about Peony.
+You can use `Libera's webchat`_ to connect to this channel from your web browser.
 
 .. _Peony's documentation: https://peony-twitter.readthedocs.io
+.. _#peony: irc://irc.libera.chat/peony
+.. _Libera's webchat: https://web.libera.chat/?channels=#peony
 
 Contributing
 ------------

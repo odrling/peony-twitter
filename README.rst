@@ -84,7 +84,7 @@ You can use `Libera's webchat`_ to connect to this channel from your web browser
 .. _Peony's documentation: https://peony-twitter.readthedocs.io
 .. _#peony: irc://irc.libera.chat/peony
 .. _Libera IRC network: https://libera.chat
-.. _Libera's webchat: https://web.libera.chat/?channels=#peony
+.. _Libera's webchat: https://web.libera.chat/#peony
 
 Contributing
 ------------

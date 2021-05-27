@@ -77,12 +77,13 @@ Documentation
 
 Read `Peony's documentation`_ on Read The Docs.
 
-There is a `#peony`_ channel on the Libera IRC network for support and
+There is a `#peony`_ channel on the `Libera IRC network`_ for support and
 discussion about Peony.
 You can use `Libera's webchat`_ to connect to this channel from your web browser.
 
 .. _Peony's documentation: https://peony-twitter.readthedocs.io
 .. _#peony: irc://irc.libera.chat/peony
+.. _Libera IRC network: https://libera.chat
 .. _Libera's webchat: https://web.libera.chat/?channels=#peony
 
 Contributing

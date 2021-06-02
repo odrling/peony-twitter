@@ -14,7 +14,7 @@ You can easily upload a media with peony:
 
     async def upload_media(path):
         media = await client.upload_media(path)
-        client.api.statuses.update.post(status="Wow! Look at this picture!",
+        await client.api.statuses.update.post(status="Wow! Look at this picture!",
                                         media_ids=[media.media_id])
 
     loop = asyncio.get_event_loop()

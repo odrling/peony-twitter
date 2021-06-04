@@ -9,6 +9,7 @@ the Twitter APIs, with a method to upload a media
 
 import asyncio
 import io
+from contextlib import suppress
 import logging
 
 try:
@@ -452,13 +453,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
             tasks.append(self.loop.create_task(cancel_tasks()))
 
-        # close the session only if it was created by peony
-        if not self._user_session and self._session is not None:
-            try:
-                tasks.append(self.loop.create_task(self._session.close()))
-            except (TypeError, AttributeError):
-                pass
-
         return tasks
 
     async def close(self):
@@ -468,7 +462,12 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         if tasks:
             await asyncio.wait(tasks)
 
-        self._session = None
+        # close the session only if it was created by peony
+        if not self._user_session and self._session is not None:
+            with suppress(TypeError, AttributeError):
+                await self._session.close()
+
+            self._session = None
 
     async def __aenter__(self):
         return self
@@ -487,7 +486,7 @@ class PeonyClient(BasePeonyClient):
 
         self.user = self.loop.create_task(self._get_user())
 
-    async def _get_user(self):
+    async def _get_user(self, init=False):
         """
         create a ``user`` attribute with the response of the endpoint
         https://api.twitter.com/1.1/account/verify_credentials.json
@@ -504,16 +503,15 @@ class PeonyClient(BasePeonyClient):
     def _get_close_tasks(self):
         tasks = super()._get_close_tasks()
 
-        if isinstance(self.headers, OAuth1Headers):
-            if not self.user.done():
-                async def cancel_user():
-                    self.user.cancel()
-                    try:
-                        await self.user
-                    except CancelledError:  # pragma: no cover
-                        pass
+        if not self.user.done():
+            async def cancel_user():
+                self.user.cancel()
+                try:
+                    await self.user
+                except CancelledError:  # pragma: no cover
+                    pass
 
-                tasks.append(self.loop.create_task(cancel_user()))
+            tasks.append(self.loop.create_task(cancel_user()))
 
         return tasks
 

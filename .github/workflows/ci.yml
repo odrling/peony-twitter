@@ -24,7 +24,7 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: pip install --upgrade -r tests_requirements.txt
+      run: pip install --upgrade -r tests_requirements.txt wheel
     - name: Check codestyle
       run: flake8
     - name: Run tests

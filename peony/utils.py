@@ -108,7 +108,7 @@ class ErrorHandler(metaclass=MetaErrorHandler):
 
                 if status is not ErrorHandler.RETRY:
                     _logger.debug("raising exception")
-                    if future is not None:
+                    if future is not None and not future.done():
                         future.set_exception(exc)
                         return
 

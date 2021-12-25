@@ -12,7 +12,7 @@ __author__ = "Florian Badie"
 __author_email__ = "florianbadie@gmail.com"
 __url__ = "https://github.com/odrling/peony-twitter"
 
-__version__ = "2.1.0-r1"
+__version__ = "2.1.1"
 
 __license__ = "MIT License"
 

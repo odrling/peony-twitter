@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import asyncio
 import logging
+import mimetypes
 import os
 import sys
 from functools import partial
@@ -13,13 +14,13 @@ import peony
 
 from . import exceptions
 
+mime = mimetypes.MimeTypes()
+
 try:
     import magic
     magic_mime = magic.Magic(mime=True)
     magic_module = True
 except Exception:  # pragma: no cover
-    import mimetypes
-    mime = mimetypes.MimeTypes()
     magic_module = False
 
 

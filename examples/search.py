@@ -3,10 +3,10 @@
 import asyncio
 
 try:
-    from . import peony, api
+    from . import api, peony
 except (SystemError, ImportError):
-    from __init__ import peony
     import api
+    from __init__ import peony
 
 loop = asyncio.get_event_loop()
 client = peony.PeonyClient(**api.keys, loop=loop)

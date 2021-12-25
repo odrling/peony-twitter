@@ -14,10 +14,10 @@ except ImportError:
     PIL = None
 
 try:
-    from . import peony, api
+    from . import api, peony
 except (SystemError, ImportError):
-    from __init__ import peony, utils
     import api
+    from __init__ import peony, utils
 
 client = peony.PeonyClient(**api.keys)
 

@@ -4,9 +4,10 @@ import asyncio
 from unittest.mock import Mock, patch
 
 import aiohttp
+import pytest
+
 import peony
 import peony.api
-import pytest
 from peony import BasePeonyClient, data_processing, exceptions, stream
 from tests import dummy
 from tests.tests_client import DummyClient, MockSession, MockSessionRequest

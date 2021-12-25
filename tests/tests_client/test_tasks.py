@@ -1,7 +1,8 @@
 
-import peony
 import pytest
 from asynctest import patch
+
+import peony
 from peony.general import twitter_api_version, twitter_base_api_url
 
 from . import DummyClient, MockSession

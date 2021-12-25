@@ -5,10 +5,10 @@ import base64
 from urllib.parse import urlparse
 
 try:
-    from . import peony, api
+    from . import api, peony
 except (SystemError, ImportError):
-    from __init__ import peony
     import api
+    from __init__ import peony
 
 client = peony.PeonyClient(**api.keys)
 

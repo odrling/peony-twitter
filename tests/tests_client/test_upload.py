@@ -7,10 +7,11 @@ import tempfile
 
 import aiofiles
 import aiohttp
-import peony
-import peony.exceptions
 import pytest
 from asynctest import patch
+
+import peony
+import peony.exceptions
 from peony import utils
 from peony.client import PeonyClient
 from tests.tests_client import DummyPeonyClient

@@ -4,10 +4,10 @@ import html
 import pprint
 
 try:
-    from . import peony, api
+    from . import api, peony
 except (SystemError, ImportError):
-    from __init__ import peony
     import api
+    from __init__ import peony
 
 
 def print_data(func):

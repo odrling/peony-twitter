@@ -2,6 +2,7 @@
 
 import pytest
 from asynctest import patch
+
 from peony import oauth
 from peony.exceptions import PeonyUnavailableMethod
 from tests import dummy

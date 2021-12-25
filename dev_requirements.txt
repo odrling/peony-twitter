@@ -6,3 +6,4 @@ flake8-bugbear
 isort
 sphinx
 sphinx_rtd_theme
+types-setuptools

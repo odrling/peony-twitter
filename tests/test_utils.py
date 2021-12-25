@@ -26,7 +26,7 @@ def builtin_mimetypes(func):
 
     @wraps(func)
     async def decorated(*args, **kwargs):
-        with patch.object(utils, 'magic') as magic:
+        with patch.object(utils, 'magic_module') as magic:
             magic.__bool__.return_value = False
             with patch.object(utils, 'mime') as mime:
                 mime.guess_type.side_effect = mimetypes.MimeTypes().guess_type

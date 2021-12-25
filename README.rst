@@ -1,4 +1,4 @@
-Asynchronous Twitter API client for Python 3.5+
+Asynchronous Twitter API client for Python 3.6+
 ===============================================
 
 

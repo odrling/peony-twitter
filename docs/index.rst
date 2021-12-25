@@ -2,7 +2,7 @@
  Peony's documentation
 =======================
 
-Peony is an asynchronous Twitter API client for Python 3.5+.
+Peony is an asynchronous Twitter API client for Python 3.6+.
 
 If you encounter an error after updating Peony check out the :ref:`breaking_changes` section.
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import inspect
 import os
 import re
 import sys
@@ -20,9 +19,10 @@ def get_metadata(metadata_file):
         metadata['keywords'] = metadata.get('keywords', '').split(', ')
 
         ex = r'"{3}[^\w]*(?P<name>[^\s]*)[^\w]+(?P<description>.*)'
-        match = re.search(ex, text)
+        match_ = re.search(ex, text)
 
-        metadata.update(match.groupdict())
+        assert match_ is not None
+        metadata.update(match_.groupdict())
 
     return metadata
 
@@ -41,10 +41,10 @@ def get_requirements(requirements):
 
 
 def main():
-    if sys.version_info < (3, 5, 3):
-        raise RuntimeError("Peony requires Python 3.5.3+")
+    if sys.version_info < (3, 6):
+        raise RuntimeError("Peony requires Python 3.6+")
 
-    dirname = os.path.dirname(inspect.getfile(inspect.currentframe()))
+    dirname = os.path.dirname(__file__)
 
     # get metadata and keywords from peony/__init__.py
     kwargs = get_metadata(os.path.join(dirname, 'peony', '__init__.py'))
@@ -63,7 +63,7 @@ def main():
     setup(long_description=long_description,
           packages=find_packages(include=["peony*"]),
           extras_require=extras_require,
-          python_requires='>=3.5.3',
+          python_requires='>=3.6',
           **kwargs)
 
 

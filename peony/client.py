@@ -9,15 +9,12 @@ the Twitter APIs, with a method to upload a media
 
 import asyncio
 import io
-from contextlib import suppress
 import logging
 import warnings
-
-try:
-    from asyncio.exceptions import CancelledError
-except ImportError:  # pragma: no cover
-    from concurrent.futures import CancelledError
-
+from asyncio.exceptions import CancelledError as aCancelledError
+from concurrent.futures import CancelledError as cCancelledError
+from contextlib import suppress
+from typing import Dict, Set
 from urllib.parse import urlparse
 
 import aiohttp
@@ -31,10 +28,12 @@ from .stream import StreamResponse
 
 logger = logging.getLogger(__name__)
 
+CancelledError = aCancelledError, cCancelledError
+
 
 class MetaPeonyClient(type):
 
-    def __new__(cls, name, bases, attrs, **kwargs):
+    def __new__(cls, name, bases, attrs, **_):
         """ put the :class:`~peony.commands.tasks.Task`s in the right place """
         tasks = {'tasks': set()}
 
@@ -94,6 +93,8 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         An event loop, if not specified :func:`asyncio.get_event_loop`
         is called
     """
+    _tasks: Dict[str, Set[task]]
+    _streams: EventStreams
 
     def __init__(self,
                  consumer_key=None,

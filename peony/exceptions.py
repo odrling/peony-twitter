@@ -184,73 +184,73 @@ class HTTPGatewayTimeout(PeonyException):
 
 
 @errors.code(3)
-class InvalidCoordinates(statuses[400]):
+class InvalidCoordinates(HTTPBadRequest):
     pass
 
 
 @errors.code(13)
-class NoLocationAssociatedToIP(statuses[404]):
+class NoLocationAssociatedToIP(HTTPNotFound):
     pass
 
 
 @errors.code(17)
-class NoUserMatchesQuery(statuses[404]):
+class NoUserMatchesQuery(HTTPNotFound):
     pass
 
 
 @errors.code(32)
-class NotAuthenticated(statuses[401]):
+class NotAuthenticated(HTTPUnauthorized):
     pass
 
 
 @errors.code(34)
-class DoesNotExist(statuses[404]):
+class DoesNotExist(HTTPNotFound):
     pass
 
 
 @errors.code(36)
-class CannotReportYourselfAsSpam(statuses[403]):
+class CannotReportYourselfAsSpam(HTTPForbidden):
     pass
 
 
 @errors.code(38)
-class ParameterMissing(statuses[403]):
+class ParameterMissing(HTTPForbidden):
     pass
 
 
 @errors.code(44)
-class AttachmentURLInvalid(statuses[400]):
+class AttachmentURLInvalid(HTTPBadRequest):
     pass
 
 
 @errors.code(50)
-class UserNotFound(statuses[404]):
+class UserNotFound(HTTPNotFound):
     pass
 
 
 @errors.code(63)
-class UserSuspended(statuses[404]):
+class UserSuspended(HTTPNotFound):
     pass
 
 
 @errors.code(64)
-class AccountSuspended(statuses[403]):
+class AccountSuspended(HTTPForbidden):
     pass
 
 
 @errors.code(68)
-class MigrateToNewAPI(statuses[410]):
+class MigrateToNewAPI(HTTPGone):
     pass
 
 
 @errors.code(87)
-class ActionNotPermitted(statuses[403]):
+class ActionNotPermitted(HTTPForbidden):
     pass
 
 
 # TODO: check if that could be moved to RateLimitExceeded
 @errors.code(88)
-class RateLimitExceeded(statuses[429]):
+class RateLimitExceeded(HTTPTooManyRequests):
     """ Exception raised on rate limit """
 
     @property
@@ -279,207 +279,207 @@ class RateLimitExceeded(statuses[429]):
 
 
 @errors.code(89)
-class InvalidOrExpiredToken(statuses[403]):
+class InvalidOrExpiredToken(HTTPForbidden):
     pass
 
 
 @errors.code(92)
-class SSLRequired(statuses[403]):
+class SSLRequired(HTTPForbidden):
     pass
 
 
 @errors.code(93)
-class ApplicationNotAllowedToAccessDirectMessages(statuses[403]):
+class ApplicationNotAllowedToAccessDirectMessages(HTTPForbidden):
     pass
 
 
 @errors.code(99)
-class UnableToVerifyCredentials(statuses[403]):
+class UnableToVerifyCredentials(HTTPForbidden):
     pass
 
 
 @errors.code(120)
-class ValueTooLong(statuses[403]):
+class ValueTooLong(HTTPForbidden):
     pass
 
 
 @errors.code(130)
-class OverCapacity(statuses[503]):
+class OverCapacity(HTTPServiceUnavailable):
     pass
 
 
 @errors.code(131)
-class InternalError(statuses[500]):
+class InternalError(HTTPInternalServerError):
     pass
 
 
 @errors.code(135)
-class CouldNotAuthenticate(statuses[401]):
+class CouldNotAuthenticate(HTTPUnauthorized):
     pass
 
 
 @errors.code(139)
-class StatusAlreadyFavorited(statuses[403]):
+class StatusAlreadyFavorited(HTTPForbidden):
     pass
 
 
 @errors.code(144)
-class StatusNotFound(statuses[404]):
+class StatusNotFound(HTTPNotFound):
     pass
 
 
 @errors.code(150)
-class CannotSendMessageToNonFollowers(statuses[403]):
+class CannotSendMessageToNonFollowers(HTTPForbidden):
     pass
 
 
 @errors.code(160)
-class FollowRequestAlreadyChanged(statuses[403]):
+class FollowRequestAlreadyChanged(HTTPForbidden):
     pass
 
 
 @errors.code(161)
-class FollowLimit(statuses[403]):
+class FollowLimit(HTTPForbidden):
     pass
 
 
 @errors.code(179)
-class ProtectedTweet(statuses[403]):
+class ProtectedTweet(HTTPForbidden):
     pass
 
 
 @errors.code(185)
-class StatusLimit(statuses[403]):
+class StatusLimit(HTTPForbidden):
     pass
 
 
 @errors.code(186)
-class TweetTooLong(statuses[403]):
+class TweetTooLong(HTTPForbidden):
     pass
 
 
 @errors.code(187)
-class DuplicatedStatus(statuses[403]):
+class DuplicatedStatus(HTTPForbidden):
     pass
 
 
 @errors.code(205)
-class SpamReportLimit(statuses[403]):
+class SpamReportLimit(HTTPForbidden):
     pass
 
 
 @errors.code(214)
-class OwnerMustAllowDMFromAnyone(statuses[403]):
+class OwnerMustAllowDMFromAnyone(HTTPForbidden):
     pass
 
 
 @errors.code(215)
-class BadAuthentication(statuses[400]):
+class BadAuthentication(HTTPBadRequest):
     pass
 
 
 @errors.code(220)
-class AccessNotAllowedByCredentials(statuses[403]):
+class AccessNotAllowedByCredentials(HTTPForbidden):
     pass
 
 
 @errors.code(226)
-class AutomatedRequest(statuses[403]):
+class AutomatedRequest(HTTPForbidden):
     pass
 
 
 @errors.code(251)
-class RetiredEndpoint(statuses[410]):
+class RetiredEndpoint(HTTPGone):
     pass
 
 
 @errors.code(261)
-class ReadOnlyApplication(statuses[403]):
+class ReadOnlyApplication(HTTPForbidden):
     pass
 
 
 @errors.code(271)
-class CannotMuteYourself(statuses[403]):
+class CannotMuteYourself(HTTPForbidden):
     pass
 
 
 @errors.code(272)
-class NotMutingUser(statuses[403]):
+class NotMutingUser(HTTPForbidden):
     pass
 
 
 @errors.code(323)
-class GIFNotAllowedWithMultipleImages(statuses[400]):
+class GIFNotAllowedWithMultipleImages(HTTPBadRequest):
     pass
 
 
 @errors.code(324)
-class MediaIDValidationFailed(statuses[400]):
+class MediaIDValidationFailed(HTTPBadRequest):
     pass
 
 
 @errors.code(325)
-class MediaIDNotFound(statuses[400]):
+class MediaIDNotFound(HTTPBadRequest):
     pass
 
 
 @errors.code(326)
-class AccountLocked(statuses[403]):
+class AccountLocked(HTTPForbidden):
     pass
 
 
 @errors.code(327)
-class AlreadyRetweeted(statuses[403]):
+class AlreadyRetweeted(HTTPForbidden):
     pass
 
 
 @errors.code(349)
-class CannotSendMessageToUser(statuses[403]):
+class CannotSendMessageToUser(HTTPForbidden):
     pass
 
 
 @errors.code(354)
-class DMCharacterLimit(statuses[403]):
+class DMCharacterLimit(HTTPForbidden):
     pass
 
 
 @errors.code(355)
-class SubscriptionAlreadyExists(statuses[409]):
+class SubscriptionAlreadyExists(HTTPConflict):
     pass
 
 
 @errors.code(385)
-class ReplyToUnavailableTweet(statuses[403]):
+class ReplyToUnavailableTweet(HTTPForbidden):
     pass
 
 
 @errors.code(386)
-class TooManyAttachmentTypes(statuses[403]):
+class TooManyAttachmentTypes(HTTPForbidden):
     pass
 
 
 @errors.code(407)
-class InvalidURL(statuses[400]):
+class InvalidURL(HTTPBadRequest):
     pass
 
 
 @errors.code(415)
-class CallbackURLNotApproved(statuses[403]):
+class CallbackURLNotApproved(HTTPForbidden):
     pass
 
 
 @errors.code(416)
-class InvalidOrSuspendedApplication(statuses[401]):
+class InvalidOrSuspendedApplication(HTTPUnauthorized):
     pass
 
 
 @errors.code(417)
-class DesktopApplicationAuth(statuses[401]):
+class DesktopApplicationAuth(HTTPUnauthorized):
     pass
 
 
 @errors.code(421)
-class TweetNoLongerAvailable(statuses[404]):
+class TweetNoLongerAvailable(HTTPNotFound):
     pass
 
 
@@ -489,5 +489,5 @@ class TweetViolatedRules(TweetNoLongerAvailable):
 
 
 @errors.code(433)
-class TweetIsReplyRestricted(statuses[403]):
+class TweetIsReplyRestricted(HTTPForbidden):
     pass

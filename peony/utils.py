@@ -15,11 +15,12 @@ from . import exceptions
 
 try:
     import magic
-    mime = magic.Magic(mime=True)
+    magic_mime = magic.Magic(mime=True)
+    magic_module = True
 except Exception:  # pragma: no cover
     import mimetypes
     mime = mimetypes.MimeTypes()
-    magic = None
+    magic_module = False
 
 
 _logger = logging.getLogger(__name__)
@@ -294,12 +295,12 @@ async def get_type(media, path=None):
     str
         The category of the media on Twitter
     """
-    if magic:
+    if magic_module:
         if not media:
             raise TypeError("Media data is empty")
 
         _logger.debug("guessing mimetype using magic")
-        media_type = mime.from_buffer(media[:1024])
+        media_type = magic_mime.from_buffer(media[:1024])
     else:
         media_type = None
         if path:

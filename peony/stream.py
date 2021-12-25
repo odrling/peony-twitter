@@ -3,11 +3,8 @@
 import asyncio
 import logging
 import sys
-
-try:
-    from asyncio import CancelledError
-except ImportError:  # pragma: no cover
-    from concurrent.futures import CancelledError
+from asyncio import CancelledError as aCancelledError
+from concurrent.futures import CancelledError as cCancelledError
 
 import aiohttp
 import async_timeout
@@ -15,6 +12,8 @@ import async_timeout
 from . import data_processing, exceptions, utils
 from .exceptions import StreamLimit
 from .general import rate_limit_notices
+
+CancelledError = aCancelledError, cCancelledError
 
 ClientPayloadError = aiohttp.ClientPayloadError
 ClientConnectionError = aiohttp.ClientConnectionError

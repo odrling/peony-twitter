@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABC, abstractmethod
+from typing import Any, Union
 
-from . import general, requests
+from . import requests
 
 
 class AbstractAPIPath(ABC):
@@ -56,7 +57,7 @@ class AbstractAPIPath(ABC):
         """
         return "/".join(self._path) + (suffix or self._suffix)
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: Any) -> 'AbstractAPIPath':  # noqa: E501
         """
             Where the magic happens
 
@@ -79,11 +80,8 @@ class AbstractAPIPath(ABC):
         BaseAPIPath
             New APIPath instance with a new ``path`` value
         """
-        if isinstance(key, str):
-            if key.lower() in general.request_methods:
-                return self._request(key)
-            else:
-                new_path = self._path + [key]
+        if isinstance(key, (str, int)):
+            new_path = self._path + [key]
         elif isinstance(key, (tuple, list)):
             key = [str(i) for i in key]
             new_path = self._path + key
@@ -95,7 +93,7 @@ class AbstractAPIPath(ABC):
                               suffix=self._suffix,
                               client=self.client)
 
-    def __getattr__(self, k):
+    def __getattr__(self, key: str) -> 'AbstractAPIPath':  # noqa: E501
         """
             Call __getitem__ when trying to get an attribute from the
             instance
@@ -103,10 +101,38 @@ class AbstractAPIPath(ABC):
         If your path contains an actual attribute of the instance
         you should call __getitem__ instead
         """
-        return self[k]
+        return self[key]
+
+    @property
+    def get(self):
+        return self._request('get')
+
+    @property
+    def post(self):
+        return self._request('post')
+
+    @property
+    def put(self):
+        return self._request('put')
+
+    @property
+    def delete(self):
+        return self._request('delete')
+
+    @property
+    def patch(self):
+        return self._request('patch')
+
+    @property
+    def option(self):
+        return self._request('option')
+
+    @property
+    def head(self):
+        return self._request('head')
 
     @abstractmethod
-    def _request(self, method):
+    def _request(self, method: str) -> Union[requests.Request, requests.StreamingRequest]:  # noqa: E501
         """
             Make a request for the endpoint
 

@@ -38,7 +38,3 @@ format: .installed $(PYFILES)
 
 test: .installed format
 	py.test --cov=peony --cov-report term-missing --durations=20 tests
-
-release:
-	python3 setup.py sdist bdist_wheel
-	twine upload dist/*

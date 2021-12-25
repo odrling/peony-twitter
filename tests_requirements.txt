@@ -2,6 +2,7 @@
 -r requirements.txt
 asynctest
 codecov
+mypy
 flake8
 flake8-bugbear
 pytest

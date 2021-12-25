@@ -10,14 +10,18 @@ the Twitter APIs, with a method to upload a media
 import asyncio
 import io
 import logging
+import sys
 import warnings
-from asyncio.exceptions import CancelledError as aCancelledError
-from concurrent.futures import CancelledError as cCancelledError
 from contextlib import suppress
 from typing import Dict, Set
 from urllib.parse import urlparse
 
 import aiohttp
+
+if sys.version_info < (3, 8):  # pragma: no cover
+    from concurrent.futures import CancelledError
+else:
+    from asyncio.exceptions import CancelledError
 
 from . import data_processing, exceptions, general, oauth, utils
 from .api import APIPath, StreamingAPIPath
@@ -27,8 +31,6 @@ from .oauth import OAuth1Headers
 from .stream import StreamResponse
 
 logger = logging.getLogger(__name__)
-
-CancelledError = aCancelledError, cCancelledError
 
 
 class MetaPeonyClient(type):

@@ -52,7 +52,7 @@ async def test_upload_media(input_type, medias):
 
         with patch.object(dummy_peony_client, 'request',
                           side_effect=dummy_upload) as req:
-            await dummy_peony_client.upload_media(media)
+            await dummy_peony_client.upload_media(media, chunked=False)
             assert req.called
 
         if input_type == 'file':
@@ -289,7 +289,7 @@ async def test_upload_from_url(url):
                 session.get = dummy_get
                 with patch.object(dummy_peony_client, 'request',
                                   side_effect=dummy_request):
-                    await dummy_peony_client.upload_media(url)
+                    await dummy_peony_client.upload_media(url, chunked=False)
 
 
 @pytest.mark.online
@@ -307,7 +307,8 @@ async def test_upload_from_request(url):
 
             with patch.object(dummy_peony_client, 'request',
                               side_effect=dummy_request):
-                await dummy_peony_client.upload_media(media_request)
+                await dummy_peony_client.upload_media(media_request,
+                                                      chunked=False)
 
 
 @pytest.mark.online

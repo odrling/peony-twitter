@@ -11,6 +11,7 @@ import asyncio
 import io
 from contextlib import suppress
 import logging
+import warnings
 
 try:
     from asyncio.exceptions import CancelledError
@@ -614,8 +615,8 @@ class PeonyClient(BasePeonyClient):
     async def upload_media(self, file_,
                            media_type=None,
                            media_category=None,
-                           chunked=None,
-                           size_limit=3 * (1024**2),
+                           chunked=True,
+                           size_limit=None,
                            **params):
         """
             upload a media file on twitter
@@ -631,9 +632,6 @@ class PeonyClient(BasePeonyClient):
             ``media_type``
         chunked : bool, optional
             If True, force the use of the chunked upload for the media
-        size_limit : int, optional
-            If set, the media will be sent using a multipart upload if
-            its size is over ``size_limit`` bytes
         params : dict
             parameters used when making the request
 
@@ -656,16 +654,17 @@ class PeonyClient(BasePeonyClient):
                             "filename or binary data or an aiohttp request")
 
         media_size = await utils.get_size(media)
-        if chunked is not None:
-            size_test = False
-        else:
-            size_test = media_size > size_limit
+        if size_limit is not None:
+            warnings.warn("The size_limit parameter of upload_media is "
+                          "deprecated, chunked defaults to True and should be "
+                          "set explicitly to False if needed.",
+                          DeprecationWarning)
 
         if isinstance(media, aiohttp.ClientResponse):
             # send the content of the response
             media = media.content
 
-        if chunked or (size_test and chunked is None):
+        if chunked:
             args = media, media_size, file_, media_type, media_category
             response = await self._chunked_upload(*args, **params)
         else:

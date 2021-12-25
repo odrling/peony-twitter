@@ -52,8 +52,7 @@ async def test_upload_media(input_type, medias):
 
         with patch.object(dummy_peony_client, 'request',
                           side_effect=dummy_upload) as req:
-            await dummy_peony_client.upload_media(media,
-                                                  size_limit=3 * 1024**2)
+            await dummy_peony_client.upload_media(media)
             assert req.called
 
         if input_type == 'file':

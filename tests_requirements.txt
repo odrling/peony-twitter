@@ -3,6 +3,7 @@
 asynctest
 codecov
 mypy
+types-setuptools
 flake8
 flake8-bugbear
 pytest

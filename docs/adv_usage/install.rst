@@ -6,7 +6,7 @@
 
 When you install peony using this command::
 
-    $ pip3 install peony-twitter[all]
+    $ pip3 install 'peony-twitter[all]'
 
 You install some modules that you may not need. But before deciding to not
 install these modules you need to know what will change if they are
@@ -18,7 +18,7 @@ python-magic
 
 You can install it by running::
 
-    $ pip3 install peony-twitter[magic]
+    $ pip3 install 'peony-twitter[magic]'
 
 ``python-magic`` is used to find the mimetype of a file.
 The mimetype of a media has to be given when making a multipart upload.
@@ -32,7 +32,7 @@ aiofiles
 
 You can install it by running::
 
-    $ pip3 install peony-twitter[aiofiles]
+    $ pip3 install 'peony-twitter[aiofiles]'
 
 or directly::
 
@@ -45,14 +45,14 @@ read operation will not block the event loop.
 .. note::
     magic and aiofiles can be installed using the ``media`` extra requirement::
 
-        $ pip3 install peony-twitter[media]
+        $ pip3 install 'peony-twitter[media]'
 
 aiohttp
 -------
 
 This command will install some optional dependencies of aiohttp::
 
-    $ pip3 install peony-twitter[aiohttp]
+    $ pip3 install 'peony-twitter[aiohttp]'
 
 or again directly::
 

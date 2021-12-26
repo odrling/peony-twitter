@@ -7,7 +7,7 @@ Installation
 
 To install this module simply run::
 
-    $ pip install peony-twitter[all]
+    $ pip install 'peony-twitter[all]'
 
 This will install all the modules required to make peony run out of the box.
 You might feel like some of them are not fit for your needs.

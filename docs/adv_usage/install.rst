@@ -13,7 +13,7 @@ install these modules you need to know what will change if they are
 not installed.
 
 
-magic-python
+python-magic
 ------------
 
 You can install it by running::
@@ -22,9 +22,9 @@ You can install it by running::
 
 or (if peony is already installed)::
 
-    $ pip3 install magic-python
+    $ pip3 install python-magic
 
-``magic-python`` is used to find the mimetype of a file.
+``python-magic`` is used to find the mimetype of a file.
 The mimetype of a media has to be given when making a multipart upload.
 If you don't install this module you will not be able to send large pictures
 or GIFs from a file path that would not be recognized by the ``mimetypes``

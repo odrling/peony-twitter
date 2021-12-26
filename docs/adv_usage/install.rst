@@ -20,10 +20,6 @@ You can install it by running::
 
     $ pip3 install peony-twitter[magic]
 
-or (if peony is already installed)::
-
-    $ pip3 install python-magic
-
 ``python-magic`` is used to find the mimetype of a file.
 The mimetype of a media has to be given when making a multipart upload.
 If you don't install this module you will not be able to send large pictures

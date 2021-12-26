@@ -1,5 +1,6 @@
 # magic: upload medias from file objects or filenames without a known extension
 python-magic
+python-magic-bin; platform_system == 'Windows'
 
 # aiofiles: read a file without blocking the loop (while uploading media)
 aiofiles
@@ -7,6 +8,7 @@ aiofiles
 # media: libraries recommended for uploading media
 aiofiles
 python-magic
+python-magic-bin; platform_system == 'Windows'
 
 # aiohttp: optional libraries for aiohttp
 aiodns
@@ -20,3 +22,4 @@ aiodns
 aiofiles
 cchardet
 python-magic
+python-magic-bin; platform_system == 'Windows'

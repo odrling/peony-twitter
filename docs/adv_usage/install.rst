@@ -26,6 +26,11 @@ If you don't install this module you will not be able to send large pictures
 or GIFs from a file path that would not be recognized by the ``mimetypes``
 module (shipped with Python) or from a file object.
 
+If ``python-magic`` doesn't seem to be used check that libmagic is installed on
+your system as this module depends on this native library.
+You can follow the `installation instructions of python-magic`_.
+
+.. _installation instructions of python-magic: https://github.com/ahupp/python-magic#installation
 
 aiofiles
 --------

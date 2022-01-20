@@ -13,7 +13,7 @@ the usage is similar to that of REST API endpoints).
 
 
     async def track():
-        stream = client.stream.statuses.filter.post(track="uwu")
+        stream = client.stream.statuses.filter.post.stream(track="uwu")
 
         # stream is an asynchronous iterator
         async for tweet in stream:

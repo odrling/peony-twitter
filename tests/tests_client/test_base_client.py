@@ -22,16 +22,7 @@ async def test_streaming_apis():
             assert request.called
 
         with patch.object(dummy_client, 'stream_request') as request:
-            dummy_client.stream.test.get()
-            assert request.called
-
-    async with DummyClient(streaming_apis={'api'}) as client:
-        with patch.object(client, 'stream_request') as request:
-            client.api.test.get()
-            assert request.called
-
-        with patch.object(client, 'request', side_effect=dummy) as request:
-            await client.stream.test.get()
+            dummy_client.stream.test.get.stream()
             assert request.called
 
 
@@ -113,7 +104,8 @@ async def test_bad_request():
 async def test_stream_request():
     # streams are tested in test_stream
     async with DummyClient() as dummy_client:
-        assert isinstance(dummy_client.stream.get(), stream.StreamResponse)
+        assert isinstance(dummy_client.stream.get.stream(),
+                          stream.StreamResponse)
 
 
 @pytest.mark.asyncio

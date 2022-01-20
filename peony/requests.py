@@ -161,6 +161,7 @@ class RequestFactory(Endpoint):
     def __init__(self, api, method):
         super().__init__(api, method)
         self.iterator = Iterators(self)
+        self.stream = StreamingRequest(api, method)
 
     def __call__(self, **kwargs):
         return Request(self.api, self.method, **kwargs)

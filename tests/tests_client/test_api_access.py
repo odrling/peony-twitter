@@ -78,12 +78,6 @@ async def test_create_endpoint_type_error():
 
 
 @pytest.mark.asyncio
-async def test_create_streaming_path():
-    async with DummyClient() as dummy_client:
-        assert isinstance(dummy_client.stream.test, peony.api.StreamingAPIPath)
-
-
-@pytest.mark.asyncio
 async def test_create_api_path():
     async with DummyClient() as dummy_client:
         assert isinstance(dummy_client.api.test, peony.api.APIPath)

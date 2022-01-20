@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABC, abstractmethod
-from typing import Any, Union
+from typing import Any
 
 from . import requests
 
@@ -132,7 +132,7 @@ class AbstractAPIPath(ABC):
         return self._request('head')
 
     @abstractmethod
-    def _request(self, method: str) -> Union[requests.Request, requests.StreamingRequest]:  # noqa: E501
+    def _request(self, method: str) -> requests.RequestFactory:
         """
             Make a request for the endpoint
 
@@ -165,21 +165,3 @@ class APIPath(AbstractAPIPath):
 
     def _request(self, method):
         return requests.RequestFactory(self, method)
-
-
-class StreamingAPIPath(AbstractAPIPath):
-    """
-        Class to make requests to a Streaming API
-
-    Parameters
-    ----------
-    path : str
-        Value of ``_path``
-    suffix : str
-        suffix to append to the url
-    client : .client.BasePeonyClient
-        client used to perform the request
-    """
-
-    def _request(self, method):
-        return requests.StreamingRequest(self, method)

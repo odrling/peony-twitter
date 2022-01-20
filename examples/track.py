@@ -11,7 +11,7 @@ client = peony.PeonyClient(**api.keys)
 
 
 async def track():
-    stream = client.stream.statuses.filter.post(track="uwu")
+    stream = client.stream.statuses.filter.post.stream(track="uwu")
 
     # stream is an asynchronous iterator
     async for tweet in stream:

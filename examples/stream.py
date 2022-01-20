@@ -67,7 +67,8 @@ def on_favorited(data, client):
 class UserStream(peony.EventStream):
 
     def stream_request(self):
-        return self.userstream.user.get(stall_warnings="true", replies="all")
+        return self.userstream.user.get.stream(stall_warnings="true",
+                                               replies="all")
 
     @peony.events.on_connected.handler
     async def init_timeline(self):

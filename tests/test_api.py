@@ -23,11 +23,6 @@ def api():
 
 
 @pytest.fixture
-def streaming():
-    return peony.api.StreamingAPIPath([twitter_base_api_url], '.json', client)
-
-
-@pytest.fixture
 def endpoint(api):
     return api.test.endpoint
 
@@ -65,12 +60,12 @@ def test_api_request_method_post(endpoint):
     assert endpoint.post.method == 'post'
 
 
-def test_api_streaming_request_method_get(streaming):
-    assert streaming.endpoint.get.method == 'get'
+def test_api_streaming_request_method_get(endpoint):
+    assert endpoint.get.stream.method == 'get'
 
 
-def test_api_streaming_request_method_post(streaming):
-    assert streaming.endpoint.post.method == 'post'
+def test_api_streaming_request_method_post(endpoint):
+    assert endpoint.post.stream.method == 'post'
 
 
 def test_api_str(endpoint):

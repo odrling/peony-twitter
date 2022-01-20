@@ -24,7 +24,7 @@ else:
     from asyncio.exceptions import CancelledError
 
 from . import data_processing, exceptions, general, oauth, utils
-from .api import APIPath, StreamingAPIPath
+from .api import APIPath
 from .commands import EventStreams, task
 from .exceptions import PeonyUnavailableMethod
 from .oauth import OAuth1Headers
@@ -69,8 +69,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
     Parameters
     ----------
-    streaming_apis : iterable, optional
-        Iterable containing the streaming APIs subdomains
     base_url : str, optional
         Format of the url for all the requests
     api_version : str, optional
@@ -106,7 +104,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                  bearer_token=None,
                  auth=None,
                  headers=None,
-                 streaming_apis=None,
                  base_url=None,
                  api_version=None,
                  suffix='.json',
@@ -119,11 +116,6 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                  encoding=None,
                  loop=None,
                  **kwargs):
-
-        if streaming_apis is None:
-            self.streaming_apis = general.streaming_apis
-        else:
-            self.streaming_apis = streaming_apis
 
         if base_url is None:
             self.base_url = general.twitter_base_api_url
@@ -280,11 +272,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         base_url = self._get_base_url(base_url, api, version)
 
-        # use StreamingAPIPath if subdomain is in self.streaming_apis
-        if api in self.streaming_apis:
-            return StreamingAPIPath([base_url], suffix=suffix, client=self)
-        else:
-            return APIPath([base_url], suffix=suffix, client=self)
+        return APIPath([base_url], suffix=suffix, client=self)
 
     __getattr__ = __getitem__
 

@@ -313,6 +313,11 @@ class InternalError(HTTPInternalServerError):
     pass
 
 
+@errors.code(136)
+class Blocked(HTTPForbidden):
+    pass
+
+
 @errors.code(135)
 class CouldNotAuthenticate(HTTPUnauthorized):
     pass
@@ -340,6 +345,11 @@ class FollowRequestAlreadyChanged(HTTPForbidden):
 
 @errors.code(161)
 class FollowLimit(HTTPForbidden):
+    pass
+
+
+@errors.code(162)
+class FollowBlocked(HTTPForbidden):
     pass
 
 

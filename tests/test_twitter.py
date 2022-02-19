@@ -114,7 +114,7 @@ async def test_oauth2_bearer_token(oauth2_client):
 
 @oauth2_decorator
 async def test_oauth2_nonexisting_endpoint(oauth2_client):
-    with pytest.raises(exceptions.DoesNotExist):
+    with pytest.raises(exceptions.HTTPNotFound):
         await oauth2_client.api.whereismytweet.get()
 
 

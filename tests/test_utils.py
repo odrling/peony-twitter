@@ -23,12 +23,11 @@ from . import MockResponse, create_future, dummy
 
 
 def builtin_mimetypes(func):
-
     @wraps(func)
     async def decorated(*args, **kwargs):
-        with patch.object(utils, 'magic_module') as magic:
+        with patch.object(utils, "magic_module") as magic:
             magic.__bool__.return_value = False
-            with patch.object(utils, 'mime') as mime:
+            with patch.object(utils, "mime") as mime:
                 mime.guess_type.side_effect = mimetypes.MimeTypes().guess_type
 
                 await func(*args, **kwargs)
@@ -38,15 +37,12 @@ def builtin_mimetypes(func):
 
 @pytest.fixture
 def json_data():
-    return data_processing.JSONData({'a': 1, 'b': 2})
+    return data_processing.JSONData({"a": 1, "b": 2})
 
 
 @pytest.fixture
 def response(json_data):
-    return data_processing.PeonyResponse(data=json_data,
-                                         headers={},
-                                         url="",
-                                         request={})
+    return data_processing.PeonyResponse(data=json_data, headers={}, url="", request={})
 
 
 @pytest.fixture
@@ -70,11 +66,10 @@ async def test_error_handler_rate_limit():
         tries -= 1
 
         if tries > 0:
-            response = MockResponse(error=88,
-                                    headers={'X-Rate-Limit-Reset': 0})
+            response = MockResponse(error=88, headers={"X-Rate-Limit-Reset": 0})
             await exceptions.throw(response)
 
-    with patch.object(asyncio, 'sleep', side_effect=dummy):
+    with patch.object(asyncio, "sleep", side_effect=dummy):
         await utils.DefaultErrorHandler(rate_limit, tries=tries)(url="http://")
 
 
@@ -83,7 +78,7 @@ async def test_error_handler_service_unavailable():
     async def service_unavailable(**kwargs):
         raise exceptions.HTTPServiceUnavailable()
 
-    with patch.object(asyncio, 'sleep', side_effect=dummy) as sleep:
+    with patch.object(asyncio, "sleep", side_effect=dummy) as sleep:
         with pytest.raises(exceptions.HTTPServiceUnavailable):
             await utils.DefaultErrorHandler(service_unavailable)()
 
@@ -147,9 +142,9 @@ async def test_error_handler_base_object():
     global called
     called = False
 
-    class ObjectErrorHandler(utils.DefaultErrorHandler, object,
-                             metaclass=utils.MetaErrorHandler):
-
+    class ObjectErrorHandler(
+        utils.DefaultErrorHandler, object, metaclass=utils.MetaErrorHandler
+    ):
         @utils.ErrorHandler.handle(exceptions.PeonyException)
         def handle_peony_exception(self):
             global called
@@ -168,7 +163,6 @@ async def test_error_handler_base_object():
 
 
 class ErrorHandlerWithException(utils.ErrorHandler):
-
     @utils.ErrorHandler.handle(Exception)
     def whoops_handler(self):
         raise RuntimeError
@@ -187,22 +181,20 @@ def test_get_args():
     def test(a, b, c):
         pass
 
-    assert utils.get_args(test) == ('a', 'b', 'c')
-    assert utils.get_args(test, skip=1) == ('b', 'c')
+    assert utils.get_args(test) == ("a", "b", "c")
+    assert utils.get_args(test, skip=1) == ("b", "c")
     assert utils.get_args(test, skip=3) == tuple()
 
 
 def test_get_args_class():
-
-    class Test():
-
+    class Test:
         def __call__(self, a, b, c):
             pass
 
     test = Test()
 
-    assert utils.get_args(test) == ('self', 'a', 'b', 'c')
-    assert utils.get_args(test, skip=1) == ('a', 'b', 'c')
+    assert utils.get_args(test) == ("self", "a", "b", "c")
+    assert utils.get_args(test, skip=1) == ("a", "b", "c")
     assert utils.get_args(test, skip=4) == tuple()
 
 
@@ -215,7 +207,7 @@ def setup_logger(logger):
     return error
 
 
-@pytest.mark.parametrize('logger', [None, logging.getLogger(__name__)])
+@pytest.mark.parametrize("logger", [None, logging.getLogger(__name__)])
 def test_log_error(logger):
     if logger is None:
         _logger = logging.getLogger("peony.utils")
@@ -229,8 +221,7 @@ def test_log_error(logger):
 
     except RuntimeError:
         for exc_info in (None, sys.exc_info()):
-            utils.log_error(MockResponse.message, exc_info=exc_info,
-                            logger=logger)
+            utils.log_error(MockResponse.message, exc_info=exc_info, logger=logger)
 
             error.seek(0)
             output = error.read()
@@ -278,7 +269,7 @@ async def test_get_type_builtin(medias):
 @pytest.mark.asyncio
 @builtin_mimetypes
 async def test_get_type_builtin_exception(medias):
-    media = medias['lady_peony']
+    media = medias["lady_peony"]
     f = io.BytesIO(await media.download(chunk=1024))
     with pytest.raises(RuntimeError):
         await utils.get_type(f)
@@ -356,14 +347,14 @@ async def test_get_media_metadata(medias):
 
 @pytest.mark.asyncio
 async def test_get_media_metadata_filename():
-    with tempfile.NamedTemporaryFile('w+b') as tmp:
+    with tempfile.NamedTemporaryFile("w+b") as tmp:
         with pytest.raises(TypeError):
             await utils.get_media_metadata(tmp.name)
 
 
 @pytest.mark.asyncio
 async def test_get_media_metadata_path():
-    with tempfile.NamedTemporaryFile('w+b') as tmp:
+    with tempfile.NamedTemporaryFile("w+b") as tmp:
         path = pathlib.Path(tmp.name)
         with pytest.raises(TypeError):
             await utils.get_media_metadata(path)
@@ -371,7 +362,7 @@ async def test_get_media_metadata_path():
 
 @pytest.mark.asyncio
 async def test_get_media_metadata_file(medias):
-    media = medias['lady_peony']
+    media = medias["lady_peony"]
     data = io.BytesIO(await media.download())
 
     with pytest.raises(TypeError):
@@ -385,7 +376,7 @@ async def test_get_media_metadata_exception():
 
 
 def test_set_debug():
-    with patch.object(logging, 'basicConfig') as basicConfig:
+    with patch.object(logging, "basicConfig") as basicConfig:
         peony.set_debug()
         assert peony.logger.level == logging.DEBUG
         basicConfig.assert_called_with(level=logging.WARNING)

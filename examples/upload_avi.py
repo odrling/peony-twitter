@@ -14,8 +14,8 @@ client = peony.PeonyClient(**api.keys)
 
 
 async def set_avi(path):
-    with open(path, 'rb') as avi:
-        avib64 = base64.b64encode(avi.read()).decode('utf-8')
+    with open(path, "rb") as avi:
+        avib64 = base64.b64encode(avi.read()).decode("utf-8")
 
     await client.api.account.update_profile_image.post(image=avib64)
 
@@ -28,5 +28,5 @@ def main():
     loop.run_until_complete(set_avi(path))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

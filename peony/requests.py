@@ -32,7 +32,7 @@ class Endpoint:
 
 class AbstractRequest(ABC):
     """
-        A function that makes a request when called
+    A function that makes a request when called
     """
 
     def _get_params(self, _suffix=None, **kwargs):
@@ -69,13 +69,14 @@ class AbstractRequest(ABC):
             New requests parameters, correctly formatted
         """
         # items which does not have a key starting with `_`
-        items = [(key, value) for key, value in kwargs.items()
-                 if not key.startswith("_")]
+        items = [
+            (key, value) for key, value in kwargs.items() if not key.startswith("_")
+        ]
         params, skip_params = {}, False
 
         for key, value in items:
             # binary data
-            if hasattr(value, 'read') or isinstance(value, bytes):
+            if hasattr(value, "read") or isinstance(value, bytes):
                 params[key] = value
                 # The params won't be used to make the signature
                 skip_params = True
@@ -98,20 +99,21 @@ class AbstractRequest(ABC):
                 params[key] = str(value)
 
         # dict with other items (+ strip "_" from keys)
-        kwargs = {key[1:]: value for key, value in kwargs.items()
-                  if key.startswith("_")}
+        kwargs = {
+            key[1:]: value for key, value in kwargs.items() if key.startswith("_")
+        }
 
-        if method == "post" and not kwargs.get('data', None) and params:
-            kwargs['data'] = params  # post requests use the data argument
+        if method == "post" and not kwargs.get("data", None) and params:
+            kwargs["data"] = params  # post requests use the data argument
 
-        elif not kwargs.get('params', None) and params:
-            kwargs['params'] = params
+        elif not kwargs.get("params", None) and params:
+            kwargs["params"] = params
 
         return kwargs, skip_params
 
     @abstractmethod
     def __call__(self, **kwargs):
-        """ method called to make the request """
+        """method called to make the request"""
 
 
 class Iterators(Endpoint):
@@ -128,16 +130,18 @@ class Iterators(Endpoint):
         iterator = getattr(iterators, key)
 
         if isinstance(self.request, Request):
+
             def iterate(**kwargs):
                 return iterator(self.request, **kwargs)
+
         else:
             keys = utils.get_args(iterator.__init__)
 
             def iterate(**kwargs):
                 iterator_kwargs = {}
                 for key in keys:
-                    if '_' + key in kwargs:
-                        iterator_kwargs[key] = kwargs.pop('_' + key)
+                    if "_" + key in kwargs:
+                        iterator_kwargs[key] = kwargs.pop("_" + key)
 
                 request = self.request(**kwargs)
 
@@ -186,10 +190,10 @@ class Request(asyncio.Future, AbstractRequest):
         kwargs, skip_params, url = self._get_params(**kwargs)
 
         # if user explicitly wants to skip parameters in the oauth signature
-        if 'skip_params' in kwargs:
-            skip_params = kwargs.pop('skip_params')
+        if "skip_params" in kwargs:
+            skip_params = kwargs.pop("skip_params")
 
-        error_handling = kwargs.pop('error_handling', True)
+        error_handling = kwargs.pop("error_handling", True)
 
         kwargs.update(method=self.method, url=url, skip_params=skip_params)
 
@@ -216,7 +220,7 @@ class Request(asyncio.Future, AbstractRequest):
 
 class StreamingRequest(AbstractRequest):
     """
-        Requests to Streaming APIs
+    Requests to Streaming APIs
     """
 
     def __init__(self, api, method):
@@ -226,6 +230,6 @@ class StreamingRequest(AbstractRequest):
     def __call__(self, **kwargs):
         kwargs, skip_params, url = self._get_params(**kwargs)
 
-        return self.api.client.stream_request(self.method, url=url,
-                                              skip_params=skip_params,
-                                              **kwargs)
+        return self.api.client.stream_request(
+            self.method, url=url, skip_params=skip_params, **kwargs
+        )

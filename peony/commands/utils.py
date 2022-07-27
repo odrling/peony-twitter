@@ -17,7 +17,7 @@ def doc(func):
     """
     stripped_chars = " \t"
 
-    if hasattr(func, '__doc__'):
+    if hasattr(func, "__doc__"):
         docstring = func.__doc__.lstrip(" \n\t")
         if "\n" in docstring:
             i = docstring.index("\n")
@@ -28,8 +28,7 @@ def doc(func):
     return ""
 
 
-def permission_check(data, command_permissions,
-                     command=None, permissions=None):
+def permission_check(data, command_permissions, command=None, permissions=None):
     """
         Check the permissions of the user requesting a command
 
@@ -53,7 +52,7 @@ def permission_check(data, command_permissions,
     if permissions:
         pass
     elif command:
-        if hasattr(command, 'permissions'):
+        if hasattr(command, "permissions"):
             permissions = command.permissions
         else:
             return True  # true if no permission is required
@@ -61,6 +60,8 @@ def permission_check(data, command_permissions,
         msg = "{name} must be called with command or permissions argument"
         raise RuntimeError(msg.format(name="_permission_check"))
 
-    return any(data['sender']['id'] in command_permissions[permission]
-               for permission in permissions
-               if permission in command_permissions)
+    return any(
+        data["sender"]["id"] in command_permissions[permission]
+        for permission in permissions
+        if permission in command_permissions
+    )

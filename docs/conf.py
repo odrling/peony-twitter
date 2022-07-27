@@ -43,37 +43,39 @@ sys.path.insert(0, str(maindir))
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.intersphinx',
-    'sphinx.ext.napoleon'
+    "sphinx.ext.autodoc",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.intersphinx",
+    "sphinx.ext.napoleon",
 ]
 
 rtd = "https://%s.readthedocs.io/en/stable"
 python_docs = "https://docs.python.org/3"
-intersphinx_mapping = {'python': (python_docs, None),
-                       'aiohttp': (rtd % "aiohttp", None)}
+intersphinx_mapping = {
+    "python": (python_docs, None),
+    "aiohttp": (rtd % "aiohttp", None),
+}
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # The suffix(es) of source filenames.
 # You can specify multiple suffix as a list of string:
 #
 # source_suffix = ['.rst', '.md']
-source_suffix = '.rst'
+source_suffix = ".rst"
 
 # The encoding of source files.
 #
 # source_encoding = 'utf-8-sig'
 
 # The master toctree document.
-master_doc = 'index'
+master_doc = "index"
 
 # General information about the project.
-project = 'Peony'
-copyright = '2016-2017, Florian Badie'
-author = 'odrling'
+project = "Peony"
+copyright = "2016-2017, Florian Badie"
+author = "odrling"
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -83,7 +85,7 @@ author = 'odrling'
 
 init = maindir / "peony" / "__init__.py"
 with init.open() as stream:
-    ex = r'__version__\s*=\s*?[\"\']([^\"\']*)'
+    ex = r"__version__\s*=\s*?[\"\']([^\"\']*)"
     match = re.search(ex, stream.read())
     version = match.group(1)
     # The full version, including alpha/beta/rc tags.
@@ -130,7 +132,7 @@ exclude_patterns = []
 # show_authors = False
 
 # The name of the Pygments (syntax highlighting) style to use.
-pygments_style = 'sphinx'
+pygments_style = "sphinx"
 
 # A list of ignored prefixes for module index sorting.
 # modindex_common_prefix = []
@@ -149,11 +151,12 @@ todo_include_todos = False
 #
 # on_rtd is whether we are on readthedocs.org, this line of code
 # grabbed from docs.readthedocs.org
-on_rtd = os.environ.get('READTHEDOCS', None) == 'True'
+on_rtd = os.environ.get("READTHEDOCS", None) == "True"
 
 if not on_rtd:  # only import and set the theme if we're building docs locally
     import sphinx_rtd_theme
-    html_theme = 'sphinx_rtd_theme'
+
+    html_theme = "sphinx_rtd_theme"
     html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # otherwise, readthedocs.org uses their theme by default, so no need
@@ -274,7 +277,7 @@ html_static_path = []
 # html_search_scorer = 'scorer.js'
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'Peonydoc'
+htmlhelp_basename = "Peonydoc"
 
 # -- Options for LaTeX output ---------------------------------------------
 
@@ -282,15 +285,12 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -300,8 +300,7 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'Peony.tex', 'Peony Documentation',
-     'odrling', 'manual'),
+    (master_doc, "Peony.tex", "Peony Documentation", "odrling", "manual"),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -341,10 +340,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'peony', 'Peony Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, "peony", "Peony Documentation", [author], 1)]
 
 # If true, show URL addresses after external links.
 #
@@ -357,9 +353,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'Peony', 'Peony Documentation',
-     author, 'Peony', 'An asynchronous Twitter API client.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        "Peony",
+        "Peony Documentation",
+        author,
+        "Peony",
+        "An asynchronous Twitter API client.",
+        "Miscellaneous",
+    ),
 ]
 
 # Documents to append as an appendix to all manuals.

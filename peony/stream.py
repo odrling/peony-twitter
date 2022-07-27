@@ -58,12 +58,9 @@ class StreamResponse:
         Keyword parameters of the request
     """
 
-    def __init__(self,
-                 client,
-                 session=None,
-                 loads=data_processing.loads,
-                 timeout=10,
-                 **kwargs):
+    def __init__(
+        self, client, session=None, loads=data_processing.loads, timeout=10, **kwargs
+    ):
 
         self.client = client
         self.session = session
@@ -123,9 +120,9 @@ class StreamResponse:
             self.state = ENHANCE_YOUR_CALM
         else:
             logger.debug("raising error during stream connection")
-            raise await exceptions.throw(self.response,
-                                         loads=self.client._loads,
-                                         url=self.kwargs['url'])
+            raise await exceptions.throw(
+                self.response, loads=self.client._loads, url=self.kwargs["url"]
+            )
 
         logger.debug("stream state: %d" % self.state)
 
@@ -147,9 +144,9 @@ class StreamResponse:
         if self.response is None:
             logger.info("first connection to the stream")
             await self.connect()
-            return {'connected': True}
+            return {"connected": True}
 
-        line = b''
+        line = b""
         try:
             if self.state != NORMAL:
                 if self._reconnecting:
@@ -165,7 +162,7 @@ class StreamResponse:
 
                 with async_timeout.timeout(90):
                     line = await self.response.content.readline()
-                    line = line.strip(b'\r\n')
+                    line = line.strip(b"\r\n")
                     logger.debug("received data: %s" % line)
 
             if line in rate_limit_notices:
@@ -218,8 +215,10 @@ class StreamResponse:
             if self._error_timeout < MAX_DISCONNECTION_TIMEOUT:
                 self._error_timeout += DISCONNECTION_TIMEOUT
 
-            logger.info("The stream was disconnected, will reconnect in %ss"
-                        % self._error_timeout)
+            logger.info(
+                "The stream was disconnected, will reconnect in %ss"
+                % self._error_timeout
+            )
 
         elif self.state == RECONNECTION:
             if self._error_timeout < RECONNECTION_TIMEOUT:
@@ -227,8 +226,10 @@ class StreamResponse:
             elif self._error_timeout < MAX_RECONNECTION_TIMEOUT:
                 self._error_timeout *= 2
 
-            logger.info("Could not connect to the stream, reconnection in %ss"
-                        % self._error_timeout)
+            logger.info(
+                "Could not connect to the stream, reconnection in %ss"
+                % self._error_timeout
+            )
 
         elif self.state == ENHANCE_YOUR_CALM:
             if self._error_timeout < ENHANCE_YOUR_CALM_TIMEOUT:
@@ -236,27 +237,28 @@ class StreamResponse:
             else:
                 self._error_timeout *= 2
 
-            logger.warning("Enhance Your Calm response received from Twitter. "
-                           "If you didn't restart your program frenetically "
-                           "then there is probably something wrong with it. "
-                           "Make sure you are not opening too many connections"
-                           " to the endpoint you are currently using by "
-                           "checking out Twitter's Streaming API "
-                           "documentation: "
-                           "https://dev.twitter.com/streaming/overview\n"
-                           "The stream will restart in %ss."
-                           % self._error_timeout)
+            logger.warning(
+                "Enhance Your Calm response received from Twitter. "
+                "If you didn't restart your program frenetically "
+                "then there is probably something wrong with it. "
+                "Make sure you are not opening too many connections"
+                " to the endpoint you are currently using by "
+                "checking out Twitter's Streaming API "
+                "documentation: "
+                "https://dev.twitter.com/streaming/overview\n"
+                "The stream will restart in %ss." % self._error_timeout
+            )
         elif self.state == EOF:
             pass  # no timeout
         else:
             raise RuntimeError("Incorrect state: %d" % self.state)
 
         self._reconnecting = True
-        return {'reconnecting_in': self._error_timeout, 'error': error}
+        return {"reconnecting_in": self._error_timeout, "error": error}
 
     async def restart_stream(self):
         """
-            Restart the stream on error
+        Restart the stream on error
         """
         await self.response.release()
         await asyncio.sleep(self._error_timeout)
@@ -264,7 +266,7 @@ class StreamResponse:
 
         logger.info("Reconnected to the stream")
         self._reconnecting = False
-        return {'stream_restart': True}
+        return {"stream_restart": True}
 
     def __enter__(self):
         """
@@ -290,12 +292,12 @@ class StreamResponse:
         return self
 
     def __exit__(self, *args):
-        """ Close the response on error """
-        if getattr(self, 'response', None) is not None:
+        """Close the response on error"""
+        if getattr(self, "response", None) is not None:
             if not self.response.closed:
                 logger.debug("Closing the stream")
                 self.response.close()
 
     async def __aexit__(self, *args):
-        """ Close the response on error """
+        """Close the response on error"""
         self.__exit__(*args)

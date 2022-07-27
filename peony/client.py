@@ -34,22 +34,21 @@ logger = logging.getLogger(__name__)
 
 
 class MetaPeonyClient(type):
-
     def __new__(cls, name, bases, attrs, **_):
-        """ put the :class:`~peony.commands.tasks.Task`s in the right place """
-        tasks = {'tasks': set()}
+        """put the :class:`~peony.commands.tasks.Task`s in the right place"""
+        tasks = {"tasks": set()}
 
         for base in bases:
-            if hasattr(base, '_tasks'):
+            if hasattr(base, "_tasks"):
                 for key, value in base._tasks.items():
                     tasks[key] |= value
 
         for attr in attrs.values():
             if isinstance(attr, task):
-                tasks['tasks'].add(attr)
+                tasks["tasks"].add(attr)
 
-        attrs['_tasks'] = tasks
-        attrs['_streams'] = EventStreams()
+        attrs["_tasks"] = tasks
+        attrs["_streams"] = EventStreams()
 
         return super().__new__(cls, name, bases, attrs)
 
@@ -93,29 +92,32 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         An event loop, if not specified :func:`asyncio.get_event_loop`
         is called
     """
+
     _tasks: Dict[str, Set[task]]
     _streams: EventStreams
 
-    def __init__(self,
-                 consumer_key=None,
-                 consumer_secret=None,
-                 access_token=None,
-                 access_token_secret=None,
-                 bearer_token=None,
-                 auth=None,
-                 headers=None,
-                 base_url=None,
-                 api_version=None,
-                 suffix='.json',
-                 loads=data_processing.loads,
-                 error_handler=utils.DefaultErrorHandler,
-                 session=None,
-                 proxy=None,
-                 compression=True,
-                 user_agent=None,
-                 encoding=None,
-                 loop=None,
-                 **kwargs):
+    def __init__(
+        self,
+        consumer_key=None,
+        consumer_secret=None,
+        access_token=None,
+        access_token_secret=None,
+        bearer_token=None,
+        auth=None,
+        headers=None,
+        base_url=None,
+        api_version=None,
+        suffix=".json",
+        loads=data_processing.loads,
+        error_handler=utils.DefaultErrorHandler,
+        session=None,
+        proxy=None,
+        compression=True,
+        user_agent=None,
+        encoding=None,
+        loop=None,
+        **kwargs
+    ):
 
         if base_url is None:
             self.base_url = general.twitter_base_api_url
@@ -139,6 +141,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         self.encoding = encoding
 
         if encoding is not None:
+
             def _loads(*args, **kwargs):
                 return loads(*args, encoding=encoding, **kwargs)
 
@@ -154,28 +157,28 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         self._gathered_tasks = None
 
         if consumer_key is None or consumer_secret is None:
-            raise TypeError("missing 2 required arguments: 'consumer_key' "
-                            "and 'consumer_secret'")
+            raise TypeError(
+                "missing 2 required arguments: 'consumer_key' " "and 'consumer_secret'"
+            )
 
         # all the possible args required by headers in :mod:`peony.oauth`
         kwargs = {
-            'consumer_key': consumer_key,
-            'consumer_secret': consumer_secret,
-            'access_token': access_token,
-            'access_token_secret': access_token_secret,
-            'bearer_token': bearer_token,
-            'compression': compression,
-            'user_agent': user_agent,
-            'headers': headers,
-            'client': self
+            "consumer_key": consumer_key,
+            "consumer_secret": consumer_secret,
+            "access_token": access_token,
+            "access_token_secret": access_token_secret,
+            "bearer_token": bearer_token,
+            "compression": compression,
+            "user_agent": user_agent,
+            "headers": headers,
+            "client": self,
         }
 
         # get the args needed by the auth parameter on initialization
         args = utils.get_args(auth.__init__, skip=1)
 
         # keep only the arguments required by auth on init
-        kwargs = {key: value for key, value in kwargs.items()
-                  if key in args}
+        kwargs = {key: value for key, value in kwargs.items() if key in args}
 
         self.headers = auth(**kwargs)
 
@@ -209,15 +212,15 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         if "{api}" in base_url:
             if api == "":
-                base_url = base_url.replace('{api}.', '')
+                base_url = base_url.replace("{api}.", "")
             else:
-                format_args['api'] = api
+                format_args["api"] = api
 
         if "{version}" in base_url:
             if version == "":
-                base_url = base_url.replace('/{version}', '')
+                base_url = base_url.replace("/{version}", "")
             else:
-                format_args['version'] = version
+                format_args["version"] = version
 
         return base_url.format(api=api, version=version)
 
@@ -245,15 +248,16 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             To access an API endpoint
         """
         defaults = None, self.api_version, self._suffix, self.base_url
-        keys = ['api', 'version', 'suffix', 'base_url']
+        keys = ["api", "version", "suffix", "base_url"]
 
         if isinstance(values, dict):
             # set values in the right order
-            values = [values.get(key, defaults[i])
-                      for i, key in enumerate(keys)]
+            values = [values.get(key, defaults[i]) for i, key in enumerate(keys)]
         elif isinstance(values, set):
-            raise TypeError('Cannot use a set to access an api, '
-                            'please use a dict, a tuple or a list instead')
+            raise TypeError(
+                "Cannot use a set to access an api, "
+                "please use a dict, a tuple or a list instead"
+            )
         elif isinstance(values, str):
             values = [values, *defaults[1:]]
         elif isinstance(values, tuple):
@@ -261,12 +265,16 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
                 padding = (None,) * (len(keys) - len(values))
                 values += padding
 
-            values = [default if value is None else value
-                      for value, default in zip(values, defaults)
-                      if (value, default) != (None, None)]
+            values = [
+                default if value is None else value
+                for value, default in zip(values, defaults)
+                if (value, default) != (None, None)
+            ]
         else:
-            raise TypeError("Could not create an endpoint from an object of "
-                            "type " + values.__class__.__name__)
+            raise TypeError(
+                "Could not create an endpoint from an object of "
+                "type " + values.__class__.__name__
+            )
 
         api, version, suffix, base_url = values
 
@@ -284,11 +292,9 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         else:
             self.loop.run_until_complete(self.close())
 
-    async def request(self, method, url, future,
-                      headers=None,
-                      session=None,
-                      encoding=None,
-                      **kwargs):
+    async def request(
+        self, method, url, future, headers=None, session=None, encoding=None, **kwargs
+    ):
         """
             Make requests to the REST API
 
@@ -314,11 +320,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         # prepare request arguments, particularly the headers
         req_kwargs = await self.headers.prepare_request(
-            method=method,
-            url=url,
-            headers=headers,
-            proxy=self.proxy,
-            **kwargs
+            method=method, url=url, headers=headers, proxy=self.proxy, **kwargs
         )
 
         if encoding is None:
@@ -330,21 +332,24 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         async with session.request(**req_kwargs) as response:
             if response.status < 400:
-                data = await data_processing.read(response, self._loads,
-                                                  encoding=encoding)
+                data = await data_processing.read(
+                    response, self._loads, encoding=encoding
+                )
 
-                future.set_result(data_processing.PeonyResponse(
-                    data=data,
-                    headers=response.headers,
-                    url=response.url,
-                    request=req_kwargs
-                ))
+                future.set_result(
+                    data_processing.PeonyResponse(
+                        data=data,
+                        headers=response.headers,
+                        url=response.url,
+                        request=req_kwargs,
+                    )
+                )
             else:  # throw exception if status is not 2xx
-                await exceptions.throw(response, loads=self._loads,
-                                       encoding=encoding, url=url)
+                await exceptions.throw(
+                    response, loads=self._loads, encoding=encoding, url=url
+                )
 
-    def stream_request(self, method, url, headers=None, _session=None,
-                       *args, **kwargs):
+    def stream_request(self, method, url, headers=None, _session=None, *args, **kwargs):
         """
             Make requests to the Streaming API
 
@@ -377,12 +382,12 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
     @classmethod
     def event_stream(cls, event_stream):
-        """ Decorator to attach an event stream to the class """
+        """Decorator to attach an event stream to the class"""
         cls._streams.append(event_stream)
         return event_stream
 
     def _get_tasks(self):
-        return [task(self) for task in self._tasks['tasks']]
+        return [task(self) for task in self._tasks["tasks"]]
 
     def get_tasks(self):
         """
@@ -399,7 +404,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         return tasks
 
     async def run_tasks(self):
-        """ Run the tasks attached to the instance """
+        """Run the tasks attached to the instance"""
         tasks = self.get_tasks()
         self._gathered_tasks = asyncio.gather(*tasks)
         try:
@@ -416,7 +421,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
             await self.close()
 
     def run(self):
-        """ Run the tasks attached to the instance """
+        """Run the tasks attached to the instance"""
         self.loop.run_until_complete(self.arun())
 
     def _get_close_tasks(self):
@@ -425,6 +430,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         # cancel setup
         if isinstance(self.setup, asyncio.Future):
             if not self.setup.done():
+
                 async def cancel_setup():
                     self.setup.cancel()
                     try:
@@ -436,6 +442,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         # close currently running tasks
         if self._gathered_tasks is not None:
+
             async def cancel_tasks():
                 self._gathered_tasks.cancel()
                 try:
@@ -448,7 +455,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         return tasks
 
     async def close(self):
-        """ properly close the client """
+        """properly close the client"""
         tasks = self._get_close_tasks()
 
         if tasks:
@@ -470,7 +477,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
 class PeonyClient(BasePeonyClient):
     """
-        A client with some useful methods for most usages
+    A client with some useful methods for most usages
     """
 
     def __init__(self, *args, **kwargs):
@@ -483,19 +490,22 @@ class PeonyClient(BasePeonyClient):
         create a ``user`` attribute with the response of the endpoint
         https://api.twitter.com/1.1/account/verify_credentials.json
         """
-        api = self['api', general.twitter_api_version,
-                   ".json", general.twitter_base_api_url]
+        api = self[
+            "api", general.twitter_api_version, ".json", general.twitter_base_api_url
+        ]
 
         if isinstance(self.headers, oauth.OAuth1Headers):
             return await api.account.verify_credentials.get()
 
-        raise PeonyUnavailableMethod("user attribute is only available with "
-                                     "OAuth 1 authentification.")
+        raise PeonyUnavailableMethod(
+            "user attribute is only available with " "OAuth 1 authentification."
+        )
 
     def _get_close_tasks(self):
         tasks = super()._get_close_tasks()
 
         if not self.user.done():
+
             async def cancel_user():
                 self.user.cancel()
                 try:
@@ -507,12 +517,16 @@ class PeonyClient(BasePeonyClient):
 
         return tasks
 
-    async def _chunked_upload(self, media, media_size,
-                              path=None,
-                              media_type=None,
-                              media_category=None,
-                              chunk_size=2**20,
-                              **params):
+    async def _chunked_upload(
+        self,
+        media,
+        media_size,
+        path=None,
+        media_type=None,
+        media_category=None,
+        chunk_size=2**20,
+        **params
+    ):
         """
             upload media in chunks
 
@@ -561,14 +575,13 @@ class PeonyClient(BasePeonyClient):
             **params
         )
 
-        media_id = response['media_id']
+        media_id = response["media_id"]
         i = 0
 
         while chunk:
-            req = self.upload.media.upload.post(command="APPEND",
-                                                media_id=media_id,
-                                                media=chunk,
-                                                segment_index=i)
+            req = self.upload.media.upload.post(
+                command="APPEND", media_id=media_id, media=chunk, segment_index=i
+            )
             if is_coro:
                 chunk, _ = await asyncio.gather(media.read(chunk_size), req)
             else:
@@ -577,38 +590,40 @@ class PeonyClient(BasePeonyClient):
 
             i += 1
 
-        status = await self.upload.media.upload.post(command="FINALIZE",
-                                                     media_id=media_id)
+        status = await self.upload.media.upload.post(
+            command="FINALIZE", media_id=media_id
+        )
 
-        if 'processing_info' in status:
-            while status['processing_info'].get('state') != "succeeded":
-                processing_info = status['processing_info']
-                if processing_info.get('state') == "failed":
-                    error = processing_info.get('error', {})
+        if "processing_info" in status:
+            while status["processing_info"].get("state") != "succeeded":
+                processing_info = status["processing_info"]
+                if processing_info.get("state") == "failed":
+                    error = processing_info.get("error", {})
 
-                    message = error.get('message', str(status))
+                    message = error.get("message", str(status))
 
-                    raise exceptions.MediaProcessingError(data=status,
-                                                          message=message,
-                                                          **params)
+                    raise exceptions.MediaProcessingError(
+                        data=status, message=message, **params
+                    )
 
-                delay = processing_info['check_after_secs']
+                delay = processing_info["check_after_secs"]
                 await asyncio.sleep(delay)
 
                 status = await self.upload.media.upload.get(
-                    command="STATUS",
-                    media_id=media_id,
-                    **params
+                    command="STATUS", media_id=media_id, **params
                 )
 
         return response
 
-    async def upload_media(self, file_,
-                           media_type=None,
-                           media_category=None,
-                           chunked=True,
-                           size_limit=None,
-                           **params):
+    async def upload_media(
+        self,
+        file_,
+        media_type=None,
+        media_category=None,
+        chunked=True,
+        size_limit=None,
+        **params
+    ):
         """
             upload a media file on twitter
 
@@ -633,23 +648,27 @@ class PeonyClient(BasePeonyClient):
         """
         if isinstance(file_, str):
             url = urlparse(file_)
-            if url.scheme.startswith('http'):
+            if url.scheme.startswith("http"):
                 media = await self._session.get(file_)
             else:
                 path = urlparse(file_).path.strip(" \"'")
-                media = await utils.execute(open(path, 'rb'))
-        elif hasattr(file_, 'read') or isinstance(file_, bytes):
+                media = await utils.execute(open(path, "rb"))
+        elif hasattr(file_, "read") or isinstance(file_, bytes):
             media = file_
         else:
-            raise TypeError("upload_media input must be a file object or a "
-                            "filename or binary data or an aiohttp request")
+            raise TypeError(
+                "upload_media input must be a file object or a "
+                "filename or binary data or an aiohttp request"
+            )
 
         media_size = await utils.get_size(media)
         if size_limit is not None:
-            warnings.warn("The size_limit parameter of upload_media is "
-                          "deprecated, chunked defaults to True and should be "
-                          "set explicitly to False if needed.",
-                          DeprecationWarning)
+            warnings.warn(
+                "The size_limit parameter of upload_media is "
+                "deprecated, chunked defaults to True and should be "
+                "set explicitly to False if needed.",
+                DeprecationWarning,
+            )
 
         if isinstance(media, aiohttp.ClientResponse):
             # send the content of the response
@@ -659,10 +678,9 @@ class PeonyClient(BasePeonyClient):
             args = media, media_size, file_, media_type, media_category
             response = await self._chunked_upload(*args, **params)
         else:
-            response = await self.upload.media.upload.post(media=media,
-                                                           **params)
+            response = await self.upload.media.upload.post(media=media, **params)
 
-        if not hasattr(file_, 'read') and not getattr(media, 'closed', True):
+        if not hasattr(file_, "read") and not getattr(media, "closed", True):
             media.close()
 
         return response

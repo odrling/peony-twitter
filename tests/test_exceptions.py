@@ -22,17 +22,16 @@ async def test_errors():
     # status code exceptions
     for status, exception in exceptions.statuses.items():
         with pytest.raises(exception):
-            response = MockResponse(data=b"",
-                                    content_type="application/octet-stream",
-                                    status=status)
+            response = MockResponse(
+                data=b"", content_type="application/octet-stream", status=status
+            )
             await exceptions.throw(response)
 
 
 @pytest.mark.asyncio
 async def test_error():
     with pytest.raises(exceptions.errors[32]):
-        data = json.dumps({'error': {'code': 32,
-                                     'message': MockResponse.message}})
+        data = json.dumps({"error": {"code": 32, "message": MockResponse.message}})
         response = MockResponse(data=data)
         await exceptions.throw(response)
 
@@ -55,9 +54,9 @@ async def test_json_decode_error():
 async def test_rate_limit():
     t = time()
 
-    with patch.object(exceptions, 'time', return_value=t):
+    with patch.object(exceptions, "time", return_value=t):
         try:
-            headers = {'X-Rate-Limit-Reset': t + 50}
+            headers = {"X-Rate-Limit-Reset": t + 50}
             response = MockResponse(error=88, headers=headers)
             await exceptions.throw(response)
 
@@ -78,7 +77,7 @@ async def test_peony_exception():
 
 
 def test_get_error_not_dict():
-    assert exceptions.get_error({'error': 1}) is None
+    assert exceptions.get_error({"error": 1}) is None
 
 
 def test_custom_peony_exception_message():
@@ -91,8 +90,9 @@ def test_custom_peony_exception_message():
 
 def test_exception_url():
     try:
-        exceptions.PeonyException(message=MockResponse.message,
-                                  url="http://whatever.com")
+        exceptions.PeonyException(
+            message=MockResponse.message, url="http://whatever.com"
+        )
     except exceptions.PeonyException as e:
         assert e.url == "http://whatever.com"
         assert str(e).endswith(e.url)

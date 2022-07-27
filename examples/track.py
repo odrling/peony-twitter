@@ -18,14 +18,13 @@ async def track():
         # you can then access items as you would do with a
         # `PeonyResponse` object
         if peony.events.tweet(tweet):
-            user_id = tweet['user']['id']
+            user_id = tweet["user"]["id"]
             username = tweet.user.screen_name
 
             msg = "@{username} ({id}): {text}"
-            print(msg.format(username=username,
-                             id=user_id,
-                             text=tweet.text))
+            print(msg.format(username=username, id=user_id, text=tweet.text))
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(track())

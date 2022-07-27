@@ -1,4 +1,3 @@
-
 import pytest
 from asynctest import patch
 
@@ -9,7 +8,6 @@ from . import DummyClient, MockSession
 
 
 class SetupClientTest(DummyClient):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._session = MockSession()
@@ -17,7 +15,6 @@ class SetupClientTest(DummyClient):
 
 
 class TasksClientTest(DummyClient):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.tasks_tests = [False, False, True]
@@ -37,27 +34,23 @@ class TasksClientTest(DummyClient):
 @pytest.mark.asyncio
 async def test_tasks():
     async with TasksClientTest() as client:
-        with patch.object(client, 'request') as request:
+        with patch.object(client, "request") as request:
             await client.run_tasks()
-            base_url = twitter_base_api_url.format(api='api',
-                                                   version=twitter_api_version)
-            assert request.called_with(method='get',
-                                       url=base_url + '/test.json')
-            assert request.called_with(method='get',
-                                       url=base_url + '/endpoint.json')
+            base_url = twitter_base_api_url.format(
+                api="api", version=twitter_api_version
+            )
+            assert request.called_with(method="get", url=base_url + "/test.json")
+            assert request.called_with(method="get", url=base_url + "/endpoint.json")
 
             assert all(client.tasks_tests)
 
 
 def test_run():
     client = TasksClientTest()
-    with patch.object(client, 'request') as request:
+    with patch.object(client, "request") as request:
         client.run()
-        base_url = twitter_base_api_url.format(api='api',
-                                               version=twitter_api_version)
-        assert request.called_with(method='get',
-                                   url=base_url + '/test.json')
-        assert request.called_with(method='get',
-                                   url=base_url + '/endpoint.json')
+        base_url = twitter_base_api_url.format(api="api", version=twitter_api_version)
+        assert request.called_with(method="get", url=base_url + "/test.json")
+        assert request.called_with(method="get", url=base_url + "/endpoint.json")
 
         assert all(client.tasks_tests)

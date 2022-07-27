@@ -58,7 +58,7 @@ class Functions(dict):
 
     @process_keys
     def __getitem__(self, k):
-        """ get the function you want """
+        """get the function you want"""
         return super().__getitem__(k)
 
     @process_keys
@@ -70,8 +70,7 @@ class Functions(dict):
 
     def __repr__(self):
         return "{classname}({super})".format(
-            classname=self.__class__.__name__,
-            super=", ".join(super().keys())
+            classname=self.__class__.__name__, super=", ".join(super().keys())
         )
 
     def _get(self, text):
@@ -96,7 +95,7 @@ class Functions(dict):
                     return word
 
     async def run(self, *args, data):
-        """ run the function you want """
+        """run the function you want"""
         cmd = self._get(data.text)
 
         try:
@@ -116,47 +115,39 @@ class Functions(dict):
 
 
 class Commands(Functions):
-
     def __init__(self, prefix=None):
         super().__init__(prefix=prefix)
 
         @self
         def help(_self, data, *args, **kwargs):
-            """ show commands help """
+            """show commands help"""
             kdoc = [
                 (key, utils.doc(value))
                 for key, value in self.items()
                 if utils.permission_check(
-                    data,
-                    command_permissions=_self.permissions,
-                    command=value
+                    data, command_permissions=_self.permissions, command=value
                 )
             ]
 
             kdoc.sort(key=self._key)
 
-            msg = ["{key}: {doc}".format(key=key, doc=doc)
-                   for key, doc in kdoc]
+            msg = ["{key}: {doc}".format(key=key, doc=doc) for key, doc in kdoc]
 
             return "\n".join(msg)
 
     def _key(self, item):
         key, __ = item
         if key == self.prefix + "help":
-            return ''   # /help is the first in the message
+            return ""  # /help is the first in the message
         else:
             return key  # sort other commands alphabeticaly
 
     def restricted(self, *permissions):
-
         def decorator(func):
-
             @wraps(func)
             async def decorated(_self, *args, data):
                 permission = utils.permission_check(
-                    data,
-                    command_permissions=_self.permissions,
-                    permissions=permissions
+                    data, command_permissions=_self.permissions, permissions=permissions
                 )
 
                 if permission:

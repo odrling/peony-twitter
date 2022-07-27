@@ -13,5 +13,6 @@ async def search_test():
     async with peony.PeonyClient(**api.keys) as client:
         print(await client.user)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     asyncio.run(search_test())

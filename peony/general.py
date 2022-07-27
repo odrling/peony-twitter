@@ -8,5 +8,5 @@ streaming_apis = {"stream", "userstream", "sitestream"}
 
 rate_limit_notices = [
     b"Exceeded connection limit for user",
-    b"Easy there, Turbo. Too many requests recently. Enhance your calm."
+    b"Easy there, Turbo. Too many requests recently. Enhance your calm.",
 ]

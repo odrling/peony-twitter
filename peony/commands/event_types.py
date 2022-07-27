@@ -5,7 +5,7 @@ from functools import wraps
 from ..utils import get_args
 from .event_handlers import EventHandler
 
-on = 'on_{name}'
+on = "on_{name}"
 
 
 def _get_value(func):
@@ -54,8 +54,9 @@ class Handler:
         """
 
         def decorated(func):
-            return EventHandler(func=func, event=self.event,
-                                prefix=prefix, strict=strict)
+            return EventHandler(
+                func=func, event=self.event, prefix=prefix, strict=strict
+            )
 
         return decorated
 
@@ -81,10 +82,10 @@ class Event:
         self.__doc__ = func.__doc__
 
     def envelope(self):
-        """ returns an :class:`Event` that can be used for site streams """
+        """returns an :class:`Event` that can be used for site streams"""
 
         def enveloped_event(data):
-            return 'for_user' in data and self._func(data.get('message'))
+            return "for_user" in data and self._func(data.get("message"))
 
         return self.__class__(enveloped_event, self.__name__)
 
@@ -102,7 +103,7 @@ class Event:
 
 class Events(dict):
     """
-        A class to manage event handlers easily
+    A class to manage event handlers easily
     """
 
     def __init__(self, *args, **kwargs):
@@ -118,8 +119,7 @@ class Events(dict):
 
     def _set_aliases(self, *keys, event=None, func=None):
         name = func.__name__
-        keys = [key if "{name}" not in key else key.format(name=name)
-                for key in keys]
+        keys = [key if "{name}" not in key else key.format(name=name) for key in keys]
 
         if func:
             event = self(func)
@@ -128,7 +128,7 @@ class Events(dict):
         else:
             raise RuntimeError("Could not set alias")
 
-        event.__doc__ += "\n:aliases: %s" % ', '.join(keys).format(name=name)
+        event.__doc__ += "\n:aliases: %s" % ", ".join(keys).format(name=name)
 
         for key in keys:
             self[key] = event
@@ -137,7 +137,6 @@ class Events(dict):
         return event
 
     def alias(self, *keys):
-
         def decorator(func):
             event = self._set_aliases(*keys, func=func)
 
@@ -146,7 +145,6 @@ class Events(dict):
         return decorator
 
     def event_alias(self, *keys):
-
         def decorator(func):
             event = self._set_aliases(*keys, event=func)
 
@@ -160,10 +158,10 @@ class Events(dict):
 
             @wraps(func)
             def decorated(data):
-                return data.get('event') == value
+                return data.get("event") == value
 
             self[func.__name__] = decorated
-            self['on_' + func.__name__] = decorated
+            self["on_" + func.__name__] = decorated
             self[func.__name__].__doc__ = func.__doc__
             return self[func.__name__]
         else:
@@ -188,11 +186,9 @@ class Events(dict):
 
     @property
     def no_aliases(self):
-        return {key: value for key, value in self.items()
-                if key not in self.aliases}
+        return {key: value for key, value in self.items() if key not in self.aliases}
 
     def priority(self, p):
-
         def decorated(func):
             func.priority = p
             return self(func)
@@ -211,10 +207,10 @@ def friends(data):
     For more information:
     https://dev.twitter.com/streaming/overview/messages-types#friends-lists-friends
     """  # noqa: E501
-    return 'friends' in data or 'friends_str' in data
+    return "friends" in data or "friends_str" in data
 
 
-@events.alias(on, 'on_dm')
+@events.alias(on, "on_dm")
 def direct_message():
     """
         Event triggered when a direct message is received
@@ -224,7 +220,7 @@ def direct_message():
     """
 
 
-@events.alias(on, 'retweet', 'on_retweet')
+@events.alias(on, "retweet", "on_retweet")
 @events.priority(-1)
 def retweeted_status(data):
     """
@@ -233,7 +229,7 @@ def retweeted_status(data):
     For more information:
     https://dev.twitter.com/overview/api/tweets
     """
-    return tweet(data) and 'retweeted_status' in data
+    return tweet(data) and "retweeted_status" in data
 
 
 @events.alias(on)
@@ -246,10 +242,10 @@ def tweet(data):
     For more information:
     https://dev.twitter.com/overview/api/tweets
     """
-    return 'text' in data
+    return "text" in data
 
 
-@events.alias(on, 'deleted_tweet')
+@events.alias(on, "deleted_tweet")
 def delete():
     """
         Event triggered when an user deletes a tweet
@@ -259,7 +255,7 @@ def delete():
     """  # noqa: E501
 
 
-@events.alias('location_deleted')
+@events.alias("location_deleted")
 def scrub_geo():
     """
         Event triggered when an user deletes their location on a range of
@@ -314,6 +310,7 @@ def disconnect():
 
 # warnings
 
+
 @events.alias(on)
 def warning():
     """
@@ -334,8 +331,7 @@ def stall_warning(data):
     For more information:
     https://dev.twitter.com/streaming/overview/messages-types#stall-warnings-warning
     """  # noqa: E501
-    return (warning(data)
-            and data.get('warning').get('code') == "FALLING_BEHIND")
+    return warning(data) and data.get("warning").get("code") == "FALLING_BEHIND"
 
 
 @events.alias(on)
@@ -346,8 +342,8 @@ def too_many_follows(data):
     For more information:
     https://dev.twitter.com/streaming/overview/messages-types#too-many-follows-warning
     """  # noqa: E501
-    return (warning(data)
-            and data.get('warning').get('code') == "FOLLOWS_OVER_LIMIT")
+    return warning(data) and data.get("warning").get("code") == "FOLLOWS_OVER_LIMIT"
+
 
 # events, the data looks like; {"event": EVENT_NAME, ...}
 
@@ -500,7 +496,8 @@ def user_update():
 
 # Site stream control messages
 
-@events.alias('control_message')
+
+@events.alias("control_message")
 def control():
     """
         Event triggered upon receiving a control message
@@ -512,10 +509,11 @@ def control():
 
 # Internal peony events
 
-@events.alias(on, 'first_connection')
+
+@events.alias(on, "first_connection")
 def connected():
     """
-        event_triggered on the first connection to a stream
+    event_triggered on the first connection to a stream
     """
 
 
@@ -523,19 +521,19 @@ def connected():
 @events.priority(1)
 def connect(data):
     """
-        event triggered on connection or reconnection to a stream
+    event triggered on connection or reconnection to a stream
     """
     return connected(data) or stream_restart(data)
 
 
-@events.alias(on, 'on_restart', 'restart')
+@events.alias(on, "on_restart", "restart")
 def stream_restart():
     """
-        Event triggered on stream restart
+    Event triggered on stream restart
     """
 
 
-@events.alias(on, 'reconnect', 'on_reconnect')
+@events.alias(on, "reconnect", "on_reconnect")
 def reconnecting_in():
     """
         Event triggered when a stream restart is scheduled
@@ -549,6 +547,6 @@ def reconnecting_in():
 @events.priority(1024)
 def default(_):
     """
-        Event triggered when the data didn't trigger any handled event
+    Event triggered when the data didn't trigger any handled event
     """
     return True

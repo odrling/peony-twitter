@@ -1,4 +1,3 @@
-
 import inspect
 import os
 import sys
@@ -18,9 +17,11 @@ try:
     except (SystemError, ImportError):
         import api  # noqa
 except ImportError:
-    print("You must set your keys in the file example/api.py."
-          "\nCopy/paste the file api_example.py and set your "
-          "keys as indicated.")
+    print(
+        "You must set your keys in the file example/api.py."
+        "\nCopy/paste the file api_example.py and set your "
+        "keys as indicated."
+    )
 
     exit()
 

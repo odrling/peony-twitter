@@ -21,8 +21,7 @@ async def get_home(**params):
     async for tweets in responses:
         for tweet in reversed(tweets):
             text = html.unescape(tweet.text)
-            print("@{user.screen_name}: {text}".format(user=tweet.user,
-                                                       text=text))
+            print("@{user.screen_name}: {text}".format(user=tweet.user, text=text))
             print("-" * 10)
 
         await asyncio.sleep(180)
@@ -35,5 +34,5 @@ def main():
     loop.run_until_complete(get_home())
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

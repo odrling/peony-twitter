@@ -19,8 +19,9 @@ class BaseJSONData(dict):
         if key in self:
             return self[key]
 
-        raise AttributeError("%s has no property named %s." %
-                             (self.__class__.__name__, key))
+        raise AttributeError(
+            "%s has no property named %s." % (self.__class__.__name__, key)
+        )
 
     def __delattr__(self, item):
         del self[item]
@@ -31,30 +32,30 @@ class BaseJSONData(dict):
 
 class JSONData(BaseJSONData):
     """
-        A dict that lets you get the full data of the tweet without having
-        to check if the data is truncated
+    A dict that lets you get the full data of the tweet without having
+    to check if the data is truncated
     """
 
     def __contains__(self, key):
-        if key == 'text':
-            return super().__contains__('text') or 'full_text' in self
+        if key == "text":
+            return super().__contains__("text") or "full_text" in self
 
         elif super().__contains__(key):
             return True
 
-        if 'extended_tweet' in self.keys():
+        if "extended_tweet" in self.keys():
             return key in self.extended_tweet
 
         return False
 
     def __getitem__(self, key):
-        if key == 'text' and 'full_text' in self.keys():
-            return super().__getitem__('full_text')
+        if key == "text" and "full_text" in self.keys():
+            return super().__getitem__("full_text")
 
-        if key == 'extended_tweet':
+        if key == "extended_tweet":
             return super().__getitem__(key)
 
-        if 'extended_tweet' in self.keys():
+        if "extended_tweet" in self.keys():
             if key in self.extended_tweet:
                 return self.extended_tweet[key]
 
@@ -105,44 +106,46 @@ class PeonyResponse:
     """
 
     def __init__(self, data, headers, url, request):
-        super().__setattr__('data', data)
-        super().__setattr__('headers', headers)
-        super().__setattr__('url', url)
-        super().__setattr__('request', request)
+        super().__setattr__("data", data)
+        super().__setattr__("headers", headers)
+        super().__setattr__("url", url)
+        super().__setattr__("request", request)
 
     def __getattr__(self, key):
-        """ get attributes from the data """
+        """get attributes from the data"""
         return getattr(self.data, key)
 
     def __getitem__(self, key):
-        """ get items from the data """
+        """get items from the data"""
         return self.data[key]
 
     def __contains__(self, item):
         return item in self.data
 
     def __iter__(self):
-        """ iterate over the data """
+        """iterate over the data"""
         return iter(self.data)
 
     def __str__(self):
-        """ use the string of the data """
+        """use the string of the data"""
         return str(self.data)
 
     def __repr__(self):
-        """ use the representation of the data """
+        """use the representation of the data"""
         return repr(self.data)
 
     def __len__(self):
-        """ get the length of the data """
+        """get the length of the data"""
         return len(self.data)
 
     def __setitem__(self, key, value):
         self.data[key] = value
+
     __setattr__ = __setitem__
 
     def __delitem__(self, key):
         del self.data[key]
+
     __delattr__ = __delitem__
 
 
@@ -191,7 +194,7 @@ async def read(response, loads=loads, encoding=None):
     :obj:`bytes`, :obj:`str`, :obj:`dict` or :obj:`list`
         the data returned depends on the response
     """
-    ctype = response.headers.get('Content-Type', "").lower()
+    ctype = response.headers.get("Content-Type", "").lower()
 
     try:
         if "application/json" in ctype:
@@ -204,8 +207,6 @@ async def read(response, loads=loads, encoding=None):
 
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         data = await response.read()
-        raise exceptions.PeonyDecodeError(response=response,
-                                          data=data,
-                                          exception=exc)
+        raise exceptions.PeonyDecodeError(response=response, data=data, exception=exc)
 
     return await response.read()

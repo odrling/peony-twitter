@@ -5,7 +5,6 @@ from functools import update_wrapper
 
 
 class Task:
-
     def __init__(self, func):
         self.__wrapped__ = None
         update_wrapper(self, func)
@@ -14,8 +13,9 @@ class Task:
         return self.__wrapped__(*args, **kwargs)
 
     def __str__(self):
-        return "<{cls} {name}()>".format(cls=self.__class__.__name__,
-                                         name=self.__wrapped__.__name__)
+        return "<{cls} {name}()>".format(
+            cls=self.__class__.__name__, name=self.__wrapped__.__name__
+        )
 
     def __repr__(self):
         return str(self)

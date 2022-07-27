@@ -11,7 +11,6 @@ except (SystemError, ImportError):
 
 
 def print_data(func):
-
     def decorated(self, tweet):
         if self.last_id < tweet.id:
             print(func(self, tweet) + "\n" + "-" * 10)
@@ -20,7 +19,6 @@ def print_data(func):
 
 
 class Home(peony.PeonyClient):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -30,8 +28,7 @@ class Home(peony.PeonyClient):
     def print_rt(self, tweet):
         text = html.unescape(tweet.retweeted_status.text)
         fmt = "@{user.screen_name} RT @{rt.user.screen_name}: {text}"
-        return fmt.format(user=tweet.user, rt=tweet.retweeted_status,
-                          text=text)
+        return fmt.format(user=tweet.user, rt=tweet.retweeted_status, text=text)
 
     @print_data
     def print_tweet(self, tweet):
@@ -41,13 +38,12 @@ class Home(peony.PeonyClient):
 
     @peony.task
     async def get_timeline(self):
-        request = self.api.statuses.home_timeline.get(count=200,
-                                                      since_id=self.last_id)
+        request = self.api.statuses.home_timeline.get(count=200, since_id=self.last_id)
         responses = request.iterator.with_since_id(fill_gaps=True)
 
         async for tweets in responses:
             for tweet in reversed(tweets):
-                if 'retweeted_status' in tweet:
+                if "retweeted_status" in tweet:
                     self.print_rt(tweet)
                 else:
                     self.print_tweet(tweet)
@@ -56,6 +52,6 @@ class Home(peony.PeonyClient):
             await asyncio.sleep(120)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     client = Home(**api.keys)
     client.run()

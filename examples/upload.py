@@ -41,13 +41,13 @@ def convert(img, formats):
 
     for kwargs in formats:
         f = io.BytesIO()
-        if img.mode == "RGBA" and kwargs['format'] != "PNG":
+        if img.mode == "RGBA" and kwargs["format"] != "PNG":
             # convert to RGB if picture is too large as a png
             # this implies that the png format is the first in `formats`
             if min_size < 5 * 1024**2:
                 continue
             else:
-                img.convert('RGB')
+                img.convert("RGB")
 
         img.save(f, **kwargs)
         size = f.tell()
@@ -85,8 +85,7 @@ def optimize_media(file_, max_size, formats):
         The smallest file created in this function
     """
     if not PIL:
-        msg = ("Pillow must be installed to optimize a media\n"
-               "$ pip3 install Pillow")
+        msg = "Pillow must be installed to optimize a media\n" "$ pip3 install Pillow"
         raise RuntimeError(msg)
 
     img = PIL.Image.open(file_)
@@ -103,7 +102,7 @@ def optimize_media(file_, max_size, formats):
 
     # do not close a file opened by the user
     # only close if a filename was given
-    if not hasattr(file_, 'read'):
+    if not hasattr(file_, "read"):
         img.close()
 
     return media
@@ -112,19 +111,14 @@ def optimize_media(file_, max_size, formats):
 async def process_media(media, path):
     data = await media.read()
     mime_type = await utils.get_type(data, path)
-    if not mime_type.startswith('image'):
+    if not mime_type.startswith("image"):
         return media
 
     # formats to try when converting the picture
-    formats = [dict(format='PNG'),
-               dict(format='JPEG', quality=90, optimize=True)]
+    formats = [dict(format="PNG"), dict(format="JPEG", quality=90, optimize=True)]
 
     return await client.loop.run_in_executor(
-        ProcessPoolExecutor(),
-        optimize_media,
-        io.BytesIO(data),
-        (2048, 2048),
-        formats
+        ProcessPoolExecutor(), optimize_media, io.BytesIO(data), (2048, 2048), formats
     )
 
 
@@ -134,24 +128,21 @@ async def send_tweet_with_media():
 
     path = ""
     while not path and not os.path.exists(path):
-        path = input('file to upload:\n')
+        path = input("file to upload:\n")
 
     # read the most common input formats
     path = urlparse(path).path.strip(" \"'")
 
-    async with aiofiles.open(path, 'rb') as media:
+    async with aiofiles.open(path, "rb") as media:
         # optimize pictures if PIL is available
         if PIL:
             media = await process_media(media, path)
 
-        uploaded = await client.upload_media(media,
-                                             chunk_size=2**18,
-                                             chunked=True)
+        uploaded = await client.upload_media(media, chunk_size=2**18, chunked=True)
         media_id = uploaded.media_id
-        await client.api.statuses.update.post(status=status,
-                                              media_ids=media_id)
+        await client.api.statuses.update.post(status=status, media_ids=media_id)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
     loop.run_until_complete(send_tweet_with_media())

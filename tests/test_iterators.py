@@ -6,10 +6,10 @@ from peony import iterators
 
 from . import MockIteratorRequest
 
-data = [{'id': 1, 'text': "Hello"}]
+data = [{"id": 1, "text": "Hello"}]
 
 
-@pytest.mark.parametrize('response', (data, {'statuses': data}))
+@pytest.mark.parametrize("response", (data, {"statuses": data}))
 def test_get_data(response):
     iterator = iterators.with_max_id(MockIteratorRequest)
     assert iterator.get_data(response) == data
@@ -20,7 +20,7 @@ def test_get_data_incorrect():
     assert iterator.get_data(data[0]) == []
 
 
-@pytest.mark.parametrize('dict_resp', (False, True))
+@pytest.mark.parametrize("dict_resp", (False, True))
 @pytest.mark.asyncio
 async def test_max_id(dict_resp):
     MockIteratorRequest.kwargs = dict(max_id=499, dict=dict_resp)
@@ -29,9 +29,9 @@ async def test_max_id(dict_resp):
     ids = set()
     async for response in responses:
         if dict_resp:
-            response = response['statuses']
+            response = response["statuses"]
 
-        new_ids = {user['id'] for user in response}
+        new_ids = {user["id"] for user in response}
         size_before = len(ids)
         ids |= new_ids
 
@@ -43,19 +43,20 @@ async def test_max_id(dict_resp):
     assert len(ids) == 500
 
 
-@pytest.mark.parametrize('dict_resp', (False, True))
+@pytest.mark.parametrize("dict_resp", (False, True))
 @pytest.mark.asyncio
 async def test_since_id(dict_resp):
     MockIteratorRequest.kwargs = dict(since_id=499, count=10, dict=dict_resp)
-    responses = iterators.with_since_id(MockIteratorRequest, fill_gaps=False,
-                                        force=False)
+    responses = iterators.with_since_id(
+        MockIteratorRequest, fill_gaps=False, force=False
+    )
 
     ids = set()
     async for response in responses:
         if dict_resp:
-            response = response['statuses']
+            response = response["statuses"]
 
-        new_ids = {user['id'] for user in response}
+        new_ids = {user["id"] for user in response}
         size_before = len(ids)
         ids |= new_ids
 
@@ -70,13 +71,13 @@ async def test_since_id(dict_resp):
 @pytest.mark.asyncio
 async def test_since_id_force():
     MockIteratorRequest.kwargs = dict(since_id=499, count=10)
-    responses = iterators.with_since_id(MockIteratorRequest,
-                                        fill_gaps=False,
-                                        force=True)
+    responses = iterators.with_since_id(
+        MockIteratorRequest, fill_gaps=False, force=True
+    )
 
     ids = set()
     async for response in responses:
-        new_ids = {user['id'] for user in response}
+        new_ids = {user["id"] for user in response}
         size_before = len(ids)
         ids |= new_ids
 
@@ -92,12 +93,13 @@ async def test_since_id_force():
 @pytest.mark.asyncio
 async def test_fill_gaps():
     MockIteratorRequest.kwargs = dict(since_id=499)
-    responses = iterators.with_since_id(MockIteratorRequest,
-                                        fill_gaps=True, force=False)
+    responses = iterators.with_since_id(
+        MockIteratorRequest, fill_gaps=True, force=False
+    )
 
     ids = set()
     async for response in responses:
-        new_ids = {user['id'] for user in response}
+        new_ids = {user["id"] for user in response}
         ids |= new_ids
 
         if len(new_ids) == 0:
@@ -112,12 +114,11 @@ async def test_fill_gaps():
 @pytest.mark.asyncio
 async def test_fill_gaps_force():
     MockIteratorRequest.kwargs = dict(since_id=499)
-    responses = iterators.with_since_id(MockIteratorRequest,
-                                        fill_gaps=True, force=True)
+    responses = iterators.with_since_id(MockIteratorRequest, fill_gaps=True, force=True)
 
     ids = set()
     async for response in responses:
-        new_ids = {user['id'] for user in response}
+        new_ids = {user["id"] for user in response}
         size_before = len(ids)
         ids |= new_ids
 
@@ -137,7 +138,7 @@ async def test_cursor():
 
     ids = set()
     async for response in responses:
-        new_ids = set(response['ids'])
+        new_ids = set(response["ids"])
         size_before = len(ids)
         ids |= new_ids
 

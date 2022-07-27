@@ -19,5 +19,6 @@ async def getting_started():
     # tweet about your sudden love for peony
     await client.api.statuses.update.post(status="I'm using Peony!!")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     loop.run_until_complete(getting_started())

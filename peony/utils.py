@@ -18,6 +18,7 @@ mime = mimetypes.MimeTypes()
 
 try:
     import magic
+
     magic_mime = magic.Magic(mime=True)
     magic_module = True
 except Exception:  # pragma: no cover
@@ -29,7 +30,7 @@ _logger = logging.getLogger(__name__)
 
 class Handle:
 
-    __slots__ = 'exceptions', 'handler'
+    __slots__ = "exceptions", "handler"
 
     def __init__(self, handler, *exceptions):
         self.exceptions = exceptions
@@ -37,13 +38,12 @@ class Handle:
 
 
 class MetaErrorHandler(type):
-
     def __new__(cls, name, bases, attrs, **kwargs):
-        """ put the :class:`~peony.utils.Handle`s in the right place """
+        """put the :class:`~peony.utils.Handle`s in the right place"""
         handlers = {}
 
         for base in bases:
-            if hasattr(base, '_handlers'):
+            if hasattr(base, "_handlers"):
                 for key, value in base._handlers.items():
                     handlers[key] = value
 
@@ -52,7 +52,7 @@ class MetaErrorHandler(type):
                 for exception in attr.exceptions:
                     handlers[exception] = attr.handler
 
-        attrs['_handlers'] = handlers
+        attrs["_handlers"] = handlers
 
         return super().__new__(cls, name, bases, attrs)
 
@@ -81,8 +81,7 @@ class ErrorHandler(metaclass=MetaErrorHandler):
         if exception_class in self._handlers:
             handler = self._handlers[exception_class]
             args = get_args(handler, skip=1)
-            handler_kwargs = {key: kwargs[key] for key in args
-                              if key in kwargs}
+            handler_kwargs = {key: kwargs[key] for key in args if key in kwargs}
             try:
                 return await execute(handler(self, **handler_kwargs))
             except Exception as exc:
@@ -101,8 +100,7 @@ class ErrorHandler(metaclass=MetaErrorHandler):
                 else:
                     return await self.__request(future=future, **kwargs)
             except Exception as exc:
-                status = await self._handle(exc.__class__, exception=exc,
-                                            **kwargs)
+                status = await self._handle(exc.__class__, exception=exc, **kwargs)
 
                 if isinstance(status, Exception):
                     exc = status
@@ -150,8 +148,10 @@ class DefaultErrorHandler(ErrorHandler):
     async def handle_service_unavailable(self):
         self.tries -= 1
         if self.tries > 0:
-            _logger.info("Service temporarily unavailable, "
-                         "request will be made again very soon")
+            _logger.info(
+                "Service temporarily unavailable, "
+                "request will be made again very soon"
+            )
             await asyncio.sleep(0.5)
             return ErrorHandler.RETRY
 
@@ -182,11 +182,11 @@ def get_args(func, skip=0):
         Function's arguments
     """
 
-    code = getattr(func, '__code__', None)
+    code = getattr(func, "__code__", None)
     if code is None:
         code = func.__call__.__code__
 
-    return code.co_varnames[skip:code.co_argcount]
+    return code.co_varnames[skip : code.co_argcount]
 
 
 def log_error(msg=None, exc_info=None, logger=None, **kwargs):
@@ -244,8 +244,7 @@ async def get_media_metadata(data, path=None):
 
     media_category = get_category(media_type)
 
-    _logger.info("media_type: %s, media_category: %s" % (media_type,
-                                                         media_category))
+    _logger.info("media_type: %s, media_category: %s" % (media_type, media_category))
 
     return media_type, media_category
 
@@ -264,17 +263,16 @@ async def get_size(media):
     int
         The size of the file
     """
-    if hasattr(media, 'seek'):
+    if hasattr(media, "seek"):
         await execute(media.seek(0, os.SEEK_END))
         size = await execute(media.tell())
         await execute(media.seek(0))
-    elif hasattr(media, 'headers'):
-        size = int(media.headers['Content-Length'])
+    elif hasattr(media, "headers"):
+        size = int(media.headers["Content-Length"])
     elif isinstance(media, bytes):
         size = len(media)
     else:
-        raise TypeError("Can't get size of media of type:",
-                        type(media).__name__)
+        raise TypeError("Can't get size of media of type:", type(media).__name__)
 
     _logger.info("media size: %dB" % size)
     return size
@@ -309,24 +307,27 @@ async def get_type(media, path=None):
             media_type = mime.guess_type(path)[0]
 
         if media_type is None:
-            msg = ("Could not guess the mimetype of the media.\n"
-                   "Please consider installing python-magic\n"
-                   "(pip3 install peony-twitter[magic])")
+            msg = (
+                "Could not guess the mimetype of the media.\n"
+                "Please consider installing python-magic\n"
+                "(pip3 install peony-twitter[magic])"
+            )
             raise RuntimeError(msg)
 
     return media_type
 
 
 def get_category(media_type):
-    if media_type.startswith('video'):
+    if media_type.startswith("video"):
         return "tweet_video"
-    elif media_type.endswith('gif'):
+    elif media_type.endswith("gif"):
         return "tweet_gif"
-    elif media_type.startswith('image'):
+    elif media_type.startswith("image"):
         return "tweet_image"
     else:
-        raise RuntimeError("The provided media cannot be handled.\n"
-                           "mimetype: %s" % media_type)
+        raise RuntimeError(
+            "The provided media cannot be handled.\n" "mimetype: %s" % media_type
+        )
 
 
 async def execute(coro):
@@ -344,58 +345,57 @@ async def execute(coro):
 
 
 def set_debug():
-    """ activates error messages, useful during development """
+    """activates error messages, useful during development"""
     logging.basicConfig(level=logging.WARNING)
     peony.logger.setLevel(logging.DEBUG)
 
 
 class Entity:
-    """ Helper to use Twitter entities """
+    """Helper to use Twitter entities"""
 
-    def __init__(self, original: str,
-                 entity_type: str,
-                 data: Mapping[str, Any]):
+    def __init__(self, original: str, entity_type: str, data: Mapping[str, Any]):
         self.data = data
         self.entity_type = entity_type
-        self.original = original[self.start:self.end]
+        self.original = original[self.start : self.end]
 
     def __getitem__(self, key: str) -> Any:
         return self.data[key]
 
     @property
     def start(self) -> int:
-        return self.data['start']
+        return self.data["start"]
 
     @property
     def end(self) -> int:
-        return self.data['end']
+        return self.data["end"]
 
     @property
     def text(self) -> str:
-        """ returns text representing the entity """
-        ret = {
-            'urls': lambda: self.data['display_url']
-        }
+        """returns text representing the entity"""
+        ret = {"urls": lambda: self.data["display_url"]}
 
         return ret.get(self.entity_type, lambda: self.original)()
 
     @property
     def url(self) -> str:
-        """ returns an url representing the entity """
+        """returns an url representing the entity"""
         ret = {
-            'urls': lambda: self.data['expanded_url'],
-            'mentions': lambda: "https://twitter.com/{}".format(self.data['username']),    # noqa
-            'hashtags': lambda: "https://twitter.com/hashtag/{}".format(self.data['tag'])  # noqa
+            "urls": lambda: self.data["expanded_url"],
+            "mentions": lambda: "https://twitter.com/{}".format(
+                self.data["username"]
+            ),  # noqa
+            "hashtags": lambda: "https://twitter.com/hashtag/{}".format(
+                self.data["tag"]
+            ),  # noqa
         }
 
         return ret.get(self.entity_type, lambda: "")()
 
 
 def get_twitter_entities(
-    text: str,
-    entities: Mapping[str, Mapping[str, Any]]
+    text: str, entities: Mapping[str, Mapping[str, Any]]
 ) -> Iterable[Entity]:
-    """ Returns twitter entities from an entities dictionnary
+    """Returns twitter entities from an entities dictionnary
 
     Entities are returned is reversed order for ease of use (start and end
     indexes stay the same if the string is changed in place)
@@ -406,5 +406,5 @@ def get_twitter_entities(
             for entity_type, entities in entities.items()
         ),
         key=lambda e: e.start,
-        reverse=True
+        reverse=True,
     )

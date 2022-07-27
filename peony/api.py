@@ -57,7 +57,7 @@ class AbstractAPIPath(ABC):
         """
         return "/".join(self._path) + (suffix or self._suffix)
 
-    def __getitem__(self, key: Any) -> 'AbstractAPIPath':  # noqa: E501
+    def __getitem__(self, key: Any) -> "AbstractAPIPath":  # noqa: E501
         """
             Where the magic happens
 
@@ -86,14 +86,13 @@ class AbstractAPIPath(ABC):
             key = [str(i) for i in key]
             new_path = self._path + key
         else:
-            raise TypeError("Could not create endpoint from %s "
-                            "of type %s" % (key, type(key)))
+            raise TypeError(
+                "Could not create endpoint from %s " "of type %s" % (key, type(key))
+            )
 
-        return self.__class__(path=new_path,
-                              suffix=self._suffix,
-                              client=self.client)
+        return self.__class__(path=new_path, suffix=self._suffix, client=self.client)
 
-    def __getattr__(self, key: str) -> 'AbstractAPIPath':  # noqa: E501
+    def __getattr__(self, key: str) -> "AbstractAPIPath":  # noqa: E501
         """
             Call __getitem__ when trying to get an attribute from the
             instance
@@ -105,31 +104,31 @@ class AbstractAPIPath(ABC):
 
     @property
     def get(self):
-        return self._request('get')
+        return self._request("get")
 
     @property
     def post(self):
-        return self._request('post')
+        return self._request("post")
 
     @property
     def put(self):
-        return self._request('put')
+        return self._request("put")
 
     @property
     def delete(self):
-        return self._request('delete')
+        return self._request("delete")
 
     @property
     def patch(self):
-        return self._request('patch')
+        return self._request("patch")
 
     @property
     def option(self):
-        return self._request('option')
+        return self._request("option")
 
     @property
     def head(self):
-        return self._request('head')
+        return self._request("head")
 
     @abstractmethod
     def _request(self, method: str) -> requests.RequestFactory:

@@ -16,12 +16,11 @@ from tests.tests_client import DummyClient, MockSession, MockSessionRequest
 @pytest.mark.asyncio
 async def test_streaming_apis():
     async with DummyClient() as dummy_client:
-        with patch.object(dummy_client, 'request', side_effect=dummy)\
-                as request:
+        with patch.object(dummy_client, "request", side_effect=dummy) as request:
             await dummy_client.api.test.get()
             assert request.called
 
-        with patch.object(dummy_client, 'stream_request') as request:
+        with patch.object(dummy_client, "stream_request") as request:
             dummy_client.stream.test.get.stream()
             assert request.called
 
@@ -35,7 +34,7 @@ async def test_client_base_url():
 
 @pytest.mark.asyncio
 async def test_session_creation(event_loop):
-    with patch.object(aiohttp, 'ClientSession') as client_session:
+    with patch.object(aiohttp, "ClientSession") as client_session:
         client = DummyClient(loop=event_loop)
         await client.setup
         assert client_session.called
@@ -49,12 +48,12 @@ def test_client_error():
 @pytest.mark.asyncio
 async def test_client_encoding_loads():
     text = bytes([194, 161])
-    data = b"{\"hello\": \"%s\"}" % text
+    data = b'{"hello": "%s"}' % text
 
-    async with DummyClient(encoding='utf-8') as client:
-        assert client._loads(data)['hello'] == text.decode('utf-8')
+    async with DummyClient(encoding="utf-8") as client:
+        assert client._loads(data)["hello"] == text.decode("utf-8")
 
-    async with DummyClient(encoding='ascii') as client:
+    async with DummyClient(encoding="ascii") as client:
         with pytest.raises(UnicodeDecodeError):
             client._loads(data)
 
@@ -93,19 +92,20 @@ async def test_bad_request():
 
     async with BasePeonyClient("", "") as dummy_client:
         dummy_client._session = MockSession(MockSessionRequest(status=404))
-        with patch.object(dummy_client.headers, 'prepare_request',
-                          side_effect=prepare_dummy):
+        with patch.object(
+            dummy_client.headers, "prepare_request", side_effect=prepare_dummy
+        ):
             with pytest.raises(exceptions.HTTPNotFound):
-                await dummy_client.request('get', "http://google.com/404",
-                                           future=asyncio.Future())
+                await dummy_client.request(
+                    "get", "http://google.com/404", future=asyncio.Future()
+                )
 
 
 @pytest.mark.asyncio
 async def test_stream_request():
     # streams are tested in test_stream
     async with DummyClient() as dummy_client:
-        assert isinstance(dummy_client.stream.get.stream(),
-                          stream.StreamResponse)
+        assert isinstance(dummy_client.stream.get.stream(), stream.StreamResponse)
 
 
 @pytest.mark.asyncio
@@ -113,16 +113,18 @@ async def test_request_proxy():
     def raise_proxy(*args, proxy=None, **kwargs):
         raise RuntimeError(proxy)
 
-    async with BasePeonyClient("", "",
-                               proxy="http://some.proxy.com") as dummy_client:
+    async with BasePeonyClient("", "", proxy="http://some.proxy.com") as dummy_client:
         async with aiohttp.ClientSession() as session:
-            with patch.object(dummy_client.headers, 'prepare_request',
-                              side_effect=raise_proxy):
+            with patch.object(
+                dummy_client.headers, "prepare_request", side_effect=raise_proxy
+            ):
                 try:
-                    await dummy_client.request(method='get',
-                                               url="http://hello.com",
-                                               session=session,
-                                               future=None)
+                    await dummy_client.request(
+                        method="get",
+                        url="http://hello.com",
+                        session=session,
+                        future=None,
+                    )
                 except RuntimeError as e:
                     assert str(e) == "http://some.proxy.com"
                 else:
@@ -132,7 +134,6 @@ async def test_request_proxy():
 @pytest.mark.asyncio
 async def test_request_encoding():
     class DummyCTX:
-
         def __init__(self, **kwargs):
             self.status = 200
 
@@ -158,22 +159,24 @@ async def test_request_encoding():
 
     async with BasePeonyClient("", "") as client:
         async with aiohttp.ClientSession() as session:
-            with patch.object(session, 'request', side_effect=DummyCTX):
-                with patch.object(data_processing, 'read',
-                                  side_effect=get_encoding):
-                    with patch.object(data_processing, 'PeonyResponse',
-                                      side_effect=check_encoding):
-                        await client.request(method='get',
-                                             url="http://hello.com",
-                                             encoding=ENCODING,
-                                             session=session,
-                                             future=asyncio.Future())
+            with patch.object(session, "request", side_effect=DummyCTX):
+                with patch.object(data_processing, "read", side_effect=get_encoding):
+                    with patch.object(
+                        data_processing, "PeonyResponse", side_effect=check_encoding
+                    ):
+                        await client.request(
+                            method="get",
+                            url="http://hello.com",
+                            encoding=ENCODING,
+                            session=session,
+                            future=asyncio.Future(),
+                        )
 
 
 @pytest.mark.asyncio
 async def test_run_keyboard_interrupt(event_loop):
     async with DummyClient(loop=event_loop) as client:
-        with patch.object(client, 'run_tasks', side_effect=KeyboardInterrupt):
+        with patch.object(client, "run_tasks", side_effect=KeyboardInterrupt):
             await client.arun()
 
 
@@ -181,7 +184,7 @@ async def test_run_keyboard_interrupt(event_loop):
 async def test_run_exceptions_raise():
     async with DummyClient() as client:
         for exc in (Exception, RuntimeError, peony.exceptions.PeonyException):
-            with patch.object(client, 'run_tasks', side_effect=exc):
+            with patch.object(client, "run_tasks", side_effect=exc):
                 with pytest.raises(exc):
                     await client.arun()
 
@@ -207,7 +210,6 @@ async def test_close_user_session():
 
 
 class Client(DummyClient):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.t1 = False
@@ -236,12 +238,11 @@ class SubClient(Client, dict):
 
 
 def test_tasks_inheritance():
-    assert SubClient.t3 in SubClient._tasks['tasks']
-    assert Client._t1 in SubClient._tasks['tasks']
+    assert SubClient.t3 in SubClient._tasks["tasks"]
+    assert Client._t1 in SubClient._tasks["tasks"]
 
 
 class ClientCancelTasks(DummyClient):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cancelled = True
@@ -269,8 +270,7 @@ async def test_disabled_error_handler():
     async def raise_runtime_error(*args, **kwargs):
         raise RuntimeError
 
-    with patch.object(BasePeonyClient, 'request',
-                      side_effect=raise_runtime_error):
+    with patch.object(BasePeonyClient, "request", side_effect=raise_runtime_error):
         async with BasePeonyClient("", "") as client:
             with pytest.raises(RuntimeError):
                 await client.api.test.get()
@@ -281,7 +281,7 @@ async def test_change_request_client():
     async with DummyClient() as client:
         req = client.api.call.get()
         assert req.client == client
-        with patch.object(client, 'request', side_effect=dummy) as request:
+        with patch.object(client, "request", side_effect=dummy) as request:
             try:
                 await req()
             finally:
@@ -290,8 +290,7 @@ async def test_change_request_client():
         async with DummyClient() as client2:
             req.client = client2
             assert req.client == client2
-            with patch.object(client2, 'request',
-                              side_effect=dummy) as request:
+            with patch.object(client2, "request", side_effect=dummy) as request:
                 try:
                     await req()
                 finally:

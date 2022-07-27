@@ -19,8 +19,14 @@ sys.path.insert(0, os.path.dirname(str(test_dir)))
 class Media:
     cache_dir = test_dir / "cache"
 
-    def __init__(self, filename, mimetype, content_length, category=None,
-                 base="https://tests.odrling.xyz/peony/"):
+    def __init__(
+        self,
+        filename,
+        mimetype,
+        content_length,
+        category=None,
+        base="https://tests.odrling.xyz/peony/",
+    ):
         self.filename = filename
         self.url = base + filename
         self.type = mimetype
@@ -42,7 +48,7 @@ class Media:
         Media.cache_dir.mkdir(exist_ok=True)
 
         if self.cache.exists():
-            async with aiofiles.open(str(self.cache), mode='rb') as stream:
+            async with aiofiles.open(str(self.cache), mode="rb") as stream:
                 self.content = await stream.read()
                 if self.content_length == len(self.content):
                     return self.content
@@ -53,7 +59,7 @@ class Media:
         async with session.get(self.url) as response:
             print("downloading", self.filename)
             self.content = await response.read()
-            async with aiofiles.open(str(self.cache), mode='wb') as stream:
+            async with aiofiles.open(str(self.cache), mode="wb") as stream:
                 await stream.write(self.content)
 
             return self.content
@@ -66,52 +72,57 @@ class Media:
 
 
 medias = {
-    'lady_peony': Media(
+    "lady_peony": Media(
         filename="lady_peony.jpg",
         mimetype="image/jpeg",
         category="tweet_image",
-        content_length=302770
+        content_length=302770,
     ),
-    'pink_queen': Media(
+    "pink_queen": Media(
         filename="pink_queen.jpg",
         mimetype="image/jpeg",
         category="tweet_image",
-        content_length=62183
+        content_length=62183,
     ),
-    'bloom': Media(
+    "bloom": Media(
         filename="bloom.gif",
         mimetype="image/gif",
         category="tweet_gif",
-        content_length=503407
+        content_length=503407,
     ),
-    'video': Media(
+    "video": Media(
         filename="peony.mp4",
         mimetype="video/mp4",
         category="tweet_video",
-        content_length=9773437
+        content_length=9773437,
     ),
-    'seismic_waves': Media(
+    "seismic_waves": Media(
         filename="seismic_waves.png",
         mimetype="image/png",
         category="tweet_image",
-        content_length=43262
-    )
+        content_length=43262,
+    ),
 }
 
 
 class MockResponse:
     message = "to err is human, to arr is pirate"
 
-    def __init__(self, data=None, error=None,
-                 content_type="application/json",
-                 headers=None, status=200, eof=False):
+    def __init__(
+        self,
+        data=None,
+        error=None,
+        content_type="application/json",
+        headers=None,
+        status=200,
+        eof=False,
+    ):
 
         if error is not None:
-            data = json.dumps({'errors': [{'code': error,
-                                           'message': self.message}]})
+            data = json.dumps({"errors": [{"code": error, "message": self.message}]})
 
         if isinstance(data, str):
-            self.data = data.encode(encoding='utf-8')
+            self.data = data.encode(encoding="utf-8")
         elif isinstance(data, bytes):
             self.data = data
         else:
@@ -121,9 +132,9 @@ class MockResponse:
         self.status = status
         self.headers = {} if headers is None else headers
 
-        self.headers['Content-Type'] = content_type
+        self.headers["Content-Type"] = content_type
         self.eof = eof
-        self.url = ''  # quite irrelevant here
+        self.url = ""  # quite irrelevant here
         self._closed = False
 
     async def read(self):
@@ -131,22 +142,22 @@ class MockResponse:
 
     async def text(self, encoding=None):
         if encoding is None:
-            encoding = 'utf-8'
+            encoding = "utf-8"
 
         return self.data.decode(encoding=encoding)
 
     async def json(self, encoding=None, loads=json.loads):
         if encoding is None:
-            encoding = 'utf-8'
+            encoding = "utf-8"
 
         return loads(self.data, encoding=encoding)
 
     async def readline(self):
         if self.data:
-            if b'\n' in self.data:
-                i = self.data.index(b'\n')
-                line = self.data[:i + 1]
-                self.data = self.data[i + 1:]
+            if b"\n" in self.data:
+                i = self.data.index(b"\n")
+                line = self.data[: i + 1]
+                self.data = self.data[i + 1 :]
             else:
                 line = self.data
                 self.data = ""
@@ -189,11 +200,7 @@ class MockIteratorRequest:
     ids = range(1000)
     kwargs = {}
 
-    def __init__(self, since_id=None,
-                 max_id=None,
-                 cursor=None,
-                 dict=False,
-                 count=10):
+    def __init__(self, since_id=None, max_id=None, cursor=None, dict=False, count=10):
         self.since_id = since_id
         self.max_id = max_id
         self.cursor = cursor
@@ -227,9 +234,9 @@ class MockIteratorRequest:
                     end = since_id
 
                 if end < 0:
-                    data = [{'id': i} for i in self.ids[max_id::-1]]
+                    data = [{"id": i} for i in self.ids[max_id::-1]]
                 else:
-                    data = [{'id': i} for i in self.ids[max_id:end:-1]]
+                    data = [{"id": i} for i in self.ids[max_id:end:-1]]
 
         elif cursor is not None:
             if cursor == -1:
@@ -239,16 +246,17 @@ class MockIteratorRequest:
             if next_cursor >= len(self.ids):
                 next_cursor = 0
 
-            data = {'ids': self.ids[cursor:cursor + count],
-                    'next_cursor': next_cursor}
+            data = {
+                "ids": self.ids[cursor : cursor + count],
+                "next_cursor": next_cursor,
+            }
 
         else:
             last_chunk_start = len(self.ids) - count
             if since_id is None or since_id < last_chunk_start:
-                data = [{'id': i} for i in
-                        self.ids[:len(self.ids) - count - 1:-1]]
+                data = [{"id": i} for i in self.ids[: len(self.ids) - count - 1 : -1]]
             else:
-                data = [{'id': i} for i in self.ids[:since_id:-1]]
+                data = [{"id": i} for i in self.ids[:since_id:-1]]
 
         if self.dict:
             return {"statuses": data}
@@ -257,7 +265,6 @@ class MockIteratorRequest:
 
 
 class Data:
-
     def __init__(self, data):
         self._data = data
 
@@ -279,8 +286,11 @@ def async_test(func):
 
 
 if sys.version_info < (3, 5, 2):
+
     def create_future(loop):
         return asyncio.Future(loop=loop)
+
 else:
+
     def create_future(loop):
         return loop.create_future()

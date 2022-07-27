@@ -19,7 +19,7 @@ url = twitter_base_api_url + "/test/endpoint.json"
 
 @pytest.fixture
 def api():
-    return peony.api.APIPath([twitter_base_api_url], '.json', client)
+    return peony.api.APIPath([twitter_base_api_url], ".json", client)
 
 
 @pytest.fixture
@@ -35,7 +35,7 @@ def test_api_endpoint_creation(endpoint):
 
 
 def test_api_endpoint_creation_tuple(api):
-    endpoint = api['test', 'endpoint']
+    endpoint = api["test", "endpoint"]
     assert endpoint.url() == url
 
 
@@ -49,23 +49,23 @@ def test_api_client(api):
 
 
 def test_api_suffix(api):
-    assert api._suffix == '.json'
+    assert api._suffix == ".json"
 
 
 def test_api_request_method_get(endpoint):
-    assert endpoint.get.method == 'get'
+    assert endpoint.get.method == "get"
 
 
 def test_api_request_method_post(endpoint):
-    assert endpoint.post.method == 'post'
+    assert endpoint.post.method == "post"
 
 
 def test_api_streaming_request_method_get(endpoint):
-    assert endpoint.get.stream.method == 'get'
+    assert endpoint.get.stream.method == "get"
 
 
 def test_api_streaming_request_method_post(endpoint):
-    assert endpoint.post.stream.method == 'post'
+    assert endpoint.post.stream.method == "post"
 
 
 def test_api_str(endpoint):

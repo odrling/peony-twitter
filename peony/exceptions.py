@@ -5,29 +5,28 @@ from . import data_processing
 
 
 def get_error(data):
-    """ return the error if there is a corresponding exception """
+    """return the error if there is a corresponding exception"""
     if isinstance(data, dict):
-        if 'errors' in data:
-            error = data['errors'][0]
+        if "errors" in data:
+            error = data["errors"][0]
         else:
-            error = data.get('error', None)
+            error = data.get("error", None)
 
         if isinstance(error, dict):
-            if error.get('code') in errors:
+            if error.get("code") in errors:
                 return error
 
 
 async def throw(response, loads=None, encoding=None, **kwargs):
-    """ Get the response data if possible and raise an exception """
+    """Get the response data if possible and raise an exception"""
     if loads is None:
         loads = data_processing.loads
 
-    data = await data_processing.read(response, loads=loads,
-                                      encoding=encoding)
+    data = await data_processing.read(response, loads=loads, encoding=encoding)
 
     error = get_error(data)
     if error is not None:
-        exception = errors[error['code']]
+        exception = errors[error["code"]]
         raise exception(response=response, error=error, data=data, **kwargs)
 
     if response.status in statuses:
@@ -39,10 +38,9 @@ async def throw(response, loads=None, encoding=None, **kwargs):
 
 
 class PeonyException(Exception):
-    """ Parent class of all the exceptions of Peony """
+    """Parent class of all the exceptions of Peony"""
 
-    def __init__(self, response=None, error=None, data=None, url=None,
-                 message=None):
+    def __init__(self, response=None, error=None, data=None, url=None, message=None):
         """
             Add the response and data attributes
 
@@ -63,19 +61,17 @@ class PeonyException(Exception):
 
     def get_message(self):
         if self.error is not None:
-            return self.error.get('message', self.error)
+            return self.error.get("message", self.error)
 
         return str(self.data)
 
 
 class PeonyUnavailableMethod(PeonyException):
-
     def __init__(self, message):
         super().__init__(message=message)
 
 
 class PeonyDecodeError(PeonyException):
-
     def __init__(self, exception, *args, **kwargs):
         self.exception = exception
         super().__init__(*args, **kwargs)
@@ -93,10 +89,11 @@ class StreamLimit(PeonyException):
 
 
 class ErrorDict(dict):
-    """ A dict to easily add exception associated to a code """
+    """A dict to easily add exception associated to a code"""
 
     def code(self, code):
-        """ Decorator to associate a code to an exception """
+        """Decorator to associate a code to an exception"""
+
         def decorator(exception):
             self[code] = exception
             return exception
@@ -251,7 +248,7 @@ class ActionNotPermitted(HTTPForbidden):
 # TODO: check if that could be moved to RateLimitExceeded
 @errors.code(88)
 class RateLimitExceeded(HTTPTooManyRequests):
-    """ Exception raised on rate limit """
+    """Exception raised on rate limit"""
 
     @property
     def reset(self):
@@ -263,7 +260,7 @@ class RateLimitExceeded(HTTPTooManyRequests):
         int
             Time when the limit will be reset
         """
-        return int(self.response.headers.get('X-Rate-Limit-Reset', 0))
+        return int(self.response.headers.get("X-Rate-Limit-Reset", 0))
 
     @property
     def reset_in(self):

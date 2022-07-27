@@ -18,5 +18,5 @@ async def search_test():
         print(tweets)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop.run_until_complete(search_test())

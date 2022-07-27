@@ -20,30 +20,31 @@ def event_loop():
         return loop
 
 
-@pytest.fixture(name='medias')
+@pytest.fixture(name="medias")
 def fixture_medias(event_loop):
-    if os.environ.get('FORCE_IPV4', False):
+    if os.environ.get("FORCE_IPV4", False):
         connector = aiohttp.TCPConnector(family=socket.AF_INET)
     else:
         connector = aiohttp.TCPConnector()
 
     async def download():
-        async with aiohttp.ClientSession(loop=event_loop,
-                                         connector=connector) as session:
-            await asyncio.gather(*[media.download(session=session)
-                                   for media in medias.values()])
+        async with aiohttp.ClientSession(
+            loop=event_loop, connector=connector
+        ) as session:
+            await asyncio.gather(
+                *[media.download(session=session) for media in medias.values()]
+            )
 
     event_loop.run_until_complete(download())
     return medias
 
 
 class AppMedias(web.Application):
-
     def __init__(self):
         super().__init__()
 
         file = pathlib.Path(inspect.getfile(inspect.currentframe()))
-        self.router.add_static('/', str(file.parent / "cache"))
+        self.router.add_static("/", str(file.parent / "cache"))
 
         self.srv = None
         self.handler = None
@@ -84,4 +85,4 @@ def port(event_loop):
 
 @pytest.fixture
 def url(medias, port):
-    return "http://127.0.0.1:%d/%s" % (port, medias['lady_peony'].filename)
+    return "http://127.0.0.1:%d/%s" % (port, medias["lady_peony"].filename)

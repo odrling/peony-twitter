@@ -8,7 +8,6 @@ from .tasks import task
 
 
 class EventHandler(task):
-
     def __init__(self, func, event, prefix=None, strict=False):
         super().__init__(func)
 
@@ -21,29 +20,24 @@ class EventHandler(task):
     def __call__(self, *args):
         argcount = self.__wrapped__.__code__.co_argcount
 
-        if hasattr(self, 'command'):
-            args = (*args, self.command,)
+        if hasattr(self, "command"):
+            args = (
+                *args,
+                self.command,
+            )
 
         args = args[:argcount]
         return super().__call__(*args)
 
     def __repr__(self):
         return "<{clsname}: event:{event} prefix:{prefix}>".format(
-            clsname=self.__class__.__name__,
-            prefix=self.prefix,
-            event=self.is_event
+            clsname=self.__class__.__name__, prefix=self.prefix, event=self.is_event
         )
 
     @classmethod
     def event_handler(cls, event, prefix=None, **values):
-
         def decorator(func):
-            event_handler = cls(
-                func=func,
-                event=event,
-                prefix=prefix,
-                **values
-            )
+            event_handler = cls(func=func, event=event, prefix=prefix, **values)
 
             return event_handler
 
@@ -51,13 +45,13 @@ class EventHandler(task):
 
 
 class EventStream(abc.ABC):
-
     def __init__(self, client):
         self._client = client
-        self.functions = [getattr(self, func)
-                          for func in dir(self) if self._check(func)]
+        self.functions = [
+            getattr(self, func) for func in dir(self) if self._check(func)
+        ]
 
-        self.functions.sort(key=lambda i: getattr(i.is_event, 'priority', 0))
+        self.functions.sort(key=lambda i: getattr(i.is_event, "priority", 0))
 
     def __getitem__(self, key):
         return self._client[key]
@@ -106,14 +100,14 @@ class EventStream(abc.ABC):
                 return await peony.utils.execute(coro)
             except Exception:
                 fmt = "error occurred while running {classname}.{handler}:"
-                msg = fmt.format(classname=self.__class__.__name__,
-                                 handler=event_handler.__name__)
+                msg = fmt.format(
+                    classname=self.__class__.__name__, handler=event_handler.__name__
+                )
 
                 peony.utils.log_error(msg)
 
 
 class EventStreams(list):
-
     def __init__(self):
         super().__init__()
         self.is_setup = False

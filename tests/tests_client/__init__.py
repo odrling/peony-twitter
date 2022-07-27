@@ -9,16 +9,15 @@ from .. import MockResponse
 
 
 class MockSessionRequest:
-
-    def __init__(self, status=200, data=MockResponse.message,
-                 content_type="plain/text"):
+    def __init__(
+        self, status=200, data=MockResponse.message, content_type="plain/text"
+    ):
         self.status = status
         self.data = data
         self.ctype = content_type
 
     async def __aenter__(self, *args, **kwargs):
-        return MockResponse(status=self.status, data=self.data,
-                            content_type=self.ctype)
+        return MockResponse(status=self.status, data=self.data, content_type=self.ctype)
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         pass
@@ -28,7 +27,6 @@ class MockSessionRequest:
 
 
 class MockSession:
-
     def __init__(self, request=None):
         if request is None:
             self.request = MockSessionRequest()
@@ -37,7 +35,6 @@ class MockSession:
 
 
 class DummyErrorHandler(utils.ErrorHandler):
-
     async def __call__(self, future=None, **kwargs):
 
         if future is not None:
@@ -46,17 +43,15 @@ class DummyErrorHandler(utils.ErrorHandler):
 
 
 class DummyClient(BasePeonyClient):
-
     def __init__(self, *args, **kwargs):
-        super().__init__("", "", error_handler=utils.ErrorHandler,
-                         *args, **kwargs)
+        super().__init__("", "", error_handler=utils.ErrorHandler, *args, **kwargs)
 
     async def request(self, *args, **kwargs):
         pass
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
-        self.patch = mock.patch.object(self.session, 'request')
+        self.patch = mock.patch.object(self.session, "request")
         self.patch.__enter__()
 
         return await super().__aenter__()
@@ -67,17 +62,15 @@ class DummyClient(BasePeonyClient):
 
 
 class DummyPeonyClient(PeonyClient):
-
     def __init__(self, *args, **kwargs):
-        super().__init__("", "", error_handler=utils.ErrorHandler,
-                         *args, **kwargs)
+        super().__init__("", "", error_handler=utils.ErrorHandler, *args, **kwargs)
 
     async def request(self, *args, **kwargs):
         pass
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
-        self.patch = mock.patch.object(self.session, 'request')
+        self.patch = mock.patch.object(self.session, "request")
         self.patch.__enter__()
 
         return await super().__aenter__()
@@ -88,7 +81,6 @@ class DummyPeonyClient(PeonyClient):
 
 
 class TaskContext:
-
     def __init__(self, coro):
         self.coro = coro
 

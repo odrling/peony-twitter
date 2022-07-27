@@ -73,5 +73,6 @@ target/
 /tests/cache
 .pytest_cache
 
-# zsh autoenv
+# direnv/autoenv
 .autoenv.zsh
+.envrc

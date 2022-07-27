@@ -12,7 +12,6 @@ except (SystemError, ImportError):
 
 
 class BDClient(peony.PeonyClient):
-
     def __init__(self, birthday, birthday_name, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -22,14 +21,14 @@ class BDClient(peony.PeonyClient):
 
     async def set_tz(self):
         """
-            set the environment timezone to the timezone
-            set in your twitter settings
+        set the environment timezone to the timezone
+        set in your twitter settings
         """
         settings = await self.api.account.settings.get()
 
         tz = settings.time_zone.tzinfo_name
 
-        os.environ['TZ'] = tz
+        os.environ["TZ"] = tz
         time.tzset()
 
     @property
@@ -60,7 +59,7 @@ class BDClient(peony.PeonyClient):
     async def main(self):
         try:
             await self.set_tz()
-            print("Timezone in use is", os.environ['TZ'])
+            print("Timezone in use is", os.environ["TZ"])
         except Exception:
             print("Timezone in use is that of your computer")
 
@@ -73,7 +72,7 @@ class BDClient(peony.PeonyClient):
 
 def get_birthday(msg):
     birthday = input(msg)
-    birthday = [int(i) for i in birthday.split('/')]
+    birthday = [int(i) for i in birthday.split("/")]
 
     # quick check of the input
     if birthday[0] not in range(13) or birthday[1] not in range(32):
@@ -83,7 +82,7 @@ def get_birthday(msg):
     return birthday
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     loop = asyncio.get_event_loop()
 
     birthday = get_birthday("Your birthday (mm/dd): ")

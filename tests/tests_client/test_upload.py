@@ -20,16 +20,16 @@ from .. import medias
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize('input_type', ['bytes', 'file', 'path'])
+@pytest.mark.parametrize("input_type", ["bytes", "file", "path"])
 async def test_upload_media(input_type, medias):
     async with DummyPeonyClient() as dummy_peony_client:
-        media_data = medias['lady_peony'].content
+        media_data = medias["lady_peony"].content
         media_file = None
 
-        if input_type == 'file':
+        if input_type == "file":
             media = io.BytesIO(media_data)
-        elif input_type == 'path':
-            media_file = tempfile.NamedTemporaryFile('w+b')
+        elif input_type == "path":
+            media_file = tempfile.NamedTemporaryFile("w+b")
             media_file.write(media_data)
             media = media_file.name
         else:
@@ -37,26 +37,27 @@ async def test_upload_media(input_type, medias):
 
         async def dummy_upload(url, method, future, data, skip_params):
             assert url == dummy_peony_client.upload.media.upload.url()
-            assert method == 'post'
+            assert method == "post"
 
-            if input_type in 'file':
-                assert data['media'] == media
+            if input_type in "file":
+                assert data["media"] == media
             else:
-                if isinstance(data['media'], bytes):
-                    assert data['media'] == media_data
+                if isinstance(data["media"], bytes):
+                    assert data["media"] == media_data
                 else:
-                    data = await utils.execute(data['media'].read())
+                    data = await utils.execute(data["media"].read())
                     assert data == media_data
 
             assert skip_params is True
             future.set_result(None)
 
-        with patch.object(dummy_peony_client, 'request',
-                          side_effect=dummy_upload) as req:
+        with patch.object(
+            dummy_peony_client, "request", side_effect=dummy_upload
+        ) as req:
             await dummy_peony_client.upload_media(media, chunked=False)
             assert req.called
 
-        if input_type == 'file':
+        if input_type == "file":
             media.close()
         if media_file is not None:
             media_file.close()
@@ -72,7 +73,7 @@ async def test_upload_media_exception():
 @pytest.mark.asyncio
 async def test_upload_media_chunked(medias):
     async with DummyPeonyClient() as dummy_peony_client:
-        media_data = await medias['lady_peony'].download()
+        media_data = await medias["lady_peony"].download()
         rand = random.randrange(1 << 16)
 
         async def dummy_upload(media, size, *args, **kwargs):
@@ -80,8 +81,9 @@ async def test_upload_media_chunked(medias):
             assert size == len(media)
             return rand
 
-        with patch.object(dummy_peony_client, '_chunked_upload',
-                          side_effect=dummy_upload) as upload:
+        with patch.object(
+            dummy_peony_client, "_chunked_upload", side_effect=dummy_upload
+        ) as upload:
             await dummy_peony_client.upload_media(media_data, chunked=True)
             assert upload.called
 
@@ -89,7 +91,7 @@ async def test_upload_media_chunked(medias):
 @pytest.mark.asyncio
 async def test_upload_media_size_limit(medias):
     async with DummyPeonyClient() as dummy_peony_client:
-        media_data = await medias['video'].download()
+        media_data = await medias["video"].download()
         rand = random.randrange(1 << 16)
 
         async def dummy_upload(media, size, *args, **kwargs):
@@ -97,15 +99,14 @@ async def test_upload_media_size_limit(medias):
             assert size == len(media)
             return rand
 
-        with patch.object(dummy_peony_client, '_chunked_upload',
-                          side_effect=dummy_upload) as upload:
-            await dummy_peony_client.upload_media(media_data,
-                                                  size_limit=3 * 1024**2)
+        with patch.object(
+            dummy_peony_client, "_chunked_upload", side_effect=dummy_upload
+        ) as upload:
+            await dummy_peony_client.upload_media(media_data, size_limit=3 * 1024**2)
             assert upload.called
 
 
 class DummyRequest:
-
     def __init__(self, client, media, chunk_size=1024**2, fail=False):
         self.i = -1
         self.client = client
@@ -115,13 +116,14 @@ class DummyRequest:
         self.media_id = random.randrange(1 << 16)
         self.fail = fail
 
-    async def __call__(self, url, method, future,
-                       data=None, skip_params=None, params=None):
+    async def __call__(
+        self, url, method, future, data=None, skip_params=None, params=None
+    ):
         if url == self.client.api.account.verify_credentials.url():
             return
         assert url == self.client.upload.media.upload.url()
 
-        response = {'media_id': self.media_id}
+        response = {"media_id": self.media_id}
 
         append = range(self.media.content_length // self.chunk_size + 1)
 
@@ -132,34 +134,38 @@ class DummyRequest:
 
         if self.i == -1:
             self.media_data = io.BytesIO(self.media.content)
-            assert data == {'command': 'INIT',
-                            'media_category': self.media.category,
-                            'media_type': self.media.type,
-                            'total_bytes': str(self.media.content_length)}
+            assert data == {
+                "command": "INIT",
+                "media_category": self.media.category,
+                "media_type": self.media.type,
+                "total_bytes": str(self.media.content_length),
+            }
         elif self.i in append:
-            assert data == {'command': 'APPEND',
-                            'media': self.media_data.read(self.chunk_size),
-                            'media_id': str(self.media_id),
-                            'segment_index': str(self.i)}
+            assert data == {
+                "command": "APPEND",
+                "media": self.media_data.read(self.chunk_size),
+                "media_id": str(self.media_id),
+                "segment_index": str(self.i),
+            }
         elif self.i == append[-1] + 1:
-            if self.media.category != 'tweet_image':
-                check_after_secs = 5 if 'video' in self.media.category else 1
-                response['processing_info'] = {
-                    'state': 'pending',
-                    'check_after_secs': check_after_secs
+            if self.media.category != "tweet_image":
+                check_after_secs = 5 if "video" in self.media.category else 1
+                response["processing_info"] = {
+                    "state": "pending",
+                    "check_after_secs": check_after_secs,
                 }
 
-            assert data == {'command': 'FINALIZE',
-                            'media_id': str(self.media_id)}
+            assert data == {"command": "FINALIZE", "media_id": str(self.media_id)}
         else:
             if self.fail:
-                response['processing_info'] = {'state': "failed",
-                                               'error': {'message': "test"}}
+                response["processing_info"] = {
+                    "state": "failed",
+                    "error": {"message": "test"},
+                }
             else:
-                response['processing_info'] = {'state': 'succeeded'}
+                response["processing_info"] = {"state": "succeeded"}
 
-            assert params == {'command': 'STATUS',
-                              'media_id': str(self.media_id)}
+            assert params == {"command": "STATUS", "media_id": str(self.media_id)}
 
         assert skip_params is (self.i in append)
 
@@ -174,45 +180,45 @@ class DummyRequest:
 
 async def chunked_upload(media, file):
     async with DummyPeonyClient() as dummy_peony_client:
-        chunk_size = 1024 ** 2
+        chunk_size = 1024**2
 
         dummy_request = DummyRequest(dummy_peony_client, media, chunk_size)
 
-        with patch.object(dummy_peony_client, 'request',
-                          side_effect=dummy_request):
-            with patch.object(asyncio, 'sleep') as sleep:
-                await dummy_peony_client.upload_media(file,
-                                                      chunk_size=chunk_size,
-                                                      chunked=True)
+        with patch.object(dummy_peony_client, "request", side_effect=dummy_request):
+            with patch.object(asyncio, "sleep") as sleep:
+                await dummy_peony_client.upload_media(
+                    file, chunk_size=chunk_size, chunked=True
+                )
 
-                if media.filename == 'video':
+                if media.filename == "video":
                     sleep.assert_called_with(5)
-                elif media.filename == 'bloom':
+                elif media.filename == "bloom":
                     sleep.assert_called_with(1)
 
                 dummy_request.reset()
-                with patch.object(utils, 'get_media_metadata') as metadata:
-                    with patch.object(utils, 'get_category') as category:
+                with patch.object(utils, "get_media_metadata") as metadata:
+                    with patch.object(utils, "get_category") as category:
                         await dummy_peony_client.upload_media(
-                            file, chunk_size=chunk_size, chunked=True,
+                            file,
+                            chunk_size=chunk_size,
+                            chunked=True,
                             media_category=media.category,
-                            media_type=media.type
+                            media_type=media.type,
                         )
                         assert not metadata.called
                         assert not category.called
 
                 dummy_request.reset()
-                with patch.object(utils, 'get_media_metadata') as metadata:
+                with patch.object(utils, "get_media_metadata") as metadata:
                     await dummy_peony_client.upload_media(
-                        file, chunk_size=chunk_size,
-                        media_type=media.type, chunked=True
+                        file, chunk_size=chunk_size, media_type=media.type, chunked=True
                     )
                     assert not metadata.called
 
 
-@pytest.mark.usefixtures('medias')
+@pytest.mark.usefixtures("medias")
 @pytest.mark.asyncio
-@pytest.mark.parametrize('media', medias.values())
+@pytest.mark.parametrize("media", medias.values())
 async def test_chunked_upload(media):
     data = io.BytesIO(media.content)
     await chunked_upload(media, data)
@@ -220,23 +226,22 @@ async def test_chunked_upload(media):
 
 @pytest.mark.asyncio
 async def test_chunked_upload_async_input(medias):
-    async with aiofiles.open(str(medias['bloom'].cache), 'rb') as aiofile:
-        await chunked_upload(medias['bloom'], aiofile)
+    async with aiofiles.open(str(medias["bloom"].cache), "rb") as aiofile:
+        await chunked_upload(medias["bloom"], aiofile)
 
 
 @pytest.mark.asyncio
 async def test_chunked_upload_fail(medias):
     async with DummyPeonyClient() as client:
-        media = medias['video']
+        media = medias["video"]
         media_data = await media.download()
 
         chunk_size = 1024**2
 
         dummy_request = DummyRequest(client, media, chunk_size, True)
 
-        with patch.object(client, 'request',
-                          side_effect=dummy_request):
-            with patch.object(asyncio, 'sleep') as sleep:
+        with patch.object(client, "request", side_effect=dummy_request):
+            with patch.object(asyncio, "sleep") as sleep:
                 with pytest.raises(peony.exceptions.MediaProcessingError):
                     await client.upload_media(
                         media_data, chunk_size=chunk_size, chunked=True
@@ -245,7 +250,6 @@ async def test_chunked_upload_fail(medias):
 
 
 class MediaRequest:
-
     def __init__(self, url):
         self.url = url
 
@@ -261,9 +265,8 @@ class MediaRequest:
 
 
 class MediaPeonyClient(PeonyClient):
-
     async def _get_twitter_configuration(self):
-        return {'photo_size_limit': 3 * 1024**2}
+        return {"photo_size_limit": 3 * 1024**2}
 
     async def _get_user(self):
         return {}
@@ -274,22 +277,23 @@ class MediaPeonyClient(PeonyClient):
 async def test_upload_from_url(url):
     async with MediaPeonyClient("", "") as dummy_peony_client:
         async with MediaRequest(url) as media_request:
+
             async def dummy_get(get_url):
                 assert get_url == url
                 return media_request
 
-            async def dummy_request(url, method, future, data=None,
-                                    skip_params=None):
+            async def dummy_request(url, method, future, data=None, skip_params=None):
                 assert url == dummy_peony_client.upload.media.upload.url()
-                assert method.lower() == 'post'
-                assert data['media'] == media_request.content
+                assert method.lower() == "post"
+                assert data["media"] == media_request.content
                 assert skip_params
                 future.set_result(None)
 
-            with patch.object(dummy_peony_client, '_session') as session:
+            with patch.object(dummy_peony_client, "_session") as session:
                 session.get = dummy_get
-                with patch.object(dummy_peony_client, 'request',
-                                  side_effect=dummy_request):
+                with patch.object(
+                    dummy_peony_client, "request", side_effect=dummy_request
+                ):
                     await dummy_peony_client.upload_media(url, chunked=False)
 
 
@@ -298,18 +302,16 @@ async def test_upload_from_url(url):
 async def test_upload_from_request(url):
     async with MediaPeonyClient("", "") as dummy_peony_client:
         async with MediaRequest(url) as media_request:
-            async def dummy_request(url, method, future, data=None,
-                                    skip_params=None):
+
+            async def dummy_request(url, method, future, data=None, skip_params=None):
                 assert url == dummy_peony_client.upload.media.upload.url()
-                assert method.lower() == 'post'
-                assert data['media'] == media_request.content
+                assert method.lower() == "post"
+                assert data["media"] == media_request.content
                 assert skip_params
                 future.set_result(None)
 
-            with patch.object(dummy_peony_client, 'request',
-                              side_effect=dummy_request):
-                await dummy_peony_client.upload_media(media_request,
-                                                      chunked=False)
+            with patch.object(dummy_peony_client, "request", side_effect=dummy_request):
+                await dummy_peony_client.upload_media(media_request, chunked=False)
 
 
 @pytest.mark.online
@@ -317,10 +319,10 @@ async def test_upload_from_request(url):
 async def test_upload_type_error(url):
     async with DummyPeonyClient() as client:
         async with MediaRequest(url) as media_request:
+
             def fail(*args, **kwargs):
                 pytest.fail("Did not raise TypeError")
 
             with pytest.raises(TypeError):
-                with patch.object(client, 'request', side_effect=fail):
-                    await client.upload_media(media_request.content,
-                                              chunked=True)
+                with patch.object(client, "request", side_effect=fail):
+                    await client.upload_media(media_request.content, chunked=True)

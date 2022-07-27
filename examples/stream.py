@@ -11,7 +11,6 @@ except (SystemError, ImportError):
 
 
 def print_data(func):
-
     def decorated(self, tweet):
         if self.last_tweet_id < tweet.id:
             print(func(self, tweet) + "\n" + "-" * 10)
@@ -22,7 +21,6 @@ def print_data(func):
 
 
 class Home(peony.PeonyClient):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -32,8 +30,7 @@ class Home(peony.PeonyClient):
     def print_rt(self, tweet):
         text = html.unescape(tweet.retweeted_status.text)
         fmt = "@{user.screen_name} RT @{rt.user.screen_name}: {text}"
-        return fmt.format(user=tweet.user, rt=tweet.retweeted_status,
-                          text=text)
+        return fmt.format(user=tweet.user, rt=tweet.retweeted_status, text=text)
 
     @print_data
     def print_tweet(self, tweet):
@@ -43,14 +40,13 @@ class Home(peony.PeonyClient):
 
     async def get_timeline(self):
         request = self.api.statuses.home_timeline.get(
-            count=200,
-            since_id=self.last_tweet_id
+            count=200, since_id=self.last_tweet_id
         )
         responses = request.iterator.with_since_id()
 
         async for tweets in responses:
             for tweet in reversed(tweets):
-                if 'retweeted_status' in tweet:
+                if "retweeted_status" in tweet:
                     self.print_rt(tweet)
                 else:
                     self.print_tweet(tweet)
@@ -65,10 +61,8 @@ def on_favorited(data, client):
 
 @Home.event_stream
 class UserStream(peony.EventStream):
-
     def stream_request(self):
-        return self.userstream.user.get.stream(stall_warnings="true",
-                                               replies="all")
+        return self.userstream.user.get.stream(stall_warnings="true", replies="all")
 
     @peony.events.on_connected.handler
     async def init_timeline(self):
@@ -96,14 +90,21 @@ class UserStream(peony.EventStream):
         dm = data.direct_message
         text = html.unescape(dm.text)
         fmt = "@{sender} → @{recipient}: {text}\n" + "-" * 10
-        print(fmt.format(sender=dm.sender.screen_name,
-                         recipient=dm.recipient.screen_name,
-                         text=text))
+        print(
+            fmt.format(
+                sender=dm.sender.screen_name,
+                recipient=dm.recipient.screen_name,
+                text=text,
+            )
+        )
 
     @on_favorited.handler
     async def favorited(self, data):
-        print(data.source.screen_name, "favorited:",
-              html.unescape(data.target_object.text) + "\n" + "-" * 10)
+        print(
+            data.source.screen_name,
+            "favorited:",
+            html.unescape(data.target_object.text) + "\n" + "-" * 10,
+        )
 
     @peony.events.friends.handler
     async def pass_friends(self):
@@ -114,6 +115,6 @@ class UserStream(peony.EventStream):
         print(pprint.pformat(data), "\n" + "-" * 10)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     home = Home(**api.keys)
     home.run()

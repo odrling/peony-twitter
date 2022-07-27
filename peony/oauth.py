@@ -40,16 +40,16 @@ class PeonyHeaders(ABC, dict):
     """
 
     def __init__(self, compression=True, user_agent=None, headers=None):
-        """ Add a nice User-Agent """
+        """Add a nice User-Agent"""
         super().__init__()
 
         if user_agent is None:
-            self['User-Agent'] = "peony v" + __version__
+            self["User-Agent"] = "peony v" + __version__
         else:
-            self['User-Agent'] = user_agent
+            self["User-Agent"] = user_agent
 
         if compression:
-            self['Accept-Encoding'] = "deflate, gzip"
+            self["Accept-Encoding"] = "deflate, gzip"
 
         if headers is not None:
             for key, value in headers.items():
@@ -58,11 +58,9 @@ class PeonyHeaders(ABC, dict):
     def __setitem__(self, key, value):
         super().__setitem__(key.title(), value)
 
-    async def prepare_request(self, method, url,
-                              headers=None,
-                              skip_params=False,
-                              proxy=None,
-                              **kwargs):
+    async def prepare_request(
+        self, method, url, headers=None, skip_params=False, proxy=None, **kwargs
+    ):
         """
         prepare all the arguments for the request
 
@@ -86,9 +84,9 @@ class PeonyHeaders(ABC, dict):
         """
 
         if method.lower() == "post":
-            key = 'data'
+            key = "data"
         else:
-            key = 'params'
+            key = "params"
 
         if key in kwargs and not skip_params:
             request_params = {key: kwargs.pop(key)}
@@ -97,23 +95,22 @@ class PeonyHeaders(ABC, dict):
 
         request_params.update(dict(method=method.upper(), url=url))
 
-        coro = self.sign(**request_params, skip_params=skip_params,
-                         headers=headers)
-        request_params['headers'] = await utils.execute(coro)
-        request_params['proxy'] = proxy
+        coro = self.sign(**request_params, skip_params=skip_params, headers=headers)
+        request_params["headers"] = await utils.execute(coro)
+        request_params["proxy"] = proxy
 
         kwargs.update(request_params)
 
         return kwargs
 
     def _user_headers(self, headers=None):
-        """ Make sure the user doesn't override the Authorization header """
+        """Make sure the user doesn't override the Authorization header"""
         h = self.copy()
 
         if headers is not None:
             keys = set(headers.keys())
-            if h.get('Authorization', False):
-                keys -= {'Authorization'}
+            if h.get("Authorization", False):
+                keys -= {"Authorization"}
 
             for key in keys:
                 h[key] = headers[key]
@@ -123,8 +120,8 @@ class PeonyHeaders(ABC, dict):
     @abstractmethod
     def sign(self, *args, headers=None, **kwargs):
         """
-            sign, that is, generate the `Authorization` headers before making
-            a request
+        sign, that is, generate the `Authorization` headers before making
+        a request
         """
 
 
@@ -146,9 +143,16 @@ class OAuth1Headers(PeonyHeaders):
         Other headers
     """
 
-    def __init__(self, consumer_key, consumer_secret,
-                 access_token=None, access_token_secret=None,
-                 compression=True, user_agent=None, headers=None):
+    def __init__(
+        self,
+        consumer_key,
+        consumer_secret,
+        access_token=None,
+        access_token_secret=None,
+        compression=True,
+        user_agent=None,
+        headers=None,
+    ):
         super().__init__(compression, user_agent, headers)
 
         self.consumer_key = consumer_key
@@ -165,55 +169,58 @@ class OAuth1Headers(PeonyHeaders):
         else:
             return "application/x-www-form-urlencoded"
 
-    def sign(self, method='GET', url=None,
-             data=None,
-             params=None,
-             skip_params=False,
-             headers=None,
-             **kwargs):
+    def sign(
+        self,
+        method="GET",
+        url=None,
+        data=None,
+        params=None,
+        skip_params=False,
+        headers=None,
+        **kwargs
+    ):
 
         headers = self._user_headers(headers)
 
         if data:
-            if 'Content-Type' not in headers:
+            if "Content-Type" not in headers:
                 default = self._default_content_type(skip_params)
-                headers['Content-Type'] = default
+                headers["Content-Type"] = default
 
             params = data.copy()
         elif params:
             params = params.copy()
 
         oauth = {
-            'oauth_consumer_key': self.consumer_key,
-            'oauth_nonce': self.gen_nonce(),
-            'oauth_signature_method': 'HMAC-SHA1',
-            'oauth_timestamp': str(int(time.time())),
-            'oauth_version': '1.0'
+            "oauth_consumer_key": self.consumer_key,
+            "oauth_nonce": self.gen_nonce(),
+            "oauth_signature_method": "HMAC-SHA1",
+            "oauth_timestamp": str(int(time.time())),
+            "oauth_version": "1.0",
         }
 
         if self.access_token is not None:
-            oauth['oauth_token'] = self.access_token
+            oauth["oauth_token"] = self.access_token
 
-        oauth['oauth_signature'] = self.gen_signature(method=method, url=url,
-                                                      params=params,
-                                                      skip_params=skip_params,
-                                                      oauth=oauth)
+        oauth["oauth_signature"] = self.gen_signature(
+            method=method, url=url, params=params, skip_params=skip_params, oauth=oauth
+        )
 
-        headers['Authorization'] = "OAuth "
+        headers["Authorization"] = "OAuth "
 
         for key, value in sorted(oauth.items(), key=lambda i: i[0]):
-            if len(headers['Authorization']) > len("OAuth "):
-                headers['Authorization'] += ", "
+            if len(headers["Authorization"]) > len("OAuth "):
+                headers["Authorization"] += ", "
 
-            headers['Authorization'] += quote(key) + '="' + quote(value) + '"'
+            headers["Authorization"] += quote(key) + '="' + quote(value) + '"'
 
         return headers
 
     def gen_nonce(self):
-        return ''.join(random.choice(self.alphabet) for i in range(32))
+        return "".join(random.choice(self.alphabet) for i in range(32))
 
     def gen_signature(self, method, url, params, skip_params, oauth):
-        signature = method.upper() + '&' + quote(url) + '&'
+        signature = method.upper() + "&" + quote(url) + "&"
 
         if params is None or skip_params:
             params = oauth
@@ -224,9 +231,9 @@ class OAuth1Headers(PeonyHeaders):
 
         for key, value in sorted(params.items(), key=lambda i: i[0]):
             if param_string:
-                param_string += '&'
+                param_string += "&"
 
-            param_string += quote(key) + '='
+            param_string += quote(key) + "="
 
             if key == "q":
                 encoded_value = urllib.parse.quote(value, safe="$:!?/()'*@")
@@ -263,9 +270,16 @@ class OAuth2Headers(PeonyHeaders):
         Other headers
     """
 
-    def __init__(self, consumer_key, consumer_secret, client,
-                 bearer_token=None, compression=True, user_agent=None,
-                 headers=None):
+    def __init__(
+        self,
+        consumer_key,
+        consumer_secret,
+        client,
+        bearer_token=None,
+        compression=True,
+        user_agent=None,
+        headers=None,
+    ):
         super().__init__(compression, user_agent, headers)
 
         self.consumer_key = consumer_key
@@ -281,48 +295,49 @@ class OAuth2Headers(PeonyHeaders):
     async def sign(self, url=None, *args, headers=None, **kwargs):
         if url == self._invalidate_token.url():
             del self.token
-        elif 'Authorization' not in self:
+        elif "Authorization" not in self:
             await self.refresh_token()
 
         return self._user_headers(headers)
 
     def get_basic_authorization(self):
         creds = quote(self.consumer_key), quote(self.consumer_secret)
-        keys = ':'.join(creds).encode('utf-8')
+        keys = ":".join(creds).encode("utf-8")
 
-        auth = "Basic " + base64.b64encode(keys).decode('utf-8')
+        auth = "Basic " + base64.b64encode(keys).decode("utf-8")
 
-        return {'Authorization': auth,
-                'Content-Type': "application/x-www-form-urlencoded;"
-                                "charset=UTF-8"}
+        return {
+            "Authorization": auth,
+            "Content-Type": "application/x-www-form-urlencoded;" "charset=UTF-8",
+        }
 
     @property
     def token(self):
         print("setting token")
-        if 'Authorization' in self:
-            return self['Authorization'][len("Bearer "):]
+        if "Authorization" in self:
+            return self["Authorization"][len("Bearer ") :]
 
     @token.setter
     def token(self, access_token):
-        self['Authorization'] = "Bearer " + access_token
+        self["Authorization"] = "Bearer " + access_token
 
     @token.deleter
     def token(self):
-        del self['Authorization']
+        del self["Authorization"]
 
     @property
     def _invalidate_token(self):
-        return self.client['api', '', ''].oauth2.invalidate_token
+        return self.client["api", "", ""].oauth2.invalidate_token
 
     async def invalidate_token(self):
-        if 'Authorization' not in self:
-            raise RuntimeError('There is no token to invalidate')
+        if "Authorization" not in self:
+            raise RuntimeError("There is no token to invalidate")
 
         token = self.token
 
         try:
             request = self._invalidate_token.post
-            data = RawFormData({'access_token': token}, quote_fields=False)
+            data = RawFormData({"access_token": token}, quote_fields=False)
 
             await request(_data=data, _headers=self.basic_authorization)
         except Exception:
@@ -335,12 +350,14 @@ class OAuth2Headers(PeonyHeaders):
 
         self._refreshing.set()
 
-        request = self.client['api', "", ""].oauth2.token.post
-        token = await request(grant_type="client_credentials",
-                              _headers=self.basic_authorization,
-                              _oauth2_pass=True)
+        request = self.client["api", "", ""].oauth2.token.post
+        token = await request(
+            grant_type="client_credentials",
+            _headers=self.basic_authorization,
+            _oauth2_pass=True,
+        )
 
-        self.token = token['access_token']
+        self.token = token["access_token"]
 
         self._refreshing.clear()
 
@@ -365,20 +382,18 @@ class OAuth2Headers(PeonyHeaders):
 
 
 class RawFormData(aiohttp.FormData):
-
     def _gen_form_urlencoded(self):
         def key(item):
-            return item[0]['name']
+            return item[0]["name"]
 
         data = ""
         for type_options, _, value in sorted(self._fields, key=key):
             if data:
                 data += "&"
 
-            data += "%s=%s" % (type_options['name'], value)
+            data += "%s=%s" % (type_options["name"], value)
 
-        charset = self._charset if self._charset is not None else 'utf-8'
+        charset = self._charset if self._charset is not None else "utf-8"
         content_type = "application/x-www-form-urlencoded;charset=" + charset
 
-        return aiohttp.payload.BytesPayload(data.encode(),
-                                            content_type=content_type)
+        return aiohttp.payload.BytesPayload(data.encode(), content_type=content_type)

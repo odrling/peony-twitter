@@ -26,14 +26,15 @@ async def get_oauth_token(consumer_key, consumer_secret, callback_uri="oob"):
         Temporary tokens
     """
 
-    async with BasePeonyClient(consumer_key=consumer_key,
-                               consumer_secret=consumer_secret,
-                               api_version="",
-                               suffix="") as client:
+    async with BasePeonyClient(
+        consumer_key=consumer_key,
+        consumer_secret=consumer_secret,
+        api_version="",
+        suffix="",
+    ) as client:
 
         response = await client.api.oauth.request_token.post(
-            _suffix="",
-            oauth_callback=callback_uri
+            _suffix="", oauth_callback=callback_uri
         )
 
         return parse_token(response)
@@ -69,9 +70,14 @@ async def get_oauth_verifier(oauth_token):
     return verifier
 
 
-async def get_access_token(consumer_key, consumer_secret,
-                           oauth_token, oauth_token_secret,
-                           oauth_verifier, **kwargs):
+async def get_access_token(
+    consumer_key,
+    consumer_secret,
+    oauth_token,
+    oauth_token_secret,
+    oauth_verifier,
+    **kwargs
+):
     """
         get the access token of the user
 
@@ -94,16 +100,17 @@ async def get_access_token(consumer_key, consumer_secret,
         Access tokens
     """
 
-    async with BasePeonyClient(consumer_key=consumer_key,
-                               consumer_secret=consumer_secret,
-                               access_token=oauth_token,
-                               access_token_secret=oauth_token_secret,
-                               api_version="",
-                               suffix="") as client:
+    async with BasePeonyClient(
+        consumer_key=consumer_key,
+        consumer_secret=consumer_secret,
+        access_token=oauth_token,
+        access_token_secret=oauth_token_secret,
+        api_version="",
+        suffix="",
+    ) as client:
 
         response = await client.api.oauth.access_token.get(
-            _suffix="",
-            oauth_verifier=oauth_verifier
+            _suffix="", oauth_verifier=oauth_verifier
         )
 
         return parse_token(response)
@@ -130,20 +137,17 @@ async def async_oauth_dance(consumer_key, consumer_secret, callback_uri="oob"):
 
     token = await get_oauth_token(consumer_key, consumer_secret, callback_uri)
 
-    oauth_verifier = await get_oauth_verifier(token['oauth_token'])
+    oauth_verifier = await get_oauth_verifier(token["oauth_token"])
 
     token = await get_access_token(
-        consumer_key,
-        consumer_secret,
-        oauth_verifier=oauth_verifier,
-        **token
+        consumer_key, consumer_secret, oauth_verifier=oauth_verifier, **token
     )
 
     token = dict(
         consumer_key=consumer_key,
         consumer_secret=consumer_secret,
-        access_token=token['oauth_token'],
-        access_token_secret=token['oauth_token_secret']
+        access_token=token["oauth_token"],
+        access_token_secret=token["oauth_token_secret"],
     )
 
     return token
@@ -169,8 +173,7 @@ def parse_token(response):
     return {key: value for key, value in items}
 
 
-def oauth_dance(consumer_key, consumer_secret,
-                oauth_callback="oob", loop=None):
+def oauth_dance(consumer_key, consumer_secret, oauth_callback="oob", loop=None):
     """
         OAuth dance to get the user's access token
 
@@ -214,9 +217,11 @@ async def async_oauth2_dance(consumer_key, consumer_secret):
     str
         Bearer token
     """
-    async with BasePeonyClient(consumer_key=consumer_key,
-                               consumer_secret=consumer_secret,
-                               auth=oauth.OAuth2Headers) as client:
+    async with BasePeonyClient(
+        consumer_key=consumer_key,
+        consumer_secret=consumer_secret,
+        auth=oauth.OAuth2Headers,
+    ) as client:
 
         await client.headers.sign()
         return client.headers.token

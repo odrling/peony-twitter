@@ -85,7 +85,7 @@ def optimize_media(file_, max_size, formats):
         The smallest file created in this function
     """
     if not PIL:
-        msg = "Pillow must be installed to optimize a media\n" "$ pip3 install Pillow"
+        msg = "Pillow must be installed to optimize a media\n$ pip3 install Pillow"
         raise RuntimeError(msg)
 
     img = PIL.Image.open(file_)

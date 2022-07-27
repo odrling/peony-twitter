@@ -326,7 +326,7 @@ def get_category(media_type):
         return "tweet_image"
     else:
         raise RuntimeError(
-            "The provided media cannot be handled.\n" "mimetype: %s" % media_type
+            "The provided media cannot be handled.\nmimetype: %s" % media_type
         )
 
 

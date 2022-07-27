@@ -158,7 +158,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
 
         if consumer_key is None or consumer_secret is None:
             raise TypeError(
-                "missing 2 required arguments: 'consumer_key' " "and 'consumer_secret'"
+                "missing 2 required arguments: 'consumer_key' and 'consumer_secret'"
             )
 
         # all the possible args required by headers in :mod:`peony.oauth`
@@ -498,7 +498,7 @@ class PeonyClient(BasePeonyClient):
             return await api.account.verify_credentials.get()
 
         raise PeonyUnavailableMethod(
-            "user attribute is only available with " "OAuth 1 authentification."
+            "user attribute is only available with OAuth 1 authentification."
         )
 
     def _get_close_tasks(self):

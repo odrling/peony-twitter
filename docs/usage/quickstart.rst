@@ -45,8 +45,6 @@ Make sure to get your api keys and access tokens from
 
     from peony import PeonyClient
 
-    loop = asyncio.get_event_loop()
-
     # create the client using your api keys
     client = PeonyClient(consumer_key=YOUR_CONSUMER_KEY,
                          consumer_secret=YOUR_CONSUMER_SECRET,
@@ -61,6 +59,6 @@ Make sure to get your api keys and access tokens from
         await client.api.statuses.update.post(status="I'm using Peony!!")
 
     # run the coroutine
-    loop.run_until_complete(getting_started())
+    asyncio.run(getting_started())
 
 .. _Twitter's application management page: https://apps.twitter.com

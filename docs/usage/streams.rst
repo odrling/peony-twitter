@@ -8,6 +8,7 @@ the usage is similar to that of REST API endpoints).
 
 .. code-block:: python
 
+    import asyncio
     from peony import PeonyClient, events
     client = peony.PeonyClient(**creds)
 
@@ -29,5 +30,4 @@ the usage is similar to that of REST API endpoints).
                                  text=tweet.text))
 
     if __name__ == '__main__':
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(track())
+        asyncio.run(track())

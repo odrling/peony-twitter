@@ -20,5 +20,4 @@ on initialisation as the `session` argument.
             await client.run_tasks()
 
     if __name__ == '__main__':
-        loop = asyncio.get_event_loop()
-        loop.run_until_complete(client_with_session())
+        asyncio.run(client_with_session())

@@ -120,7 +120,7 @@ class StreamResponse:
             self.state = ENHANCE_YOUR_CALM
         else:
             logger.debug("raising error during stream connection")
-            raise await exceptions.throw(
+            await exceptions.throw(
                 self.response, loads=self.client._loads, url=self.kwargs["url"]
             )
 
@@ -260,6 +260,7 @@ class StreamResponse:
         """
         Restart the stream on error
         """
+        assert self.response is not None
         await self.response.release()
         await asyncio.sleep(self._error_timeout)
         await self.connect()
@@ -294,6 +295,7 @@ class StreamResponse:
     def __exit__(self, *args):
         """Close the response on error"""
         if getattr(self, "response", None) is not None:
+            assert self.response is not None
             if not self.response.closed:
                 logger.debug("Closing the stream")
                 self.response.close()

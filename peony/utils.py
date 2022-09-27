@@ -397,7 +397,7 @@ def get_twitter_entities(
 ) -> Iterable[Entity]:
     """Returns twitter entities from an entities dictionnary
 
-    Entities are returned is reversed order for ease of use (start and end
+    Entities are returned in reversed order for ease of use (start and end
     indexes stay the same if the string is changed in place)
     """
     return sorted(

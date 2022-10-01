@@ -149,7 +149,7 @@ class BasePeonyClient(metaclass=MetaPeonyClient):
         else:
             self._loads = loads
 
-        self.loop = asyncio.get_event_loop() if loop is None else loop
+        self.loop = asyncio.get_running_loop() if loop is None else loop
 
         self._session = session
         self._user_session = session is not None

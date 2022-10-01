@@ -217,6 +217,11 @@ class Request(asyncio.Future, AbstractRequest):
     def __call__(self, **kwargs):
         return self.__class__(self.api, self.method, **kwargs)
 
+    def __str__(self):
+        return f"<{self.__class__.__name__} {self.method} {self.get_url()}>"
+
+    __repr__ = __str__
+
 
 class StreamingRequest(AbstractRequest):
     """

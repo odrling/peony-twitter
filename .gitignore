@@ -76,3 +76,5 @@ target/
 # direnv/autoenv
 .autoenv.zsh
 .envrc
+
+.direnv

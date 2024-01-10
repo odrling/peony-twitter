@@ -1,0 +1,92 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "peony-twitter"
+dynamic = ["version"]
+description = "An asynchronous Twitter API client for Python 3.8+"
+readme = "README.rst"
+license = { file = "LICENSE" }
+requires-python = ">=3.8"
+authors = [
+    { name = "odrling", email = "florianbadie@odrling.xyz" },
+]
+keywords = [
+    "asynchronous",
+    "asyncio",
+    "twitter",
+]
+dependencies = [
+    "aiohttp>=2.0,<4.0",
+    "async-timeout",
+]
+
+[project.optional-dependencies]
+aiofiles = [
+    "aiofiles",
+]
+aiohttp = [
+    "aiodns",
+    "cchardet",
+]
+all = [
+    "aiodns",
+    "aiofiles",
+    "cchardet",
+    "python-magic",
+    "python-magic-bin; platform_system == 'Windows'",
+]
+magic = [
+    "python-magic",
+    "python-magic-bin; platform_system == 'Windows'",
+]
+media = [
+    "aiofiles",
+    "python-magic",
+    "python-magic-bin; platform_system == 'Windows'",
+]
+tests = [
+    # all
+    "aiodns",
+    "aiofiles",
+    "python-magic",
+    "python-magic-bin; platform_system == 'Windows'",
+    # test dependencies
+    "asynctest",
+    "codecov",
+    "pyright",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-timeout",
+    "ruff",
+    "types-setuptools",
+]
+
+[project.urls]
+Homepage = "https://github.com/odrling/peony-twitter"
+Repository = "https://github.com/odrling/peony-twitter.git"
+Issues = "https://github.com/odrling/peony-twitter/issues"
+
+[tool.hatch.version]
+path = "peony/__init__.py"
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/peony",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["peony"]
+
+[tool.ruff]
+select = ["E", "F", "W", "B"]
+line-length = 99
+ignore = [
+    "E722",
+    "E203"
+]
+exclude = [
+    "examples/api_example.py"
+]

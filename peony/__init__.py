@@ -4,19 +4,11 @@
  peony-twitter
 ===============
 
-  An asynchronous Twitter API client for Python 3.6+
+  An asynchronous Twitter API client for Python 3.8+
 
 """
 
-__author__ = "Florian Badie"
-__author_email__ = "florianbadie@gmail.com"
-__url__ = "https://github.com/odrling/peony-twitter"
-
 __version__ = "3.0.0"
-
-__license__ = "MIT License"
-
-__keywords__ = "twitter, asyncio, asynchronous"
 
 import logging
 

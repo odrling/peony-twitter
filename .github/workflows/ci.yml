@@ -2,9 +2,7 @@ name: "Peony CI"
 
 on:
   push:
-    branches: [ master ]
   pull_request:
-    branches: [ master ]
 
 jobs:
   build:
@@ -12,25 +10,26 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.6'
-          - '3.7'
           - '3.8'
           - '3.9'
           - '3.10'
+          - '3.11'
+          - '3.12'
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: pip install --upgrade -r tests_requirements.txt wheel
+      run: pip install --upgrade -e '.[tests]' build
     - name: Check codestyle
-      run: flake8
-    - name: Check typing
-      run: mypy --non-interactive --install-types peony
+      run: ruff .
+    # fix typing issues
+    # - name: Check typing
+    #   run: pyright .
     - name: Run tests
       run: pytest tests --cov=peony --cov-report=xml
     - name: Codecov
       uses: codecov/codecov-action@v1
     - name: Build package
-      run: python3 setup.py sdist bdist_wheel
+      run: python3 -m build

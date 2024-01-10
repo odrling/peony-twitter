@@ -10,16 +10,16 @@ jobs:
     strategy:
       matrix:
         python-version:
-          - '3.9'
+          - '3.12'
     steps:
     - uses: actions/checkout@v2
     - uses: actions/setup-python@v2
       with:
         python-version: ${{ matrix.python-version }}
     - name: Install dependencies
-      run: pip install --upgrade wheel
+      run: pip install --upgrade build
     - name: Build package
-      run: python3 setup.py sdist bdist_wheel
+      run: python3 -m build
     - name: Publish package
       if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags')
       uses: pypa/gh-action-pypi-publish@release/v1

@@ -15,7 +15,7 @@ jobs:
       with:
         # only need to test one version, as this test tries to find out if
         # Twitter's endpoints are still working as expected
-        python-version: '3.9'
+        python-version: '3.12'
     - name: Install dependencies
       run: pip install --upgrade -r tests_requirements.txt
     - name: Run tests

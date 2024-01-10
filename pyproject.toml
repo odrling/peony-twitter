@@ -53,7 +53,6 @@ tests = [
     "python-magic",
     "python-magic-bin; platform_system == 'Windows'",
     # test dependencies
-    "asynctest",
     "codecov",
     "pyright",
     "pytest",

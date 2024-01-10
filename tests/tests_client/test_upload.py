@@ -4,11 +4,11 @@ import asyncio
 import io
 import random
 import tempfile
+from unittest.mock import patch
 
 import aiofiles
 import aiohttp
 import pytest
-from asynctest import patch
 
 import peony
 import peony.exceptions
@@ -51,9 +51,7 @@ async def test_upload_media(input_type, medias):
             assert skip_params is True
             future.set_result(None)
 
-        with patch.object(
-            dummy_peony_client, "request", side_effect=dummy_upload
-        ) as req:
+        with patch.object(dummy_peony_client, "request", side_effect=dummy_upload) as req:
             await dummy_peony_client.upload_media(media, chunked=False)
             assert req.called
 
@@ -116,9 +114,7 @@ class DummyRequest:
         self.media_id = random.randrange(1 << 16)
         self.fail = fail
 
-    async def __call__(
-        self, url, method, future, data=None, skip_params=None, params=None
-    ):
+    async def __call__(self, url, method, future, data=None, skip_params=None, params=None):
         if url == self.client.api.account.verify_credentials.url():
             return
         assert url == self.client.upload.media.upload.url()
@@ -186,9 +182,7 @@ async def chunked_upload(media, file):
 
         with patch.object(dummy_peony_client, "request", side_effect=dummy_request):
             with patch.object(asyncio, "sleep") as sleep:
-                await dummy_peony_client.upload_media(
-                    file, chunk_size=chunk_size, chunked=True
-                )
+                await dummy_peony_client.upload_media(file, chunk_size=chunk_size, chunked=True)
 
                 if media.filename == "video":
                     sleep.assert_called_with(5)
@@ -243,9 +237,7 @@ async def test_chunked_upload_fail(medias):
         with patch.object(client, "request", side_effect=dummy_request):
             with patch.object(asyncio, "sleep") as sleep:
                 with pytest.raises(peony.exceptions.MediaProcessingError):
-                    await client.upload_media(
-                        media_data, chunk_size=chunk_size, chunked=True
-                    )
+                    await client.upload_media(media_data, chunk_size=chunk_size, chunked=True)
                     sleep.assert_called_with(5)
 
 
@@ -291,9 +283,7 @@ async def test_upload_from_url(url):
 
             with patch.object(dummy_peony_client, "_session") as session:
                 session.get = dummy_get
-                with patch.object(
-                    dummy_peony_client, "request", side_effect=dummy_request
-                ):
+                with patch.object(dummy_peony_client, "request", side_effect=dummy_request):
                     await dummy_peony_client.upload_media(url, chunked=False)
 
 

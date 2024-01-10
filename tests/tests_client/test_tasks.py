@@ -1,5 +1,5 @@
 import pytest
-from asynctest import patch
+from unittest.mock import patch
 
 import peony
 from peony.general import twitter_api_version, twitter_base_api_url

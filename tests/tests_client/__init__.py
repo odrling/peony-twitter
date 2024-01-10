@@ -1,7 +1,7 @@
 import asyncio
 
 import aiohttp
-import asynctest as mock
+from unittest.mock import patch
 
 from peony import BasePeonyClient, PeonyClient, utils
 
@@ -51,7 +51,7 @@ class DummyClient(BasePeonyClient):
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
-        self.patch = mock.patch.object(self.session, "request")
+        self.patch = patch.object(self.session, "request")
         self.patch.__enter__()
 
         return await super().__aenter__()
@@ -70,7 +70,7 @@ class DummyPeonyClient(PeonyClient):
 
     async def __aenter__(self):
         self.session = aiohttp.ClientSession()
-        self.patch = mock.patch.object(self.session, "request")
+        self.patch = patch.object(self.session, "request")
         self.patch.__enter__()
 
         return await super().__aenter__()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import pytest
-from asynctest import patch
+from unittest.mock import patch
 
 from peony import oauth
 from peony.exceptions import PeonyUnavailableMethod

@@ -668,6 +668,7 @@ class PeonyClient(BasePeonyClient):
                 "deprecated, chunked defaults to True and should be "
                 "set explicitly to False if needed.",
                 DeprecationWarning,
+                stacklevel=2,
             )
 
         if isinstance(media, aiohttp.ClientResponse):

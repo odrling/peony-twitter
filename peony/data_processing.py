@@ -207,6 +207,6 @@ async def read(response, loads=loads, encoding=None):
 
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         data = await response.read()
-        raise exceptions.PeonyDecodeError(response=response, data=data, exception=exc)
+        raise exceptions.PeonyDecodeError(response=response, data=data, exception=exc) from exc
 
     return await response.read()

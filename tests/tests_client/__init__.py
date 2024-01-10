@@ -44,7 +44,7 @@ class DummyErrorHandler(utils.ErrorHandler):
 
 class DummyClient(BasePeonyClient):
     def __init__(self, *args, **kwargs):
-        super().__init__("", "", error_handler=utils.ErrorHandler, *args, **kwargs)
+        super().__init__("", "", *args, error_handler=utils.ErrorHandler, **kwargs)
 
     async def request(self, *args, **kwargs):
         pass
@@ -63,7 +63,7 @@ class DummyClient(BasePeonyClient):
 
 class DummyPeonyClient(PeonyClient):
     def __init__(self, *args, **kwargs):
-        super().__init__("", "", error_handler=utils.ErrorHandler, *args, **kwargs)
+        super().__init__("", "", *args, error_handler=utils.ErrorHandler, **kwargs)
 
     async def request(self, *args, **kwargs):
         pass

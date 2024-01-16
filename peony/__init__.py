@@ -8,7 +8,7 @@
 
 """
 
-__version__ = "3.0.0"
+from ._version import __version__, __version_tuple__  # type: ignore
 
 import logging
 

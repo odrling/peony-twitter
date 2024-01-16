@@ -78,3 +78,5 @@ target/
 .envrc
 
 .direnv
+
+peony/_version.py

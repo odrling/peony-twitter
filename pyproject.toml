@@ -1,5 +1,5 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
@@ -69,7 +69,10 @@ Repository = "https://github.com/odrling/peony-twitter.git"
 Issues = "https://github.com/odrling/peony-twitter/issues"
 
 [tool.hatch.version]
-path = "peony/__init__.py"
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "_version.py"
 
 [tool.hatch.build.targets.sdist]
 include = [
